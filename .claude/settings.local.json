@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@14 . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint)",
+      "Bash(npx create-next-app@14 . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes)",
+      "Bash(npm init *)",
+      "Bash(npm show *)",
+      "Bash(npm search *)",
+      "Bash(npx tsc *)",
+      "Bash(xargs grep *)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(npm list *)",
+      "Bash(mv \"tools/tag-extractor\" \"tag-extractor\")",
+      "Bash(mv \"tools/watch-time-calculator\" \"watch-time-calculator\")",
+      "Bash(mv \"tools/rss-feed-generator\" \"rss-feed-generator\")",
+      "Bash(mv \"tools/dislike-viewer\" \"dislike-viewer\")",
+      "Bash(mv \"tools/random-comment-picker\" \"random-comment-picker\")",
+      "Bash(sed -i 's|https://ytniches.com/tools/tag-extractor|https://ytniches.com/tag-extractor|g' src/app/\\\\\\(public\\\\\\)/tag-extractor/page.tsx)",
+      "Bash(sed -i 's|https://ytniches.com/tools/watch-time-calculator|https://ytniches.com/watch-time-calculator|g' src/app/\\\\\\(public\\\\\\)/watch-time-calculator/page.tsx)",
+      "Bash(sed -i 's|https://ytniches.com/tools/rss-feed-generator|https://ytniches.com/rss-feed-generator|g' src/app/\\\\\\(public\\\\\\)/rss-feed-generator/page.tsx)",
+      "Bash(sed -i 's|https://ytniches.com/tools/dislike-viewer|https://ytniches.com/dislike-viewer|g' src/app/\\\\\\(public\\\\\\)/dislike-viewer/page.tsx)",
+      "Bash(sed -i 's|https://ytniches.com/tools/random-comment-picker|https://ytniches.com/random-comment-picker|g' src/app/\\\\\\(public\\\\\\)/random-comment-picker/page.tsx)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\LENOVO\\\\Desktop\\\\YTNiches\\\\src\\\\app\\\\api\\\\admin\\\\prompts\\\\subtabs\\\\[subtabId]\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\LENOVO\\\\Desktop\\\\YTNiches\\\\src\\\\app\\\\api\\\\admin\\\\prompts\\\\[stepId]\\\\subtabs\")",
+      "Bash(grep -r \"niche_prompts\" supabase/ --include=\"*.sql\" -l)",
+      "Bash(grep -r \"niche_prompts\" src/ --include=\"*.ts\" -l)",
+      "Bash(node -e \"const p = require\\('./node_modules/@tiptap/react/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/@tiptap/react'\\); console.log\\(Object.keys\\(r\\).filter\\(k => k.toLowerCase\\(\\).includes\\('bubble'\\) || k.toLowerCase\\(\\).includes\\('menu'\\)\\)\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/@tiptap/react'\\); console.log\\(Object.keys\\(r\\).slice\\(0, 30\\)\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/@tiptap/extension-bubble-menu'\\); console.log\\(Object.keys\\(r\\)\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/lucide-react'\\); console.log\\(Object.keys\\(r\\).filter\\(k => k.toLowerCase\\(\\).includes\\('link'\\)\\)\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/@tiptap/extension-bubble-menu'\\); const bm = r.BubbleMenu; console.log\\(typeof bm, bm?.toString?.\\(\\)?.slice\\(0,200\\)\\)\")",
+      "Bash(node -e \"const r = require\\('./node_modules/@tiptap/core'\\); console.log\\(typeof r.Editor\\)\")",
+      "Bash(node -e \"require\\('./node_modules/sanitize-html'\\); console.log\\('sanitize-html OK'\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(p.dependencies.next\\)\")"
+    ]
+  }
+}
