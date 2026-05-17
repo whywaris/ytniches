@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Suppress ESLint peer-dep version mismatch errors during Vercel builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Image optimization
   images: {
     formats: ['image/avif', 'image/webp'],

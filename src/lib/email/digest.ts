@@ -3,8 +3,6 @@ import { render } from '@react-email/render'
 import { createAdminClient } from '@/lib/supabase/server'
 import { WeeklyDigestEmail } from './templates/weekly-digest'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 interface DigestUser {
   id: string
   email: string
@@ -26,6 +24,11 @@ interface DigestNiche {
 }
 
 export async function sendWeeklyDigest(testEmail?: string) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — skipping digest')
+    return { sent: 0, failed: 0 }
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const supabase = createAdminClient()
 
   const weekStart = getWeekStart()
