@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Flame } from 'lucide-react'
 import { HandpickCard } from '@/components/niches/HandpickCard'
+import { useSaveHandpick } from '@/hooks/useSaveHandpick'
 import type { HandpickNiche } from '@/types'
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export function DashboardHandpickClient({ niches, isPro }: Props) {
   const [activeCategory, setActiveCategory] = useState('All')
   const [hotOnly, setHotOnly] = useState(false)
+  const { savedIds, savingId, toggleSave, isSaved } = useSaveHandpick()
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(niches.map((n) => n.category))).sort()
@@ -80,7 +82,14 @@ export function DashboardHandpickClient({ niches, isPro }: Props) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((niche) => (
-            <HandpickCard key={niche.id} niche={niche} isPro={isPro} />
+            <HandpickCard
+              key={niche.id}
+              niche={niche}
+              isPro={isPro}
+              isSaved={isSaved(niche.id)}
+              isSaving={savingId === niche.id}
+              onToggleSave={toggleSave}
+            />
           ))}
         </div>
       )}

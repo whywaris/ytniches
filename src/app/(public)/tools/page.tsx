@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Tag, Timer, Rss, ThumbsDown, Dices, ImageIcon, Download, DollarSign, Clock, Code2, QrCode, UserPlus, FileText } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { GlobalCtaBanner } from '@/components/shared/GlobalCtaBanner'
+import type { GlobalCta } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Free YouTube Tools — 13 Tools for Creators | YTNiches',
@@ -131,7 +134,10 @@ const TOOLS = [
 
 const STATS = ['13 Tools Available', 'Used by 8,400+ Creators', 'Always Free']
 
-export default function ToolsPage() {
+export default async function ToolsPage() {
+  const supabase = await createClient()
+  const { data: cta } = await supabase.from('global_cta').select('*').single()
+
   return (
     <main className="bg-[#F5F0E8] min-h-screen">
       {/* Hero */}
@@ -190,30 +196,9 @@ export default function ToolsPage() {
         </div>
       </section>
 
-      {/* Bottom CTA */}
+      {/* CTA */}
       <section className="container-site pb-20">
-        <div className="max-w-2xl mx-auto text-center mt-4 bg-white border border-[#E0D9CE] rounded-[20px] p-10">
-          <h2 className="font-display font-bold text-2xl text-[#1A1612] mb-3">
-            Want niche research tools too?
-          </h2>
-          <p className="text-[#8A7F72] text-sm mb-7">
-            Get access to 1,200+ niches, title templates, script hooks and more.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/?auth=signup"
-              className="bg-[#E8402A] text-white font-bold text-sm px-5 py-3 rounded-full hover:bg-[#CF3520] transition-colors"
-            >
-              Start for free →
-            </Link>
-            <Link
-              href="/pricing"
-              className="border border-[#E0D9CE] text-[#1A1612] font-bold text-sm px-5 py-3 rounded-full hover:border-[#1A1612] transition-colors"
-            >
-              See Pro features
-            </Link>
-          </div>
-        </div>
+        <GlobalCtaBanner cta={cta as GlobalCta | null} />
       </section>
     </main>
   )

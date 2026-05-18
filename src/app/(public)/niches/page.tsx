@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/server'
 import { CATEGORIES } from '@/config/categories'
 import { NichesFilter } from '@/components/niches/NichesFilter'
 import { NichesPagination } from '@/components/niches/NichesPagination'
-import { NichesCTA } from '@/components/shared/NichesCTA'
+import { GlobalCtaBanner } from '@/components/shared/GlobalCtaBanner'
 import { WebsiteJsonLd } from '@/components/shared/JsonLd'
 import { NicheCard } from '@/components/niches/NicheCard'
-import type { Niche, CTASetting } from '@/types'
+import type { Niche, GlobalCta } from '@/types'
 
 export const revalidate = 3600
 
@@ -83,11 +83,10 @@ export default async function NichesPage({ searchParams }: PageProps) {
   const niches = (data as unknown as Niche[]) ?? []
   const totalPages = Math.ceil((count ?? 0) / NICHES_PER_PAGE)
 
-  // Fetch CTA settings
+  // Fetch CTA
   const { data: ctaData } = await supabase
-    .from('cta_settings')
+    .from('global_cta')
     .select('*')
-    .eq('page', 'niche_library')
     .single()
 
   const hasFilters = !!(category || search)
@@ -207,30 +206,8 @@ export default async function NichesPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* ADMIN-CONTROLLED CTA */}
-        {ctaData
-          ? <NichesCTA cta={ctaData as CTASetting} />
-          : (
-            <div className="max-w-6xl mx-auto px-4 md:px-8 pb-12">
-              <div className="bg-[#1A1612] rounded-2xl p-8 md:p-10 text-center">
-                <h3 className="font-display text-3xl font-black text-white mb-3">
-                  Find Your Perfect YouTube Niche
-                </h3>
-                <p className="text-sm text-white/60 mb-6 max-w-md mx-auto">
-                  Join thousands of creators using YTNiches to grow their channels.
-                </p>
-                <div className="flex gap-3 justify-center flex-wrap">
-                  <Link href="/auth/signup" className="px-6 py-3 bg-[#E8402A] text-white rounded-full text-sm font-semibold hover:bg-[#CF3520] transition-colors">
-                    Start free today
-                  </Link>
-                  <Link href="/pricing" className="px-6 py-3 bg-white/10 text-white rounded-full text-sm font-semibold hover:bg-white/20 transition-colors">
-                    See pricing
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )
-        }
+        {/* CTA */}
+        <GlobalCtaBanner cta={ctaData as GlobalCta | null} />
       </div>
     </>
   )

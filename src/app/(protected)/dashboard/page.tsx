@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NicheCard } from '@/components/niches/NicheCard'
 import type { Niche } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Overview',
   description: 'Your niche research overview.',
@@ -35,7 +37,7 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('published', true)
 
-  const firstName = authUser.email?.split('@')[0] ?? 'there'
+  const firstName = profile?.display_name || (authUser.email?.split('@')[0] ?? 'there')
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const plan = profile?.plan ?? 'free'

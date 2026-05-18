@@ -34,20 +34,32 @@ export default function SettingsClient({ user }: SettingsClientProps) {
   }
 
   async function handleSave() {
+    if (!displayName.trim()) {
+      showToast('Name cannot be empty')
+      return
+    }
     setSaving(true)
-    const { error } = await supabase
-      .from('users')
-      .update({ display_name: displayName })
-      .eq('id', user!.id)
+
+    try {
+      const res = await fetch('/api/user/update-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: displayName.trim() }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        showToast(data.error ?? 'Failed to save', 'error')
+      } else {
+        if (storeUser) setUser({ ...storeUser, display_name: displayName.trim() })
+        showToast('Name updated successfully')
+        router.refresh()
+      }
+    } catch {
+      showToast('Network error — please try again', 'error')
+    }
 
     setSaving(false)
-    if (error) {
-      showToast('Failed to save. Please try again.')
-    } else {
-      if (storeUser) setUser({ ...storeUser, display_name: displayName })
-      showToast('Saved')
-      router.refresh()
-    }
   }
 
   async function handleDeleteAccount() {

@@ -253,72 +253,41 @@ export interface HandpickNicheForm {
   published: boolean
 }
 
-// ─── Dynamic Prompt Fields ────────────────────────────────────────────────────
-export interface PromptField {
+// ─── Prompts System ───────────────────────────────────────────────────────────
+export type PromptAccess = 'free' | 'pro'
+
+export interface NichePromptValue {
   id: string
-  name: string
-  slug: string
-  placeholder: string
-  show_to_users: boolean
-  position: number
-  is_active: boolean
+  channel_id: string
+  field_name: string
+  access: PromptAccess
+  content: string
   created_at: string
   updated_at: string
 }
 
-export interface PromptFieldValue {
-  id: string
-  niche_prompt_id: string
-  field_id: string
-  value: string
-  field?: PromptField
-}
-
-export interface NichePromptRecord {
+export interface NicheChannel {
   id: string
   channel_name: string
   channel_url: string
-  published: boolean
-  created_at: string
-  updated_at: string
-  field_values?: PromptFieldValue[]
-}
-
-// ─── Prompt Editor ────────────────────────────────────────────────────────────
-export interface PromptSubtab {
-  id: string
-  step_id: string
-  label: string
-  title: string
-  subtitle: string
-  content: string
+  category: string
   position: number
+  is_active: boolean
   created_at: string
   updated_at: string
+  prompt_values?: NichePromptValue[]
 }
 
-export interface PromptStep {
+// ─── Global CTA ───────────────────────────────────────────────────────────────
+export interface GlobalCta {
   id: string
-  label: string
-  icon: string
-  position: number
-  subtabs: PromptSubtab[]
-  created_at: string
-  updated_at: string
-}
-
-// ─── CTA Settings ─────────────────────────────────────────────────────────────
-export interface CTASetting {
-  id: string
-  page: string
   is_active: boolean
   heading: string
   subheading: string
-  button_text: string
-  button_url: string
-  button_secondary_text: string
-  button_secondary_url: string
-  background_color: string
+  primary_button_text: string
+  primary_button_url: string
+  secondary_button_text: string
+  secondary_button_url: string
   created_at: string
   updated_at: string
 }
@@ -356,36 +325,57 @@ export interface YouTubeVideoData {
 }
 
 // ─── Niche Requests ───────────────────────────────────────────────────────────
-export type RequestStatus =
-  | 'pending'
-  | 'under_review'
-  | 'approved'
-  | 'completed'
-  | 'rejected'
+export type RequestType = 'niche' | 'prompts'
+export type RequestStatus = 'pending' | 'under_review' | 'completed' | 'rejected'
 
 export interface NicheRequest {
   id: string
   user_id: string
-  title: string
-  description: string | null
-  category: string
-  reason: string | null
+  request_type: RequestType
+  niche_name: string
+  description: string
   status: RequestStatus
-  votes_count: number
-  admin_note: string | null
-  linked_niche_id: string | null
+  admin_note: string
   created_at: string
   updated_at: string
-  has_voted?: boolean
-  user_email?: string
 }
 
-export interface NicheRequestVote {
+// ─── Email System ─────────────────────────────────────────────────────────────
+export type EmailType =
+  | 'digest'
+  | 'broadcast'
+  | 'welcome'
+  | 'request_notification'
+  | 'password_reset'
+  | 'manual'
+  | 'test_digest'
+
+export type EmailStatus = 'sent' | 'failed' | 'bounced'
+export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed'
+export type BroadcastSegment = 'all' | 'pro' | 'free'
+
+export interface EmailLog {
   id: string
-  request_id: string
-  user_id: string
+  email_type: EmailType
+  recipient_email: string
+  recipient_user_id: string | null
+  subject: string
+  status: EmailStatus
+  resend_id: string
+  metadata: Record<string, unknown>
   created_at: string
 }
 
-export type RequestSortBy = 'votes' | 'newest' | 'oldest'
-export type RequestFilter = 'all' | RequestStatus
+export interface BroadcastEmail {
+  id: string
+  subject: string
+  body: string
+  segment: BroadcastSegment
+  status: BroadcastStatus
+  scheduled_at: string | null
+  sent_at: string | null
+  recipients_count: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}

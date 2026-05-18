@@ -4,35 +4,41 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
-type Params = { params: Promise<{ id: string }> }
-
-export async function PATCH(request: Request, { params }: Params) {
+export async function GET() {
   const check = await verifyAdmin()
   if (check instanceof NextResponse) return check
 
-  const { id } = await params
-  const body = await request.json()
-
   const supabase = createAdminClient()
   const { data, error } = await supabase
-    .from('niche_requests')
-    .update(body)
-    .eq('id', id)
-    .select()
+    .from('global_cta')
+    .select('*')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function PATCH(request: Request) {
   const check = await verifyAdmin()
   if (check instanceof NextResponse) return check
 
-  const { id } = await params
+  const body = await request.json()
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from('niche_requests').delete().eq('id', id)
+  const { data: existing } = await supabase
+    .from('global_cta')
+    .select('id')
+    .single()
+
+  if (!existing) return NextResponse.json({ error: 'No CTA record found' }, { status: 404 })
+
+  const { data, error } = await supabase
+    .from('global_cta')
+    .update(body)
+    .eq('id', existing.id)
+    .select()
+    .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+  return NextResponse.json(data)
 }

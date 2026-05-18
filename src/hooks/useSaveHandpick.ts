@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
 export function useSaveHandpick() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
@@ -25,16 +24,11 @@ export function useSaveHandpick() {
   }
 
   async function toggleSave(handpickId: string, onNotLoggedIn?: () => void): Promise<void> {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      onNotLoggedIn?.()
-      return
-    }
+    console.log('[useSaveHandpick] toggleSave called for:', handpickId)
 
     setSavingId(handpickId)
     const isSaved = savedIds.has(handpickId)
+    console.log('[useSaveHandpick] isSaved:', isSaved, 'action:', isSaved ? 'DELETE' : 'POST')
 
     // Optimistic update
     setSavedIds((prev) => {
@@ -52,6 +46,12 @@ export function useSaveHandpick() {
       })
 
       if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        console.error('[useSaveHandpick] API error:', res.status, errData)
+        // If unauthorized, show login prompt
+        if (res.status === 401) {
+          onNotLoggedIn?.()
+        }
         // Revert on error
         setSavedIds((prev) => {
           const next = new Set(prev)
@@ -59,8 +59,11 @@ export function useSaveHandpick() {
           else next.delete(handpickId)
           return next
         })
+      } else {
+        console.log('[useSaveHandpick] Success!')
       }
-    } catch {
+    } catch (err) {
+      console.error('[useSaveHandpick] Network error:', err)
       // Revert on error
       setSavedIds((prev) => {
         const next = new Set(prev)

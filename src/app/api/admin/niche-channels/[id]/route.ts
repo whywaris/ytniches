@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
-    .from('niche_requests')
+    .from('niche_channels')
     .update(body)
     .eq('id', id)
     .select()
@@ -31,8 +31,8 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params
   const supabase = createAdminClient()
+  const { error } = await supabase.from('niche_channels').delete().eq('id', id)
 
-  const { error } = await supabase.from('niche_requests').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

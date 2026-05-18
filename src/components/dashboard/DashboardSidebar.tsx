@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Heart, Compass, LayoutGrid,
+  LayoutDashboard, Heart, Compass,
   Settings, CreditCard, LogOut, BookOpen, MessageSquarePlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,7 +19,6 @@ const NAV_SECTIONS = [
     items: [
       { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
       { href: '/dashboard/handpick', label: 'HandPick Niches', icon: Compass },
-      { href: '/categories', label: 'Categories', icon: LayoutGrid },
       { href: '/dashboard/saved', label: 'Saved Niches', icon: Heart },
       { href: '/dashboard/prompts', label: 'Prompts', icon: BookOpen },
       { href: '/dashboard/request', label: 'Request', icon: MessageSquarePlus, badge: true },

@@ -1,48 +1,40 @@
-import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/server'
-import { EmailsAdminClient } from '@/components/admin/EmailsAdminClient'
+'use client'
 
-export const metadata: Metadata = { title: 'Emails', robots: { index: false, follow: false } }
-export const dynamic = 'force-dynamic'
+import { useState } from 'react'
+import { DigestTab } from '@/components/admin/emails/DigestTab'
+import { BroadcastTab } from '@/components/admin/emails/BroadcastTab'
+import { LogsTab } from '@/components/admin/emails/LogsTab'
 
-export default async function AdminEmailsPage() {
-  const supabase = createAdminClient()
+type EmailTab = 'digest' | 'broadcast' | 'logs'
 
-  const [
-    { data: digestLogs },
-    { data: emailLogs },
-    { count: totalDigestUsers },
-  ] = await Promise.all([
-    supabase
-      .from('digest_logs')
-      .select('*')
-      .order('sent_at', { ascending: false })
-      .limit(12),
-    supabase
-      .from('email_logs')
-      .select('*')
-      .order('sent_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .in('plan', ['pro', 'lifetime']),
-  ])
+export default function AdminEmailsPage() {
+  const [activeTab, setActiveTab] = useState<EmailTab>('digest')
 
-  const lastDigest = digestLogs?.[0] ?? null
+  const tabs: { key: EmailTab; label: string }[] = [
+    { key: 'digest', label: 'Digest' },
+    { key: 'broadcast', label: 'Broadcast' },
+    { key: 'logs', label: 'Logs' },
+  ]
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="font-display font-bold text-3xl text-[#1A1612]">Emails</h1>
-        <p className="text-[#8A7F72] text-sm mt-1">Weekly digest and email log management</p>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-[#1A1612]">Emails</h1>
+        <p className="text-sm text-[#8A7F72] mt-1">Manage digests, broadcasts, and email logs</p>
       </div>
-      <EmailsAdminClient
-        digestLogs={digestLogs ?? []}
-        emailLogs={emailLogs ?? []}
-        lastDigest={lastDigest}
-        eligibleUsers={totalDigestUsers ?? 0}
-      />
+
+      <div className="flex gap-1 bg-white border border-[#E0D9CE] rounded-xl p-1 w-fit">
+        {tabs.map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key ? 'bg-[#1A1612] text-white' : 'text-[#8A7F72] hover:text-[#1A1612]'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'digest' && <DigestTab />}
+      {activeTab === 'broadcast' && <BroadcastTab />}
+      {activeTab === 'logs' && <LogsTab />}
     </div>
   )
 }

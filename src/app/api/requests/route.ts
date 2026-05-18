@@ -1,84 +1,89 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { Resend } from 'resend'
+import { RequestNotificationEmail } from '@/lib/emails/request-notification'
 
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const status = searchParams.get('status')
-  const sort = searchParams.get('sort') ?? 'votes'
-  const page = parseInt(searchParams.get('page') ?? '1')
-  const limit = 20
-  const offset = (page - 1) * limit
+const resend = new Resend(process.env.RESEND_API_KEY)
 
+// GET — fetch current user's requests
+export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  let query = supabase
-    .from('niche_requests')
-    .select('*', { count: 'exact' })
-
-  if (status && status !== 'all') {
-    query = query.eq('status', status)
-  }
-
-  if (sort === 'votes') query = query.order('votes_count', { ascending: false })
-  else if (sort === 'newest') query = query.order('created_at', { ascending: false })
-  else query = query.order('created_at', { ascending: true })
-
-  query = query.range(offset, offset + limit - 1)
-
-  const { data: requests, count, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  let requestsWithVotes = requests ?? []
-
-  if (user && requestsWithVotes.length > 0) {
-    const { data: userVotes } = await supabase
-      .from('niche_request_votes')
-      .select('request_id')
-      .eq('user_id', user.id)
-      .in('request_id', requestsWithVotes.map(r => r.id))
-
-    const votedIds = new Set(userVotes?.map(v => v.request_id) ?? [])
-    requestsWithVotes = requestsWithVotes.map(r => ({ ...r, has_voted: votedIds.has(r.id) }))
-  }
-
-  return NextResponse.json({ data: requestsWithVotes, total: count ?? 0, page, limit })
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const body = await request.json()
-  const { title, description, category, reason } = body
-
-  if (!title?.trim()) return NextResponse.json({ error: 'Title is required' }, { status: 400 })
-  if (!category) return NextResponse.json({ error: 'Category is required' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('niche_requests')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data ?? [])
+}
+
+// POST — submit new request + send email to admin
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { request_type, niche_name, description } = await request.json()
+
+  // Only pro/lifetime users can submit requests
+  const { data: userData } = await supabase
+    .from('users')
+    .select('plan, display_name, email')
+    .eq('id', user.id)
+    .single()
+
+  const isPro = userData?.plan === 'pro' || userData?.plan === 'lifetime'
+  if (!isPro) {
+    return NextResponse.json({ error: 'Only Pro members can submit requests' }, { status: 403 })
+  }
+
+  if (!request_type || !niche_name?.trim()) {
+    return NextResponse.json(
+      { error: 'request_type and niche_name are required' },
+      { status: 400 }
+    )
+  }
+
+  const { data: newRequest, error } = await supabase
+    .from('niche_requests')
     .insert({
       user_id: user.id,
-      title: title.trim(),
-      description: description?.trim() || null,
-      category,
-      reason: reason?.trim() || null,
-      status: 'pending',
-      votes_count: 1,
+      request_type,
+      niche_name: niche_name.trim(),
+      description: description?.trim() ?? '',
     })
     .select()
     .single()
 
-  if (error) {
-    if (error.message.includes('Request limit')) {
-      return NextResponse.json({ error: 'You can only submit 3 requests per month.' }, { status: 429 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Send email to admin via Resend
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL
+    if (adminEmail) {
+      await resend.emails.send({
+        from: 'YTNiches <notifications@ytniches.com>',
+        to: adminEmail,
+        subject: `New ${request_type === 'niche' ? 'Niche' : 'Prompts'} Request — ${niche_name.trim()}`,
+        react: RequestNotificationEmail({
+          userName: userData?.display_name ?? 'Unknown',
+          userEmail: userData?.email ?? user.email ?? '',
+          requestType: request_type,
+          nicheName: niche_name.trim(),
+          description: description?.trim() ?? '',
+          requestId: newRequest.id,
+        }),
+      })
     }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (emailError) {
+    console.error('[requests] Email send failed:', emailError)
   }
 
-  return NextResponse.json({ data }, { status: 201 })
+  return NextResponse.json(newRequest)
 }
