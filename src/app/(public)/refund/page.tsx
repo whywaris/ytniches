@@ -57,7 +57,7 @@ export default function RefundPage() {
         </div>
         <p className="text-sm">
           To request: Email{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           {' '}with subject &ldquo;Refund Request&rdquo; and your account email.
         </p>
       </LegalSection>
@@ -81,7 +81,7 @@ export default function RefundPage() {
         </div>
         <p className="text-sm">
           Same process — email{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           {' '}within 7 days of your purchase.
         </p>
       </LegalSection>
@@ -95,7 +95,7 @@ export default function RefundPage() {
           <ol className="space-y-3 text-sm">
             <li className="flex gap-3">
               <span className="font-bold text-[#E8402A] shrink-0">1.</span>
-              Email support@ytniches.com
+              Email help@ytniches.com
             </li>
             <li className="flex gap-3">
               <span className="font-bold text-[#E8402A] shrink-0">2.</span>
@@ -129,7 +129,7 @@ export default function RefundPage() {
 
       <LegalSection id="s7" title="Questions?">
         <p>
-          Email: <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a> — We reply within 24 hours.
+          Email: <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a> — We reply within 24 hours.
         </p>
         <p>
           <a

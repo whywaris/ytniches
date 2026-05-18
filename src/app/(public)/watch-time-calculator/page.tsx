@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { WatchTimeClient } from './WatchTimeClient'
 
 export const metadata: Metadata = {
-  title: 'YouTube Watch Time Calculator — Reach 4,000 Hours Faster | YTNiches',
+  title: 'YouTube Watch Time Calculator — Reach 4,000 Hours Faster',
   description:
     'Calculate exactly when you\'ll hit YouTube\'s 4,000 watch hour monetization requirement. Enter your upload schedule and average views to get a personalized timeline.',
   openGraph: {
-    title: 'YouTube Watch Time Calculator | YTNiches',
+    title: 'YouTube Watch Time Calculator',
     description:
       'Calculate when you\'ll reach 4,000 watch hours for YouTube monetization. Free calculator.',
     url: 'https://ytniches.com/watch-time-calculator',

@@ -50,7 +50,7 @@ export async function POST(_request: Request, { params }: Params) {
       batch.map(async (recipient) => {
         try {
           const { data: sent } = await resend.emails.send({
-            from: 'YTNiches <notifications@ytniches.com>',
+            from: 'YTNiches <help@ytniches.com>',
             to: recipient.email,
             subject: broadcast.subject,
             html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">${(broadcast.body as string).replace(/\n/g, '<br/>')}</div>`,

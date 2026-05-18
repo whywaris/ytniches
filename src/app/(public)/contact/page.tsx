@@ -14,28 +14,28 @@ const CONTACT_OPTIONS = [
     icon: Mail,
     title: 'Email Support',
     text: 'For account, billing, or general questions',
-    email: 'support@ytniches.com',
+    email: 'help@ytniches.com',
     cta: 'Send Email',
   },
   {
     icon: Lightbulb,
     title: 'Suggest a Feature',
     text: 'Have an idea? We read every suggestion',
-    email: 'feedback@ytniches.com',
+    email: 'help@ytniches.com',
     cta: 'Send Feedback',
   },
   {
     icon: Briefcase,
     title: 'Business & Partnerships',
     text: 'For partnerships, press, or business deals',
-    email: 'business@ytniches.com',
+    email: 'help@ytniches.com',
     cta: 'Get in Touch',
   },
 ]
 
 const FAQS = [
   { q: 'How do I cancel my subscription?', a: 'Go to Dashboard → Settings → Plan & Billing → Cancel. No questions asked.' },
-  { q: 'Do you offer refunds?', a: 'Yes — 7-day money back guarantee on Pro and Lifetime plans. Email support@ytniches.com with your order details.' },
+  { q: 'Do you offer refunds?', a: 'Yes — 7-day money back guarantee on Pro and Lifetime plans. Email help@ytniches.com with your order details.' },
   { q: 'How often are new niches added?', a: 'We add 30+ new niches every month. Pro members get access immediately.' },
   { q: 'Is there a free plan?', a: 'Yes — 5 niches free forever. No credit card required.' },
 ]

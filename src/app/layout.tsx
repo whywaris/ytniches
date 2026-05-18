@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://ytniches.com'),
   title: {
     default: 'YTNiches — Find Your Perfect YouTube Niche',
-    template: '%s | YTNiches'
+    template: '%s'
   },
   description: 'Discover 1,200+ profitable YouTube niches with video ideas, title templates, script hooks & 30-day content calendars. Find your perfect niche today.',
   keywords: [

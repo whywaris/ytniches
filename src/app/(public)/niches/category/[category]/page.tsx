@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!cat) return { title: 'Category Not Found' }
 
   return {
-    title: `Best ${cat.name} YouTube Niches 2025 — CPM & Ideas | YTNiches`,
+    title: `Best ${cat.name} YouTube Niches 2025 — CPM & Ideas`,
     description: `Browse ${cat.name} YouTube niches with CPM data, competition levels, and video ideas. Find the most profitable ${cat.name.toLowerCase()} niche for your channel.`,
     openGraph: {
       title: `${cat.name} YouTube Niches 2025`,

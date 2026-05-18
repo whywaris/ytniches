@@ -169,7 +169,7 @@ export default function TermsPage() {
       <LegalSection id="s12" title="12. Contact">
         <p>
           Questions about these Terms? Email:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
         </p>
       </LegalSection>
     </LegalLayout>

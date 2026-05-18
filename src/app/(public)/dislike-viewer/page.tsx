@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { DislikeClient } from './DislikeClient'
 
 export const metadata: Metadata = {
-  title: 'YouTube Dislike Viewer — See Video Dislikes | YTNiches',
+  title: 'YouTube Dislike Viewer — See Video Dislikes',
   description:
     'View the estimated dislike count on any YouTube video. Uses Return YouTube Dislike API.',
   openGraph: {
-    title: 'YouTube Dislike Viewer — See Video Dislikes | YTNiches',
+    title: 'YouTube Dislike Viewer — See Video Dislikes',
     description: 'View the estimated dislike count on any YouTube video.',
     url: 'https://ytniches.com/dislike-viewer',
     type: 'website',

@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { RssFeedClient } from './RssFeedClient'
 
 export const metadata: Metadata = {
-  title: 'YouTube RSS Feed Generator — Get Channel RSS URL | YTNiches',
+  title: 'YouTube RSS Feed Generator — Get Channel RSS URL',
   description:
     'Generate the RSS feed URL for any YouTube channel. Paste a channel URL or handle and get a ready-to-use RSS link for your feed reader or automation tool.',
   openGraph: {
-    title: 'YouTube RSS Feed Generator | YTNiches',
+    title: 'YouTube RSS Feed Generator',
     description: 'Get the RSS feed URL for any YouTube channel instantly. Free tool.',
     url: 'https://ytniches.com/rss-feed-generator',
     type: 'website',

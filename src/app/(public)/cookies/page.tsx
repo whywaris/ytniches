@@ -122,7 +122,7 @@ export default function CookiesPage() {
       <LegalSection id="s7" title="7. Contact">
         <p>
           Questions about our use of cookies? Email:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
         </p>
       </LegalSection>
     </LegalLayout>

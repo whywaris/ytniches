@@ -95,7 +95,7 @@ export default function DisclaimerPage() {
       <LegalSection id="s8" title="8. Contact">
         <p>
           If you have questions about this disclaimer or believe any information on our platform is inaccurate, please contact us:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
         </p>
       </LegalSection>
     </LegalLayout>

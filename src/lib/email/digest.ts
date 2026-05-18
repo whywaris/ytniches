@@ -171,7 +171,7 @@ export async function sendWeeklyDigest(testEmail?: string) {
             : `🎯 Weekly Niche Digest — ${weekRange}`
 
           const { data: sent, error } = await resend.emails.send({
-            from: 'YTNiches <digest@ytniches.com>',
+            from: 'YTNiches <help@ytniches.com>',
             to: user.email,
             subject,
             html,

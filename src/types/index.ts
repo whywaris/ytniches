@@ -379,3 +379,19 @@ export interface BroadcastEmail {
   created_at: string
   updated_at: string
 }
+
+// ─── Banner Ads ───────────────────────────────────────────────────────────────
+export type AdPlacement = 'sidebar' | 'inline' | 'footer'
+
+export interface BannerAd {
+  id: string
+  name: string
+  image_url: string
+  click_url: string
+  alt_text: string
+  placement: AdPlacement
+  is_active: boolean
+  position: number
+  created_at: string
+  updated_at: string
+}

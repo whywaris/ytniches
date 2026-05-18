@@ -43,15 +43,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const niche = await fetchNiche(slug)
-  if (!niche) return { title: 'Niche Not Found | YTNiches' }
+  if (!niche) return { title: 'Niche Not Found' }
 
   const channelName = niche.channel_name ?? niche.name
 
   return {
-    title: `${channelName} — ${niche.category} YouTube Niche | YTNiches`,
+    title: `${channelName} — ${niche.category} YouTube Niche`,
     description: `${channelName} is a ${niche.category} YouTube channel${niche.estimated_earning ? ` earning ${niche.estimated_earning}` : ''}. See full stats, thumbnails, and related niches.`,
     openGraph: {
-      title: `${channelName} | YTNiches`,
+      title: `${channelName} — ${niche.category} Niche`,
       description: `${niche.category} niche${niche.estimated_earning ? ` earning ${niche.estimated_earning}` : ''}`,
       type: 'article',
       url: `https://ytniches.com/niches/${slug}`,

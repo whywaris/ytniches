@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { CommentPickerClient } from './CommentPickerClient'
 
 export const metadata: Metadata = {
-  title: 'YouTube Random Comment Picker — Fair Giveaway Winner | YTNiches',
+  title: 'YouTube Random Comment Picker — Fair Giveaway Winner',
   description:
     'Pick a fair random winner from YouTube comments for giveaways and contests. Paste any YouTube video URL and instantly select a random commenter.',
   openGraph: {
-    title: 'YouTube Random Comment Picker | YTNiches',
+    title: 'YouTube Random Comment Picker',
     description: 'Pick a random comment winner from any YouTube video. Free giveaway tool.',
     url: 'https://ytniches.com/random-comment-picker',
     type: 'website',

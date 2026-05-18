@@ -17,7 +17,7 @@ export function SEOHead({
   noIndex = false,
 }: SEOHeadProps) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ytniches.com'
-  const fullTitle = `${title} | YTNiches`
+  const fullTitle = `${title}`
   const fullCanonical = canonical ? `${siteUrl}${canonical}` : siteUrl
 
   return (

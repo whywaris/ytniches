@@ -23,10 +23,10 @@ export async function generateMetadata({
   if (!category) return { title: 'Category Not Found' }
 
   return {
-    title: `${category.name} YouTube Niches — CPM Data & Video Ideas | YTNiches`,
+    title: `${category.name} YouTube Niches — CPM Data & Video Ideas`,
     description: `Browse the best ${category.name} YouTube niches with CPM data, competition levels, and 30 video ideas each. Find the most profitable ${category.name} niche for your channel in 2025.`,
     openGraph: {
-      title: `${category.name} YouTube Niches | YTNiches`,
+      title: `${category.name} YouTube Niches`,
       description: `Browse ${category.name} YouTube niches with CPM data and video ideas.`,
       type: 'website',
       url: `https://ytniches.com/categories/${params.slug}`,

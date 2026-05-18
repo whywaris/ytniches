@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL
     if (adminEmail) {
       await resend.emails.send({
-        from: 'YTNiches <notifications@ytniches.com>',
+        from: 'YTNiches <help@ytniches.com>',
         to: adminEmail,
         subject: `New ${request_type === 'niche' ? 'Niche' : 'Prompts'} Request — ${niche_name.trim()}`,
         react: RequestNotificationEmail({

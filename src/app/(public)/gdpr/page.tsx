@@ -35,7 +35,7 @@ export default function GdprPage() {
         </p>
         <p>
           For GDPR-related inquiries, you can reach us at:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
         </p>
       </LegalSection>
 
@@ -86,7 +86,7 @@ export default function GdprPage() {
         </ul>
         <p>
           To request access, email{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           {' '}with the subject &ldquo;Data Access Request.&rdquo;
         </p>
       </LegalSection>
@@ -112,7 +112,7 @@ export default function GdprPage() {
         </p>
         <p>
           To request a data export, email{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           {' '}with subject &ldquo;Data Portability Request.&rdquo;
         </p>
       </LegalSection>
@@ -156,7 +156,7 @@ export default function GdprPage() {
         <div className="bg-[#F5F0E8] rounded-xl p-5 space-y-2 text-sm">
           <div className="flex gap-3">
             <span className="font-bold text-[#E8402A] shrink-0">1.</span>
-            Email <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+            Email <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           </div>
           <div className="flex gap-3">
             <span className="font-bold text-[#E8402A] shrink-0">2.</span>
@@ -184,7 +184,7 @@ export default function GdprPage() {
         </p>
         <p>
           We encourage you to contact us first so we can try to resolve your concern:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
         </p>
       </LegalSection>
     </LegalLayout>

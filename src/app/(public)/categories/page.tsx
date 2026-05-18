@@ -11,10 +11,10 @@ import { CATEGORIES } from '@/config/categories'
 import type { Category } from '@/config/categories'
 
 export const metadata: Metadata = {
-  title: 'YouTube Niche Categories — Browse All 26 Categories | YTNiches',
+  title: 'YouTube Niche Categories — Browse All 26 Categories',
   description: 'Explore all 26 YouTube niche categories. From Finance & Business to Gaming, Health & Fitness to Tech — find the perfect YouTube niche category for your channel.',
   openGraph: {
-    title: 'YouTube Niche Categories | YTNiches',
+    title: 'YouTube Niche Categories',
     description: 'Browse all 26 YouTube niche categories and find your perfect channel topic.',
     type: 'website',
     url: 'https://ytniches.com/categories',

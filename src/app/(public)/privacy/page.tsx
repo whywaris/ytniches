@@ -116,14 +116,14 @@ export default function PrivacyPage() {
         </ul>
         <p>
           To exercise any of these rights, email:{' '}
-          <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           . For GDPR-specific rights, see our <a href="/gdpr" className="text-[#E8402A] hover:underline">GDPR page</a>.
         </p>
       </LegalSection>
 
       <LegalSection id="s8" title="8. Children's Privacy">
         <p>
-          YTNiches is not directed to individuals under the age of 13. We do not knowingly collect personal data from children. If you believe we have inadvertently collected such data, please contact us immediately at <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>.
+          YTNiches is not directed to individuals under the age of 13. We do not knowingly collect personal data from children. If you believe we have inadvertently collected such data, please contact us immediately at <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>.
         </p>
       </LegalSection>
 
@@ -138,7 +138,7 @@ export default function PrivacyPage() {
           Questions about this Privacy Policy? We&apos;re happy to help.
         </p>
         <p>
-          Email: <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+          Email: <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
           <br />
           We respond within 24–48 hours.
         </p>

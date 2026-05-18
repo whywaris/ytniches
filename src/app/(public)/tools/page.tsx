@@ -6,7 +6,7 @@ import { GlobalCtaBanner } from '@/components/shared/GlobalCtaBanner'
 import type { GlobalCta } from '@/types'
 
 export const metadata: Metadata = {
-  title: 'Free YouTube Tools — 13 Tools for Creators | YTNiches',
+  title: 'Free YouTube Tools — 13 Tools for Creators',
   description:
     'Free YouTube tools for creators. Extract tags, calculate revenue, download thumbnails, generate timestamps, create QR codes, and more. 13 tools, always free.',
   alternates: { canonical: 'https://ytniches.com/tools' },

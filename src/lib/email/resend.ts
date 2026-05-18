@@ -1,7 +1,7 @@
 import type { RequestStatus } from '@/types'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const FROM = 'YTNiches <hello@ytniches.com>'
+const FROM = 'YTNiches <help@ytniches.com>'
 const BASE_URL = 'https://ytniches.com'
 
 const SUBJECTS: Partial<Record<RequestStatus, string>> = {

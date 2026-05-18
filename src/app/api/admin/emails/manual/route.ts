@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   try {
     const { data: sent, error } = await resend.emails.send({
-      from: 'YTNiches <notifications@ytniches.com>',
+      from: 'YTNiches <help@ytniches.com>',
       to: email,
       subject,
       html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">${body.replace(/\n/g, '<br/>')}</div>`,

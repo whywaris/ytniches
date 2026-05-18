@@ -150,7 +150,7 @@ export default function PricingPage() {
             We&apos;re a small team and we read every email. Reach out and we&apos;ll get back to you within a few hours.
           </p>
           <a
-            href="mailto:hello@ytniches.com"
+            href="mailto:help@ytniches.com"
             className="inline-flex items-center gap-2 bg-white text-[#1A1612] font-bold text-sm px-7 py-3.5 rounded-full hover:bg-[#F5F0E8] transition-colors"
           >
             Email us

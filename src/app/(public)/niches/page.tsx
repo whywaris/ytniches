@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     'Browse curated YouTube niches with real channel examples, earning estimates, and proven content ideas. Find your perfect niche today.',
   openGraph: {
-    title: 'YouTube Niche Library | YTNiches',
+    title: 'YouTube Niche Library',
     description: 'Browse curated YouTube niches with real earning data.',
     url: 'https://ytniches.com/niches',
     type: 'website',

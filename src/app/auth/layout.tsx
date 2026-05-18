@@ -9,23 +9,26 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[#F5F0E8] flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <Link href="/" className="text-sm text-[#8A7F72] hover:text-[#1A1612] transition-colors flex items-center gap-2">
-          ← Back to home
-        </Link>
-        <Link href="/">
-          <span className={`${fraunces.className} text-xl font-black text-[#1A1612]`}>
-            YT<span className="text-[#E8402A]">Niches</span>
-          </span>
-        </Link>
-        <div className="w-20" />
-      </div>
+    <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Logo — centered above form */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <span className={`${fraunces.className} text-2xl font-black text-[#1A1612]`}>
+              YT<span className="text-[#E8402A]">Niches</span>
+            </span>
+          </Link>
+        </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        {/* Form content */}
         {children}
+
+        {/* Back to home */}
+        <div className="text-center mt-6">
+          <Link href="/" className="text-sm text-[#8A7F72] hover:text-[#1A1612] transition-colors">
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </div>
   )

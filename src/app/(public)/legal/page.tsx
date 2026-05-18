@@ -88,7 +88,7 @@ export default function LegalIndexPage() {
         <div className="mt-12 pt-8 border-t border-[#E0D9CE] text-sm text-[#8A7F72]">
           <p>
             Questions about any of these policies?{' '}
-            <a href="mailto:support@ytniches.com" className="text-[#E8402A] hover:underline">support@ytniches.com</a>
+            <a href="mailto:help@ytniches.com" className="text-[#E8402A] hover:underline">help@ytniches.com</a>
             {' '}— we reply within 24 hours.
           </p>
         </div>

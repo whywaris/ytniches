@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { ThumbnailResizerClient } from './ThumbnailResizerClient'
 
 export const metadata: Metadata = {
-  title: 'YouTube Thumbnail Resizer — Resize to 1280×720 Free | YTNiches',
+  title: 'YouTube Thumbnail Resizer — Resize to 1280×720 Free',
   description:
     'Resize any image to the perfect YouTube thumbnail size (1280×720 px). Supports fill, fit, and stretch modes. Download as PNG instantly — free, no signup required.',
   openGraph: {
-    title: 'YouTube Thumbnail Resizer | YTNiches',
+    title: 'YouTube Thumbnail Resizer',
     description:
       'Resize images to perfect YouTube thumbnail dimensions (1280×720). Free, instant, no upload.',
     url: 'https://ytniches.com/thumbnail-resizer',
