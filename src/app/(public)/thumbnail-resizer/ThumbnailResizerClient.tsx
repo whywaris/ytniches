@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { ImageIcon, Download, Upload, RefreshCw } from 'lucide-react'
-import { ToolLayout } from '@/components/tools/ToolLayout'
+import { Download, Upload, RefreshCw } from 'lucide-react'
 
 interface Preset {
   label: string
@@ -26,42 +25,6 @@ const MODES: { value: ResizeMode; label: string; desc: string }[] = [
   { value: 'stretch', label: 'Stretch', desc: 'Stretch to fit — may distort' },
 ]
 
-const RELATED_TOOLS = [
-  {
-    name: 'YouTube Tag Extractor',
-    href: '/tag-extractor',
-    description: 'Extract hidden tags from any YouTube video',
-  },
-  {
-    name: 'Watch Time Calculator',
-    href: '/watch-time-calculator',
-    description: "Calculate when you'll reach 4,000 watch hours",
-  },
-  {
-    name: 'RSS Feed Generator',
-    href: '/rss-feed-generator',
-    description: 'Get the RSS feed URL for any YouTube channel',
-  },
-]
-
-const FAQS = [
-  {
-    q: 'What is the ideal YouTube thumbnail size?',
-    a: 'YouTube recommends 1280×720 pixels (16:9 aspect ratio) with a maximum file size of 2 MB. Supported formats are JPG, PNG, GIF, and BMP. The minimum width is 640 pixels. This tool resizes to 1280×720 by default.',
-  },
-  {
-    q: 'What is the difference between Fill, Fit, and Stretch?',
-    a: "Fill crops the image to perfectly fill the output dimensions with no empty space — the most common choice for thumbnails. Fit scales the image to fit entirely inside the output, adding colored bars (letterboxing) if the aspect ratios differ. Stretch resizes the image to exactly fill the output, which may distort non-16:9 images.",
-  },
-  {
-    q: 'Does the image get uploaded anywhere?',
-    a: 'No. All image processing happens entirely in your browser using the HTML5 Canvas API. Your image is never sent to any server. This means the tool is instant and 100% private.',
-  },
-  {
-    q: 'What file formats are supported?',
-    a: 'You can upload JPG, PNG, WebP, GIF (first frame), BMP, or any other format your browser supports as an image. The output is always a PNG file for maximum quality.',
-  },
-]
 
 function drawImageOnCanvas(
   canvas: HTMLCanvasElement,
@@ -178,12 +141,7 @@ export function ThumbnailResizerClient() {
   }
 
   return (
-    <ToolLayout
-      title="Thumbnail Resizer"
-      description="Resize any image to the perfect YouTube thumbnail dimensions (1280×720 px). Fill, fit, or stretch — download as PNG instantly."
-      icon={<ImageIcon className="w-6 h-6 text-[#16A34A]" />}
-      relatedTools={RELATED_TOOLS}
-    >
+    <div>
       <div className="space-y-5">
         {/* Upload zone */}
         <div
@@ -383,27 +341,7 @@ export function ThumbnailResizerClient() {
             ))}
           </ul>
         </div>
-
-        {/* FAQ */}
-        <div className="bg-white border border-[#E0D9CE] rounded-[20px] p-5">
-          <h2 className="font-display font-bold text-base text-[#1A1612] mb-4">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-3">
-            {FAQS.map((item, i) => (
-              <details key={i} className="group border-b border-[#F5F0E8] last:border-0 pb-3 last:pb-0">
-                <summary className="font-semibold text-[#1A1612] text-sm cursor-pointer list-none flex items-center justify-between gap-3 pt-3 first:pt-0">
-                  <span>{item.q}</span>
-                  <span className="text-[#8A7F72] shrink-0 group-open:rotate-45 transition-transform">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-2 text-sm text-[#8A7F72] leading-relaxed">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
       </div>
-    </ToolLayout>
+    </div>
   )
 }

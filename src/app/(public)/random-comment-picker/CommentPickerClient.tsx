@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Dices, Link as LinkIcon, Loader2, RefreshCw, ExternalLink } from 'lucide-react'
-import { ToolLayout } from '@/components/tools/ToolLayout'
+
 
 interface Winner {
   text: string
@@ -24,43 +24,6 @@ interface PickResult {
 interface ApiResponse extends Partial<PickResult> {
   error?: string
 }
-
-const RELATED_TOOLS = [
-  {
-    name: 'YouTube Tag Extractor',
-    href: '/tag-extractor',
-    description: 'Extract hidden tags from any YouTube video',
-  },
-  {
-    name: 'Dislike Viewer',
-    href: '/dislike-viewer',
-    description: 'See hidden dislike counts on any video',
-  },
-  {
-    name: 'Thumbnail Resizer',
-    href: '/thumbnail-resizer',
-    description: 'Resize images to perfect YouTube thumbnail dimensions',
-  },
-]
-
-const FAQS = [
-  {
-    q: 'How random is the winner selection?',
-    a: "The tool fetches up to 200 comments from YouTube's API (sorted by relevance) and picks one at random using Math.random(). Every comment in the pool has an equal chance of being selected. For giveaways requiring auditability, we recommend running the picker live on stream.",
-  },
-  {
-    q: 'Can I filter comments to only pick from entries that include a specific word?',
-    a: 'Yes — use the optional filter field. Only comments containing your specified word or phrase will be included in the random pool. This is useful if you want only comments that include "giveaway" or "@friend" tags.',
-  },
-  {
-    q: 'Why does the tool only show 200 comments?',
-    a: "YouTube's API returns a maximum of 100 comments per request. This tool fetches two pages (200 total) for better randomness. For very active videos with thousands of comments, the winner is drawn from this representative sample.",
-  },
-  {
-    q: 'Can I pick multiple winners?',
-    a: 'Yes — just click "Pick Again" after seeing the first winner. Each click draws a new random winner from the same comment pool. You can pick as many winners as you need for your giveaway.',
-  },
-]
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -109,12 +72,7 @@ export function CommentPickerClient() {
   }
 
   return (
-    <ToolLayout
-      title="Random Comment Picker"
-      description="Pick a fair random winner from YouTube comments. Great for giveaways, contests, and community engagement."
-      icon={<Dices className="w-6 h-6 text-[#A06B00]" />}
-      relatedTools={RELATED_TOOLS}
-    >
+    <div>
       {/* Input card */}
       <div className="bg-white border border-[#E0D9CE] rounded-[20px] p-5 mb-6 space-y-4">
         <div>
@@ -267,28 +225,6 @@ export function CommentPickerClient() {
         </div>
       )}
 
-      {/* FAQ */}
-      <div className="mt-12">
-        <h2 className="font-display font-bold text-xl text-[#1A1612] mb-5">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-3">
-          {FAQS.map((item, i) => (
-            <details
-              key={i}
-              className="bg-white border border-[#E0D9CE] rounded-[16px] p-4 group"
-            >
-              <summary className="font-semibold text-[#1A1612] text-sm cursor-pointer list-none flex items-center justify-between gap-3">
-                <span>{item.q}</span>
-                <span className="text-[#8A7F72] shrink-0 group-open:rotate-45 transition-transform">
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 text-sm text-[#8A7F72] leading-relaxed">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </ToolLayout>
+    </div>
   )
 }

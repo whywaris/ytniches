@@ -1,48 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ToolLayout } from '@/components/tools/ToolLayout'
-import { Timer } from 'lucide-react'
 
 const INPUT_CLASS =
   'border border-[#E0D9CE] rounded-xl px-4 py-3 text-sm text-[#1A1612] focus:outline-none focus:border-[#E8402A] bg-white w-full'
-
-const RELATED_TOOLS = [
-  {
-    name: 'YouTube Tag Extractor',
-    href: '/tag-extractor',
-    description: 'Extract hidden tags from any YouTube video',
-  },
-  {
-    name: 'RSS Feed Generator',
-    href: '/rss-feed-generator',
-    description: 'Get the RSS feed URL for any YouTube channel',
-  },
-  {
-    name: 'Thumbnail Resizer',
-    href: '/thumbnail-resizer',
-    description: 'Resize images to perfect YouTube thumbnail dimensions',
-  },
-]
-
-const FAQ_ITEMS = [
-  {
-    q: 'How many watch hours do you need for YouTube monetization?',
-    a: "YouTube requires 4,000 watch hours in the past 12 months, along with 1,000 subscribers, to join the YouTube Partner Program. Watch hours from Shorts do not count toward this requirement.",
-  },
-  {
-    q: 'How long does it take to get 4,000 watch hours?',
-    a: "It depends entirely on your content quality and upload frequency. With high-retention videos (40%+ view duration), uploading 2-3 times per week with 500+ average views per video, most creators reach 4,000 hours within 6-12 months.",
-  },
-  {
-    q: 'Does watch time reset on YouTube?',
-    a: "No, watch time does not reset permanently. However, YouTube only counts watch hours from the past 12 months for monetization eligibility. So if you stop uploading, older videos' watch hours will eventually fall out of the 12-month window.",
-  },
-  {
-    q: 'Do YouTube Shorts count toward watch hours?',
-    a: "No. Watch time from YouTube Shorts does not count toward the 4,000 watch hour monetization requirement. Only long-form video watch time counts. However, Shorts have their own separate monetization program.",
-  },
-]
 
 const MILESTONES = [500, 1000, 2000, 4000]
 
@@ -107,12 +68,7 @@ export function WatchTimeClient() {
   }, [videoMinutes, videoSeconds, videosPerWeek, avgViews, viewDurationPercent, currentWatchHours])
 
   return (
-    <ToolLayout
-      title="Watch Time Calculator"
-      description="Calculate how long until you reach YouTube's 4,000 watch hour monetization requirement based on your upload schedule and video performance."
-      icon={<Timer className="w-7 h-7 text-[#2A7A4B]" />}
-      relatedTools={RELATED_TOOLS}
-    >
+    <div>
       <div className="space-y-5">
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -405,22 +361,7 @@ export function WatchTimeClient() {
             ))}
           </ul>
         </div>
-
-        {/* FAQ */}
-        <div className="bg-white border border-[#E0D9CE] rounded-[20px] p-5">
-          <h2 className="font-display font-bold text-base text-[#1A1612] mb-4">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-5 divide-y divide-[#F5F0E8]">
-            {FAQ_ITEMS.map(({ q, a }) => (
-              <div key={q} className="pt-5 first:pt-0">
-                <h3 className="font-semibold text-sm text-[#1A1612] mb-1.5">{q}</h3>
-                <p className="text-sm text-[#8A7F72] leading-relaxed">{a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
-    </ToolLayout>
+    </div>
   )
 }
