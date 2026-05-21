@@ -37,25 +37,6 @@ const RELATED_TOOLS = [
   },
 ]
 
-const FAQS = [
-  {
-    q: 'What is a YouTube RSS feed?',
-    a: 'YouTube automatically generates an RSS feed for every channel. It lists the latest video uploads in standard RSS format, which can be read by any RSS reader app. The feed is publicly accessible and updates whenever a new video is published.',
-  },
-  {
-    q: 'How do I use the RSS feed URL?',
-    a: 'Copy the generated RSS URL and paste it into any RSS reader app such as Feedly, Inoreader, or NewsBlur. You can also use it with automation tools like Zapier or Make (formerly Integromat) to trigger workflows whenever a new video is uploaded.',
-  },
-  {
-    q: 'What format is the feed URL?',
-    a: 'YouTube RSS feeds follow the format: https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID. The channel ID always starts with "UC" and is 24 characters long. This tool finds the channel ID for you so you don\'t have to dig through page source code.',
-  },
-  {
-    q: 'Can I get RSS feeds for playlists?',
-    a: 'Yes — YouTube also supports RSS feeds for individual playlists. The format is: https://www.youtube.com/feeds/videos.xml?playlist_id=PLAYLIST_ID. Replace PLAYLIST_ID with the ID from the playlist URL (the part after "list=").',
-  },
-]
-
 function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
@@ -251,28 +232,6 @@ export function RssFeedClient() {
         </div>
       )}
 
-      {/* FAQ */}
-      <div className="mt-12">
-        <h2 className="font-display font-bold text-xl text-[#1A1612] mb-5">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-3">
-          {FAQS.map((item, i) => (
-            <details
-              key={i}
-              className="bg-white border border-[#E0D9CE] rounded-[16px] p-4 group"
-            >
-              <summary className="font-semibold text-[#1A1612] text-sm cursor-pointer list-none flex items-center justify-between gap-3">
-                <span>{item.q}</span>
-                <span className="text-[#8A7F72] shrink-0 group-open:rotate-45 transition-transform">
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 text-sm text-[#8A7F72] leading-relaxed">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </div>
     </ToolLayout>
   )
 }

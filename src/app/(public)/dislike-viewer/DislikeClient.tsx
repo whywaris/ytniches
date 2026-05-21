@@ -39,25 +39,6 @@ const RELATED_TOOLS = [
   },
 ]
 
-const FAQS = [
-  {
-    q: 'Why did YouTube remove the dislike count?',
-    a: "YouTube removed the public dislike count in November 2021, citing creator wellbeing. The decision was widely criticized. While the official count is hidden, this tool uses data from the Return YouTube Dislike browser extension — which collected real dislike counts before the removal and now uses statistical modeling to estimate current counts.",
-  },
-  {
-    q: 'How accurate is the dislike count?',
-    a: "For videos published before November 2021, the count is highly accurate — it uses real data collected before the removal. For newer videos, the count is an estimate extrapolated from Return YouTube Dislike extension users and statistical models. It won't be exact, but it gives a meaningful approximation.",
-  },
-  {
-    q: 'What does the like/dislike ratio tell you?',
-    a: "A ratio above 90% positive is generally considered excellent. 80-90% is average. Below 70% indicates significant audience dissatisfaction. For creators, monitoring the ratio helps understand audience sentiment beyond just view counts and comments.",
-  },
-  {
-    q: 'Is this tool affiliated with YouTube or Google?',
-    a: 'No. This tool uses the Return YouTube Dislike API (returnyoutubedislikeapi.com) and the official YouTube Data API. It is an independent free tool with no affiliation with YouTube or Google.',
-  },
-]
-
 function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
@@ -262,28 +243,6 @@ export function DislikeClient() {
         </div>
       )}
 
-      {/* FAQ */}
-      <div className="mt-12">
-        <h2 className="font-display font-bold text-xl text-[#1A1612] mb-5">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-3">
-          {FAQS.map((item, i) => (
-            <details
-              key={i}
-              className="bg-white border border-[#E0D9CE] rounded-[16px] p-4 group"
-            >
-              <summary className="font-semibold text-[#1A1612] text-sm cursor-pointer list-none flex items-center justify-between gap-3">
-                <span>{item.q}</span>
-                <span className="text-[#8A7F72] shrink-0 group-open:rotate-45 transition-transform">
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 text-sm text-[#8A7F72] leading-relaxed">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </div>
     </ToolLayout>
   )
 }

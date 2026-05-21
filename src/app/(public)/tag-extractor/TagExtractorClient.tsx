@@ -43,25 +43,6 @@ const TIPS = [
   'Check competitor tags to find keyword gaps',
 ]
 
-const FAQS = [
-  {
-    q: 'How do I extract tags from a YouTube video?',
-    a: "Paste any YouTube video URL into the input above and click \"Extract Tags\". The tool fetches the video's metadata via the YouTube API and displays all tags the creator has set. Tags are normally hidden from viewers but are accessible via the API.",
-  },
-  {
-    q: 'Are YouTube video tags still important in 2025?',
-    a: 'While tags have less influence on discovery than they once did, they still help YouTube understand your video\'s topic. Tags are especially useful for misspellings and alternative keywords. They work best alongside an optimized title, description, and thumbnail.',
-  },
-  {
-    q: 'How many tags should a YouTube video have?',
-    a: 'YouTube allows up to 500 characters of tags total. Most top-performing videos use between 5 and 15 tags. Focus on quality and relevance over quantity — a few highly relevant tags outperform dozens of loosely related ones.',
-  },
-  {
-    q: 'Can I see tags on any YouTube video?',
-    a: 'Yes — this tool can extract tags from any public YouTube video. Private, age-restricted, or deleted videos cannot be accessed. Some creators choose not to add tags at all, in which case the tool will show an empty tag list.',
-  },
-]
-
 export function TagExtractorClient() {
   const [url, setUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -295,28 +276,6 @@ export function TagExtractorClient() {
         </div>
       )}
 
-      {/* FAQ */}
-      <div className="mt-12">
-        <h2 className="font-display font-bold text-xl text-[#1A1612] mb-5">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-3">
-          {FAQS.map((item, i) => (
-            <details
-              key={i}
-              className="bg-white border border-[#E0D9CE] rounded-[16px] p-4 group"
-            >
-              <summary className="font-semibold text-[#1A1612] text-sm cursor-pointer list-none flex items-center justify-between gap-3">
-                <span>{item.q}</span>
-                <span className="text-[#8A7F72] shrink-0 group-open:rotate-45 transition-transform">
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 text-sm text-[#8A7F72] leading-relaxed">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </div>
     </ToolLayout>
   )
 }

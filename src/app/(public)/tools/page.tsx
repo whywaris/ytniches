@@ -6,7 +6,7 @@ import { GlobalCtaBanner } from '@/components/shared/GlobalCtaBanner'
 import type { GlobalCta } from '@/types'
 
 export const metadata: Metadata = {
-  title: 'Free YouTube Tools — 13 Tools for Creators',
+  title: '100% Free YouTube Tools',
   description:
     'Free YouTube tools for creators. Extract tags, calculate revenue, download thumbnails, generate timestamps, create QR codes, and more. 13 tools, always free.',
   alternates: { canonical: 'https://ytniches.com/tools' },
@@ -132,7 +132,7 @@ const TOOLS = [
   },
 ]
 
-const STATS = ['13 Tools Available', 'Used by 8,400+ Creators', 'Always Free']
+const STATS = ['Used by 8,400+ Creators', 'Always Free']
 
 export default async function ToolsPage() {
   const supabase = await createClient()
