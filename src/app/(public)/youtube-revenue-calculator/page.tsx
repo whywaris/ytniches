@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { RevenueCalculatorClient } from '@/components/tools/RevenueCalculatorClient'
 import { RevenueCalculatorContent } from '@/components/tools/RevenueCalculatorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -66,6 +67,7 @@ const howToSchema = {
 export default function YouTubeRevenueCalculatorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

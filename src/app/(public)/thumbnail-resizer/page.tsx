@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ThumbnailResizerClient } from './ThumbnailResizerClient'
 import { ThumbnailResizerContent } from '@/components/tools/ThumbnailResizerContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: 'YouTube Thumbnail Resizer: Free Tool + Size Guide 2026',
@@ -141,6 +142,7 @@ const faqSchema = {
 export default function ThumbnailResizerPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

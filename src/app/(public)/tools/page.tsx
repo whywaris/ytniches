@@ -167,29 +167,6 @@ export default async function ToolsPage() {
 
       {/* Tools Grid */}
       <section className="container-site pb-16">
-        {/* Automation Tools Banner */}
-        <Link
-          href="/youtube-automation-tools"
-          className="group block bg-white border border-[#E0D9CE] rounded-[20px] p-5 sm:p-6 mb-8 hover:shadow-lg hover:border-[#E8402A]/30 transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#FDF0ED] flex items-center justify-center shrink-0">
-              <span className="text-xl">🤖</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-display font-bold text-[#1A1612] text-base sm:text-lg group-hover:text-[#E8402A] transition-colors">
-                Looking for a complete list of YouTube automation tools?
-              </h3>
-              <p className="text-sm text-[#8A7F72] mt-0.5">
-                50+ curated tools for every stage of your YouTube workflow — research, scripting, editing, SEO, and more.
-              </p>
-            </div>
-            <span className="hidden sm:block text-sm font-bold text-[#E8402A] shrink-0">
-              View All →
-            </span>
-          </div>
-        </Link>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {TOOLS.map((tool) => {
             const Icon = tool.icon

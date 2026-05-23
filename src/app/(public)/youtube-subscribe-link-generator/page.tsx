@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { SubscribeLinkGeneratorClient } from '@/components/tools/SubscribeLinkGeneratorClient'
 import { SubscribeLinkGeneratorContent } from '@/components/tools/SubscribeLinkGeneratorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -138,6 +139,7 @@ const faqSchema = {
 export default function YouTubeSubscribeLinkGeneratorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

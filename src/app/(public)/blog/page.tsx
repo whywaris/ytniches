@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Star, Clock, Eye, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { BlogPostCard } from '@/components/blog/BlogPostCard'
-import { BackToTop } from '@/components/blog/BackToTop'
+import { BackToTop } from '@/components/shared/BackToTop'
 import type { BlogPost } from '@/types'
 
 export const dynamic = 'force-dynamic'

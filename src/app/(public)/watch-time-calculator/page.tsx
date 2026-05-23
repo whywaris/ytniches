@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { WatchTimeClient } from './WatchTimeClient'
 import { WatchTimeCalculatorContent } from '@/components/tools/WatchTimeCalculatorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: 'YouTube Watch Time Calculator | Track 4,000 Hours',
@@ -142,6 +143,7 @@ const faqSchema = {
 export default function WatchTimeCalculatorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

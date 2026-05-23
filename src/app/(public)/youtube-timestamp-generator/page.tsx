@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { TimestampGeneratorClient } from '@/components/tools/TimestampGeneratorClient'
 import { TimestampGeneratorContent } from '@/components/tools/TimestampGeneratorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -157,6 +158,7 @@ const faqSchema = {
 export default function YouTubeTimestampGeneratorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

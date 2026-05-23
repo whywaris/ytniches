@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { EmbedCodeGeneratorClient } from '@/components/tools/EmbedCodeGeneratorClient'
 import { EmbedCodeGeneratorContent } from '@/components/tools/EmbedCodeGeneratorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -63,6 +64,7 @@ const faqSchema = {
 export default function YouTubeEmbedCodeGeneratorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

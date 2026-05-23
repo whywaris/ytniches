@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { CommentPickerClient } from './CommentPickerClient'
 import { RandomCommentPickerContent } from '@/components/tools/RandomCommentPickerContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: 'YouTube Random Comment Picker — Pick a Winner Free',
@@ -125,6 +126,7 @@ const faqSchema = {
 export default function RandomCommentPickerPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

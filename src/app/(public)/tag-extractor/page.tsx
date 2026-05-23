@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { TagExtractorClient } from './TagExtractorClient'
 import { TagExtractorContent } from '@/components/tools/TagExtractorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: "YouTube Tag Extractor – See Any Video's Hidden Tags Free",
@@ -60,6 +61,7 @@ const howToSchema = {
 export default function TagExtractorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

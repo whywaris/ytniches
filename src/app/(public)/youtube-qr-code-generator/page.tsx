@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { QRCodeGeneratorClient } from '@/components/tools/QRCodeGeneratorClient'
 import { QRCodeGeneratorContent } from '@/components/tools/QRCodeGeneratorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -128,6 +129,7 @@ const faqSchema = {
 export default function YouTubeQRCodeGeneratorPage() {
   return (
     <>
+      <BackToTop />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}

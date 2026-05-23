@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { WordCounterClient } from '@/components/tools/WordCounterClient'
 import { VideoWordCounterContent } from '@/components/tools/VideoWordCounterContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -147,6 +148,7 @@ const faqSchema = {
 export default function YouTubeWordCounterPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
@@ -160,8 +162,7 @@ export default function YouTubeWordCounterPage() {
               YouTube Video Word Counter
             </h1>
             <p className="text-muted text-lg max-w-xl mx-auto mb-4">
-              A 10-minute YouTube video contains 1,200–1,600 spoken words. That&apos;s an entire blog
-              post — hiding in plain sight. This free YouTube video word counter returns word count,
+              This free YouTube video word counter returns word count,
               character count, speaking rate (WPM), and reading time from any public video. Creators
               use it to plan scripts. Translators use it to price jobs. Content teams use it to estimate
               repurposing output. Paste any YouTube URL above to start — or scroll down for the complete

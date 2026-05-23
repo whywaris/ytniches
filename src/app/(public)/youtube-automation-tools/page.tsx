@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { AutomationToolsClient } from '@/components/automation-tools/AutomationToolsClient'
+import { BackToTop } from '@/components/shared/BackToTop'
 import type { AutomationTool } from '@/types'
 
 export const revalidate = 3600
@@ -65,6 +66,7 @@ export default async function YouTubeAutomationToolsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
 
+      <BackToTop />
       <main className="bg-[#F5F0E8] min-h-screen overflow-x-hidden pb-20 sm:pb-0">
         {/* Breadcrumb */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
@@ -106,26 +108,8 @@ export default async function YouTubeAutomationToolsPage() {
         {/* Client-side interactive tools list */}
         <AutomationToolsClient tools={allTools} />
 
-        {/* Bottom CTA Box */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-          <div className="bg-white rounded-[20px] border-2 border-[#E8402A]/20 p-6 sm:p-12 text-center">
-            <h2 className="font-display font-bold text-xl sm:text-2xl lg:text-3xl text-[#1A1612] mb-3">
-              Found the perfect niche for your automated channel?
-            </h2>
-            <p className="text-[#8A7F72] text-sm sm:text-base max-w-lg mx-auto mb-6">
-              Browse 1200+ YouTube niches with CPM data, video ideas, and content calendars.
-            </p>
-            <Link
-              href="/niches"
-              className="inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 min-h-[44px] bg-[#E8402A] text-white rounded-full text-sm font-bold hover:bg-[#CF3520] transition-colors"
-            >
-              Explore Niches Free →
-            </Link>
-          </div>
-        </section>
-
         {/* Bottom SEO Text Section */}
-        <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
           <h2 className="font-display font-bold text-xl text-[#1A1612] mb-4">
             How to Use These YouTube Automation Tools
           </h2>
@@ -149,67 +133,6 @@ export default async function YouTubeAutomationToolsPage() {
               voiceover service and a freemium editor to keep costs low while maintaining quality. Use the
               filters above to find tools that match your budget and workflow preferences.
             </p>
-          </div>
-        </section>
-
-        {/* Related Pages */}
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">
-          <h2 className="font-display font-bold text-xl sm:text-2xl text-[#1A1612] mb-6">
-            More Resources for YouTube Creators
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/niches"
-              className="group bg-white border border-[#E0D9CE] rounded-2xl p-5 hover:shadow-md hover:border-[#E8402A]/30 transition-all"
-            >
-              <span className="text-2xl mb-3 block">📊</span>
-              <h3 className="font-display font-bold text-sm sm:text-base text-[#1A1612] mb-1 group-hover:text-[#E8402A] transition-colors">
-                Browse 1200+ YouTube Niches
-              </h3>
-              <p className="text-xs text-[#8A7F72] leading-relaxed mb-2">
-                Find profitable niches with CPM data, video ideas, and content calendars.
-              </p>
-              <span className="text-xs font-bold text-[#E8402A]">Explore →</span>
-            </Link>
-            <Link
-              href="/tools"
-              className="group bg-white border border-[#E0D9CE] rounded-2xl p-5 hover:shadow-md hover:border-[#E8402A]/30 transition-all"
-            >
-              <span className="text-2xl mb-3 block">🛠️</span>
-              <h3 className="font-display font-bold text-sm sm:text-base text-[#1A1612] mb-1 group-hover:text-[#E8402A] transition-colors">
-                Free YouTube Tools
-              </h3>
-              <p className="text-xs text-[#8A7F72] leading-relaxed mb-2">
-                Tag extractor, revenue calculator, thumbnail tools, and more — always free.
-              </p>
-              <span className="text-xs font-bold text-[#E8402A]">Use Tools →</span>
-            </Link>
-            <Link
-              href="/blog"
-              className="group bg-white border border-[#E0D9CE] rounded-2xl p-5 hover:shadow-md hover:border-[#E8402A]/30 transition-all"
-            >
-              <span className="text-2xl mb-3 block">📝</span>
-              <h3 className="font-display font-bold text-sm sm:text-base text-[#1A1612] mb-1 group-hover:text-[#E8402A] transition-colors">
-                YouTube Creator Blog
-              </h3>
-              <p className="text-xs text-[#8A7F72] leading-relaxed mb-2">
-                Guides, strategies, and tips for growing your YouTube channel faster.
-              </p>
-              <span className="text-xs font-bold text-[#E8402A]">Read Blog →</span>
-            </Link>
-            <Link
-              href="/handpick"
-              className="group bg-white border border-[#E0D9CE] rounded-2xl p-5 hover:shadow-md hover:border-[#E8402A]/30 transition-all"
-            >
-              <span className="text-2xl mb-3 block">🔥</span>
-              <h3 className="font-display font-bold text-sm sm:text-base text-[#1A1612] mb-1 group-hover:text-[#E8402A] transition-colors">
-                Real Channel Examples
-              </h3>
-              <p className="text-xs text-[#8A7F72] leading-relaxed mb-2">
-                HandPicked channels proving these niches work — with verified earnings.
-              </p>
-              <span className="text-xs font-bold text-[#E8402A]">View Channels →</span>
-            </Link>
           </div>
         </section>
       </main>

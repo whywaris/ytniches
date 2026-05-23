@@ -20,6 +20,7 @@ const EMPTY_FORM = {
   logo_initials: '',
   logo_bg_color: '#E8402A',
   logo_text_color: '#FFFFFF',
+  logo_url: '',
   is_featured: false,
   is_ytniches_pick: false,
   is_faceless_friendly: false,
@@ -113,6 +114,7 @@ export default function AutomationToolsManager() {
       logo_initials: tool.logo_initials,
       logo_bg_color: tool.logo_bg_color,
       logo_text_color: tool.logo_text_color,
+      logo_url: tool.logo_url ?? '',
       is_featured: tool.is_featured,
       is_ytniches_pick: tool.is_ytniches_pick,
       is_faceless_friendly: tool.is_faceless_friendly,
@@ -136,6 +138,7 @@ export default function AutomationToolsManager() {
       ...form,
       slug: form.slug || generateSlug(form.name),
       affiliate_url: form.affiliate_url || null,
+      logo_url: form.logo_url || null,
     }
 
     try {
@@ -330,12 +333,19 @@ export default function AutomationToolsManager() {
                   {/* Logo + Name */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ backgroundColor: tool.logo_bg_color, color: tool.logo_text_color }}
-                      >
-                        {tool.logo_initials}
-                      </div>
+                      {tool.logo_url ? (
+                        <div className="w-9 h-9 rounded-full overflow-hidden border border-[#E0D9CE] shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={tool.logo_url} alt={tool.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                          style={{ backgroundColor: tool.logo_bg_color, color: tool.logo_text_color }}
+                        >
+                          {tool.logo_initials}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-semibold text-[#1A1612] truncate">{tool.name}</p>
                         <p className="text-xs text-[#8A7F72] truncate max-w-[200px]">{tool.tagline}</p>
@@ -585,15 +595,52 @@ export default function AutomationToolsManager() {
                 </div>
               </div>
 
+              {/* Logo Upload */}
+              <div>
+                <label className="block text-xs font-bold text-[#8A7F72] uppercase mb-1.5">Logo Image URL (optional — overrides initials)</label>
+                <div className="flex items-center gap-3">
+                  {form.logo_url && (
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-[#E0D9CE] shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={form.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <input
+                    type="url"
+                    value={form.logo_url}
+                    onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))}
+                    placeholder="https://example.com/logo.png"
+                    className="flex-1 border border-[#E0D9CE] rounded-xl px-4 py-3 text-sm text-[#1A1612] focus:outline-none focus:border-[#E8402A]"
+                  />
+                  {form.logo_url && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
+                      className="text-xs text-[#E8402A] font-semibold hover:underline shrink-0"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#8A7F72] mt-1">Paste a direct image URL. Displayed as a circle.</p>
+              </div>
+
               {/* Preview */}
               <div className="flex items-center gap-3">
                 <span className="text-xs text-[#8A7F72]">Preview:</span>
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ backgroundColor: form.logo_bg_color, color: form.logo_text_color }}
-                >
-                  {form.logo_initials || '??'}
-                </div>
+                {form.logo_url ? (
+                  <div className="w-9 h-9 rounded-full overflow-hidden border border-[#E0D9CE]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={form.logo_url} alt="Logo preview" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{ backgroundColor: form.logo_bg_color, color: form.logo_text_color }}
+                  >
+                    {form.logo_initials || '??'}
+                  </div>
+                )}
               </div>
 
               {/* Toggles */}

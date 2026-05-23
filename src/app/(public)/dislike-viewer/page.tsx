@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DislikeClient } from './DislikeClient'
 import { DislikeViewerContent } from '@/components/tools/DislikeViewerContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: 'Free YouTube Dislike Viewer — No Extension Needed',
@@ -70,6 +71,7 @@ const faqSchema = {
 export default function DislikeViewerPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

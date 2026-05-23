@@ -17,9 +17,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-  const category = getCategoryBySlug(params.slug)
+  const { slug } = await params
+  const category = getCategoryBySlug(slug)
   if (!category) return { title: 'Category Not Found' }
 
   return {
@@ -29,9 +30,9 @@ export async function generateMetadata({
       title: `${category.name} YouTube Niches`,
       description: `Browse ${category.name} YouTube niches with CPM data and video ideas.`,
       type: 'website',
-      url: `https://ytniches.com/categories/${params.slug}`,
+      url: `https://ytniches.com/categories/${slug}`,
     },
-    alternates: { canonical: `https://ytniches.com/categories/${params.slug}` },
+    alternates: { canonical: `https://ytniches.com/categories/${slug}` },
     keywords: [
       `${category.name} YouTube niches`,
       `best ${category.name} YouTube channel ideas`,
@@ -59,9 +60,10 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export default async function CategoryPage({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }) {
-  const category = getCategoryBySlug(params.slug)
+  const { slug } = await params
+  const category = getCategoryBySlug(slug)
   if (!category) notFound()
 
   const supabase = await createClient()
@@ -77,12 +79,12 @@ export default async function CategoryPage({
 
   const niches = (data as unknown as Niche[]) ?? []
 
-  const relatedCategories = CATEGORIES.filter((c) => c.slug !== params.slug).slice(0, 4)
+  const relatedCategories = CATEGORIES.filter((c) => c.slug !== slug).slice(0, 4)
 
   const breadcrumbs = [
     { name: 'Home', url: 'https://ytniches.com' },
     { name: 'Categories', url: 'https://ytniches.com/categories' },
-    { name: category.name, url: `https://ytniches.com/categories/${params.slug}` },
+    { name: category.name, url: `https://ytniches.com/categories/${slug}` },
   ]
 
   const jsonLd = {
@@ -90,7 +92,7 @@ export default async function CategoryPage({
     '@type': 'CollectionPage',
     name: `${category.name} YouTube Niches`,
     description: `Browse ${category.name} YouTube niches with CPM data and video ideas`,
-    url: `https://ytniches.com/categories/${params.slug}`,
+    url: `https://ytniches.com/categories/${slug}`,
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [

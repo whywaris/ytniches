@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { RssFeedClient } from './RssFeedClient'
 import { RSSFeedGeneratorContent } from '@/components/tools/RSSFeedGeneratorContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 
 export const metadata: Metadata = {
   title: 'YouTube RSS Feed Generator — Free, Instant, No Login',
@@ -70,6 +71,7 @@ const faqSchema = {
 export default function RssFeedGeneratorPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ThumbnailDownloaderClient } from '@/components/tools/ThumbnailDownloaderClient'
 import { ThumbnailDownloaderContent } from '@/components/tools/ThumbnailDownloaderContent'
+import { BackToTop } from '@/components/shared/BackToTop'
 import { PageAds } from '@/components/ads/PageAds'
 
 export const metadata: Metadata = {
@@ -54,6 +55,7 @@ const howToSchema = {
 export default function YouTubeThumbnailDownloadPage() {
   return (
     <>
+      <BackToTop />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
