@@ -98,7 +98,7 @@ export default async function CategoryPage({
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://ytniches.com' },
         { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://ytniches.com/categories' },
-        { '@type': 'ListItem', position: 3, name: category.name, item: `https://ytniches.com/categories/${params.slug}` },
+        { '@type': 'ListItem', position: 3, name: category.name, item: `https://ytniches.com/categories/${slug}` },
       ],
     },
     hasPart: niches.map((niche) => ({

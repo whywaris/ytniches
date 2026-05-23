@@ -24,11 +24,31 @@ export default async function DashboardPage() {
     .eq('id', authUser.id)
     .single()
 
-  const savedNicheIds: string[] = profile?.saved_niches ?? []
+  // Fetch saved handpick niche IDs (the active save system)
+  const { data: savedHandpickRows } = await supabase
+    .from('saved_handpick_niches')
+    .select('handpick_id')
+    .eq('user_id', authUser.id)
 
-  // Fetch last 4 saved niches
-  const { data: savedNiches } = savedNicheIds.length
-    ? await supabase.from('niches').select('*').in('id', savedNicheIds).limit(4)
+  const savedHandpickIds = savedHandpickRows?.map(r => r.handpick_id) ?? []
+
+  // Also check legacy saved_niches on profile
+  const legacySavedIds: string[] = profile?.saved_niches ?? []
+  const totalSavedCount = savedHandpickIds.length + legacySavedIds.length
+
+  // Fetch last 4 saved niches from legacy system
+  const { data: savedNiches } = legacySavedIds.length
+    ? await supabase.from('niches').select('*').in('id', legacySavedIds).limit(4)
+    : { data: [] }
+
+  // Fetch last 4 saved handpick niches
+  const { data: savedHandpickNiches } = savedHandpickIds.length
+    ? await supabase
+        .from('saved_handpick_niches')
+        .select('handpick_id, handpick:handpick_niches(channel_name, category, image_url)')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false })
+        .limit(4)
     : { data: [] }
 
   // Fetch total niches count
@@ -43,7 +63,7 @@ export default async function DashboardPage() {
   const plan = profile?.plan ?? 'free'
 
   const stats = [
-    { label: 'Saved Niches', value: savedNicheIds.length, icon: Heart, color: 'text-[#E8402A]', bg: 'bg-[#FDF0ED]' },
+    { label: 'Saved Niches', value: totalSavedCount, icon: Heart, color: 'text-[#E8402A]', bg: 'bg-[#FDF0ED]' },
     { label: 'Total Niches', value: totalNiches ?? 0, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Plan', value: plan.charAt(0).toUpperCase() + plan.slice(1), icon: Copy, color: 'text-purple-600', bg: 'bg-purple-50' },
   ]
@@ -101,11 +121,44 @@ export default async function DashboardPage() {
                 View all <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            {savedNiches && savedNiches.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(savedNiches as Niche[]).map((niche) => (
-                  <NicheCard key={niche.id} niche={niche} isLocked={false} />
-                ))}
+            {(savedNiches && savedNiches.length > 0) || (savedHandpickNiches && savedHandpickNiches.length > 0) ? (
+              <div className="space-y-3">
+                {/* Legacy saved niches */}
+                {savedNiches && savedNiches.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {(savedNiches as Niche[]).map((niche) => (
+                      <NicheCard key={niche.id} niche={niche} isLocked={false} />
+                    ))}
+                  </div>
+                )}
+                {/* HandPick saved niches */}
+                {savedHandpickNiches && savedHandpickNiches.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(savedHandpickNiches as { handpick_id: string; handpick: { channel_name: string; category: string; image_url: string | null } }[]).map((item) => (
+                      <Link
+                        key={item.handpick_id}
+                        href="/dashboard/saved"
+                        className="flex items-center gap-3 p-3 bg-card rounded-2xl border border-border hover:border-accent/30 transition-colors"
+                      >
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-[#F5F0E8] border border-border shrink-0">
+                          {item.handpick?.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.handpick.image_url} alt={item.handpick.channel_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-muted font-bold">
+                              {item.handpick?.channel_name?.charAt(0) ?? '?'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{item.handpick?.channel_name}</p>
+                          <p className="text-xs text-muted">{item.handpick?.category}</p>
+                        </div>
+                        <Heart className="w-3.5 h-3.5 text-[#E8402A] fill-current ml-auto shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-card rounded-[20px] border border-border border-dashed py-14 text-center">
@@ -152,12 +205,12 @@ export default async function DashboardPage() {
               ) : (
                 <div>
                   <p className="text-sm font-semibold text-foreground mb-1">
-                    Free Plan · {savedNicheIds.length}/5 niches saved
+                    Free Plan · {totalSavedCount}/5 niches saved
                   </p>
                   <div className="w-full h-1.5 bg-border rounded-full mb-3">
                     <div
                       className="h-1.5 bg-accent rounded-full"
-                      style={{ width: `${Math.min(100, (savedNicheIds.length / 5) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (totalSavedCount / 5) * 100)}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted mb-3">Unlock 1,200+ niches and full content kits</p>

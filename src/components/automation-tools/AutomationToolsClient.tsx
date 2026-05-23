@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
-import { ExternalLink, ChevronDown, X } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { ExternalLink, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TOOL_STAGES, PRICING_TYPES } from '@/config/automation-stages'
 import type { AutomationTool, ToolStage, PricingType } from '@/types'
@@ -93,13 +93,34 @@ export function AutomationToolsClient({ tools }: Props) {
             {/* Divider */}
             <span className="w-px h-5 bg-[#E0D9CE] shrink-0 mx-1" />
 
-            {/* Pricing Dropdown */}
-            <PricingDropdown
-              pricingFilter={pricingFilter}
-              setPricingFilter={setPricingFilter}
-              facelessOnly={facelessOnly}
-              setFacelessOnly={setFacelessOnly}
-            />
+            {/* Pricing pills — visible */}
+            {PRICING_TYPES.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPricingFilter(pricingFilter === p.value ? '' : p.value)}
+                className={cn(
+                  'px-3 py-1.5 min-h-[32px] rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 border',
+                  pricingFilter === p.value
+                    ? 'bg-[#1A1612] text-white border-[#1A1612]'
+                    : 'bg-white text-[#8A7F72] border-[#E0D9CE] hover:border-[#1A1612]/30 hover:text-[#1A1612]'
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+
+            {/* Faceless toggle */}
+            <button
+              onClick={() => setFacelessOnly(!facelessOnly)}
+              className={cn(
+                'px-3 py-1.5 min-h-[32px] rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 border',
+                facelessOnly
+                  ? 'bg-[#1A1612] text-white border-[#1A1612]'
+                  : 'bg-white text-[#8A7F72] border-[#E0D9CE] hover:border-[#1A1612]/30 hover:text-[#1A1612]'
+              )}
+            >
+              🎭 Faceless
+            </button>
 
             {/* Clear button */}
             {(stageFilter || pricingFilter || facelessOnly) && (
@@ -168,83 +189,6 @@ export function AutomationToolsClient({ tools }: Props) {
       {/* Tool Detail Modal */}
       {selectedTool && (
         <ToolDetailModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
-      )}
-    </div>
-  )
-}
-
-function PricingDropdown({
-  pricingFilter,
-  setPricingFilter,
-  facelessOnly,
-  setFacelessOnly,
-}: {
-  pricingFilter: string
-  setPricingFilter: (v: string) => void
-  facelessOnly: boolean
-  setFacelessOnly: (v: boolean) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const hasFilter = !!pricingFilter || facelessOnly
-  const label = pricingFilter
-    ? PRICING_TYPES.find(p => p.value === pricingFilter)?.label ?? 'Pricing'
-    : facelessOnly
-      ? '🎭 Faceless'
-      : 'Pricing'
-
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        onClick={() => setOpen(!open)}
-        className={cn(
-          'flex items-center gap-1 px-3 py-1.5 min-h-[32px] rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-200 border',
-          hasFilter
-            ? 'bg-[#1A1612] text-white border-[#1A1612]'
-            : 'bg-white text-[#6B6259] border-[#E0D9CE] hover:border-[#1A1612]/30 hover:text-[#1A1612]'
-        )}
-      >
-        {label}
-        <ChevronDown className={cn('w-3 h-3 transition-transform', open && 'rotate-180')} />
-      </button>
-
-      {open && (
-        <div className="absolute top-full right-0 mt-2 w-44 bg-white border border-[#E0D9CE] rounded-xl shadow-lg py-2 z-50">
-          <p className="px-3 py-1 text-[10px] font-bold text-[#8A7F72] uppercase tracking-wider">Pricing</p>
-          {PRICING_TYPES.map(p => (
-            <button
-              key={p.value}
-              onClick={() => { setPricingFilter(pricingFilter === p.value ? '' : p.value); setOpen(false) }}
-              className={cn(
-                'w-full text-left px-3 py-2 text-xs hover:bg-[#F5F0E8] transition-colors flex items-center justify-between',
-                pricingFilter === p.value ? 'text-[#E8402A] font-semibold' : 'text-[#1A1612]'
-              )}
-            >
-              {p.label}
-              {pricingFilter === p.value && <span className="text-[#E8402A]">✓</span>}
-            </button>
-          ))}
-          <div className="border-t border-[#E0D9CE] my-1" />
-          <button
-            onClick={() => { setFacelessOnly(!facelessOnly); setOpen(false) }}
-            className={cn(
-              'w-full text-left px-3 py-2 text-xs hover:bg-[#F5F0E8] transition-colors flex items-center justify-between',
-              facelessOnly ? 'text-[#E8402A] font-semibold' : 'text-[#1A1612]'
-            )}
-          >
-            🎭 Faceless Only
-            {facelessOnly && <span className="text-[#E8402A]">✓</span>}
-          </button>
-        </div>
       )}
     </div>
   )
