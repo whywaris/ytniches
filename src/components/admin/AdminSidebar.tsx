@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Users, Database, BookOpen, PenLine, Megaphone, MonitorPlay, MessageSquarePlus, Mail, Flame, SlidersHorizontal,
+  LayoutDashboard, Users, Database, BookOpen, PenLine, Megaphone, MonitorPlay, MessageSquarePlus, Mail, Flame, SlidersHorizontal, Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/admin/ads', label: 'Ads', icon: MonitorPlay },
   { href: '/admin/cta', label: 'CTA Settings', icon: SlidersHorizontal },
   { href: '/admin/requests', label: 'Requests', icon: MessageSquarePlus },
+  { href: '/admin/automation-tools', label: 'YT Tools', icon: Wrench },
   { href: '/admin/emails', label: 'Emails', icon: Mail },
 ]
 

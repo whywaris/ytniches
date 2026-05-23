@@ -395,3 +395,47 @@ export interface BannerAd {
   created_at: string
   updated_at: string
 }
+
+// ─── Automation Tools ─────────────────────────────────────────────────────────
+export type PricingType = 'free' | 'freemium' | 'paid'
+
+export type ToolStage =
+  | 'niche-research'
+  | 'script-writing'
+  | 'ai-voiceover'
+  | 'video-editing'
+  | 'thumbnail-design'
+  | 'seo-upload'
+  | 'scheduling-automation'
+  | 'monetization'
+  | 'analytics'
+
+export interface AutomationTool {
+  id: string
+  name: string
+  slug: string
+  tagline: string
+  description: string
+  website_url: string
+  affiliate_url: string | null
+  logo_url: string | null
+  logo_bg_color: string
+  logo_text_color: string
+  logo_initials: string
+  stage: ToolStage
+  stage_label: string
+  pricing_type: PricingType
+  pricing_note: string
+  is_featured: boolean
+  is_ytniches_pick: boolean
+  is_faceless_friendly: boolean
+  is_new: boolean
+  is_hot: boolean
+  is_active: boolean
+  has_affiliate: boolean
+  meta_title: string | null
+  meta_description: string | null
+  position: number
+  created_at: string
+  updated_at: string
+}

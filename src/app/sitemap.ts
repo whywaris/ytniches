@@ -70,6 +70,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
+  const automationToolsUrl = {
+    url: 'https://ytniches.com/youtube-automation-tools',
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.85,
+  }
+
   const legalUrls = [
     '/legal', '/privacy', '/terms', '/refund', '/cookies', '/disclaimer', '/gdpr',
   ].map((path) => ({
@@ -115,6 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...nicheUrls,
     ...blogUrls,
     ...toolUrls,
+    automationToolsUrl,
     ...legalUrls,
   ]
 }

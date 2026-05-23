@@ -388,6 +388,29 @@ export default async function NicheDetailPage({
           </div>
         </div>
 
+        {/* AUTOMATION TOOLS BANNER */}
+        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-8">
+          <Link
+            href="/youtube-automation-tools"
+            className="group block bg-white border border-[#E0D9CE] rounded-2xl p-5 hover:shadow-md hover:border-[#E8402A]/30 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-2xl shrink-0">🤖</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-bold text-sm sm:text-base text-[#1A1612] group-hover:text-[#E8402A] transition-colors">
+                  Want the best tools to start your {niche.category} channel?
+                </p>
+                <p className="text-xs text-[#8A7F72] mt-0.5">
+                  50+ curated automation tools for scripting, voiceover, editing, thumbnails, and SEO.
+                </p>
+              </div>
+              <span className="hidden sm:block text-sm font-bold text-[#E8402A] shrink-0">
+                View Tools →
+              </span>
+            </div>
+          </Link>
+        </section>
+
         {/* BOTTOM CTA */}
         <section className="bg-white border-t border-[#E0D9CE] py-16 px-4">
           <div className="max-w-2xl mx-auto text-center">

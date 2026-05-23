@@ -9,6 +9,7 @@ const footerLinks = {
   ],
   Resources: [
     { label: 'Blog', href: '/blog' },
+    { label: 'YouTube Automation Tools', href: '/youtube-automation-tools' },
     { label: 'Tutorials', href: '/tutorials' },
     { label: 'About Us', href: '/about' },
     { label: 'Contact Us', href: '/contact' },

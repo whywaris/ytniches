@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Niches', href: '/niches' },
   { label: 'Categories', href: '/categories' },
   { label: 'Free Tools', href: '/tools' },
+  { label: 'YT Tools', href: '/youtube-automation-tools' },
   { label: 'Blog', href: '/blog' },
   { label: 'Pricing', href: '/pricing' },
 ]

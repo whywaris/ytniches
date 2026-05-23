@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Heart, Compass,
-  Settings, CreditCard, LogOut, BookOpen, MessageSquarePlus,
+  Settings, CreditCard, LogOut, BookOpen, MessageSquarePlus, Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -22,6 +22,7 @@ const NAV_SECTIONS = [
       { href: '/dashboard/saved', label: 'Saved Niches', icon: Heart },
       { href: '/dashboard/prompts', label: 'Prompts', icon: BookOpen },
       { href: '/dashboard/request', label: 'Request', icon: MessageSquarePlus, badge: true },
+      { href: '/youtube-automation-tools', label: 'YT Tools', icon: Wrench, external: true },
     ],
   },
   {

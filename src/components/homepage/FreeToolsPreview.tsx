@@ -63,9 +63,13 @@ export function FreeToolsPreview() {
           ))}
         </div>
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="/tools" className="text-sm font-semibold text-[#E8402A] hover:text-[#CF3520] transition-colors">
             See all free tools →
+          </Link>
+          <span className="hidden sm:inline text-[#E0D9CE]">|</span>
+          <Link href="/youtube-automation-tools" className="text-sm font-semibold text-[#1A1612] hover:text-[#E8402A] transition-colors">
+            🤖 YouTube Automation Tools →
           </Link>
         </div>
       </div>
