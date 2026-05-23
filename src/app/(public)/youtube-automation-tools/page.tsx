@@ -8,7 +8,7 @@ import type { AutomationTool } from '@/types'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'YouTube Automation Tools 2025 — 50+ Best Tools by Workflow Stage | YTNiches',
+  title: 'YouTube Automation Tools',
   description:
     'Discover the 50+ best YouTube automation tools for every stage — script writing, AI voiceover, video editing, thumbnail design, SEO, and scheduling. Curated by YTNiches.',
   keywords: [
