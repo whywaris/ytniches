@@ -16,30 +16,31 @@ export default async function DashboardLayout({
   }
 
   return (
-        <div className="min-h-screen bg-background flex">
-          {/* Sidebar — desktop only */}
-          <aside className="hidden md:flex w-[240px] flex-shrink-0">
-            <DashboardSidebar />
-          </aside>
+        <div className="h-screen flex flex-col overflow-hidden">
+          {/* Top bar — mobile only, fixed */}
+          <div className="md:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
+            <span className="font-black text-foreground text-lg font-display">
+              YT<span className="text-accent">Niches</span>
+            </span>
+          </div>
 
-          {/* Main content */}
-          <main className="flex-1 min-w-0 flex flex-col">
-            {/* Top bar — mobile only */}
-            <div className="md:hidden flex items-center justify-between px-4 py-3 bg-card border-b border-border">
-              <span className="font-black text-foreground text-lg font-display">
-                YT<span className="text-accent">Niches</span>
-              </span>
-            </div>
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar — desktop only, fixed with internal scroll */}
+            <aside className="w-[240px] flex-shrink-0 hidden md:flex flex-col overflow-y-auto border-r border-border bg-card">
+              <DashboardSidebar />
+            </aside>
 
-            {/* Page content */}
-            <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
+            {/* Main content — only this scrolls */}
+            <main className="flex-1 min-w-0 overflow-y-auto bg-background">
               <DashboardAnnouncementBar />
               {children}
-            </div>
-          </main>
+            </main>
+          </div>
 
-          {/* Bottom nav — mobile only */}
-          <MobileBottomNav />
+          {/* Bottom nav — mobile only, fixed */}
+          <div className="flex-shrink-0 md:hidden">
+            <MobileBottomNav />
+          </div>
         </div>
   )
 }

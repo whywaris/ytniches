@@ -9,11 +9,16 @@ import Placeholder from '@tiptap/extension-placeholder'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
 import Youtube from '@tiptap/extension-youtube'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { TableCell } from '@tiptap/extension-table-cell'
 import {
   AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Terminal, Minus,
   Link as LinkIcon, Link2Off, Image as ImageIcon,
   Undo2, Redo2, Code, Play, X, Loader2,
+  Table as TableIcon, Trash2,
 } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 
@@ -108,6 +113,23 @@ export function TiptapEditor({ content, onChange, placeholder = 'Start writingâ€
         HTMLAttributes: { class: 'rounded-xl my-4 w-full aspect-video' },
       }),
       Placeholder.configure({ placeholder }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'blog-table border-collapse border border-[#E0D9CE] rounded-xl my-4 w-full',
+        },
+      }),
+      TableRow,
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'border border-[#E0D9CE] bg-[#F5F0E8] px-4 py-2 font-semibold text-left',
+        },
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-[#E0D9CE] px-4 py-2',
+        },
+      }),
     ],
     content,
     onUpdate({ editor }) {
@@ -260,6 +282,32 @@ export function TiptapEditor({ content, onChange, placeholder = 'Start writingâ€
         <Btn onClick={() => setShowYoutube(true)} active={false} title="Embed YouTube video">
           <Play className="w-3.5 h-3.5" />
         </Btn>
+
+        <Sep />
+
+        {/* Table */}
+        <Btn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={editor.isActive('table')} title="Insert table (3Ã—3)">
+          <TableIcon className="w-3.5 h-3.5" />
+        </Btn>
+        {editor.isActive('table') && (
+          <>
+            <Btn onClick={() => editor.chain().focus().addColumnAfter().run()} active={false} title="Add column after">
+              <span className="text-[10px] font-bold">+Col</span>
+            </Btn>
+            <Btn onClick={() => editor.chain().focus().addRowAfter().run()} active={false} title="Add row after">
+              <span className="text-[10px] font-bold">+Row</span>
+            </Btn>
+            <Btn onClick={() => editor.chain().focus().deleteColumn().run()} active={false} title="Delete column">
+              <span className="text-[10px] font-bold">-Col</span>
+            </Btn>
+            <Btn onClick={() => editor.chain().focus().deleteRow().run()} active={false} title="Delete row">
+              <span className="text-[10px] font-bold">-Row</span>
+            </Btn>
+            <Btn onClick={() => editor.chain().focus().deleteTable().run()} active={false} title="Delete table">
+              <Trash2 className="w-3.5 h-3.5" />
+            </Btn>
+          </>
+        )}
 
         <Sep />
 

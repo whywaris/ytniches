@@ -51,11 +51,10 @@ export default async function DashboardPage() {
         .limit(4)
     : { data: [] }
 
-  // Fetch total niches count
+  // Fetch total handpick niches count
   const { count: totalNiches } = await supabase
-    .from('niches')
+    .from('handpick_niches')
     .select('*', { count: 'exact', head: true })
-    .eq('published', true)
 
   const firstName = profile?.display_name || (authUser.email?.split('@')[0] ?? 'there')
   const hour = new Date().getHours()

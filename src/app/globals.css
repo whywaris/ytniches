@@ -388,6 +388,97 @@
   scroll-margin-top: 100px;
 }
 
+/* ─── Table Styles ───────────────────────────────────────────────────────── */
+.blog-content table,
+.ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #E0D9CE;
+}
+
+.blog-content table th,
+.ProseMirror table th {
+  background-color: #F5F0E8;
+  color: #1A1612;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid #E0D9CE;
+  border-right: 1px solid #E0D9CE;
+}
+
+.blog-content table th:last-child,
+.ProseMirror table th:last-child {
+  border-right: none;
+}
+
+.blog-content table td,
+.ProseMirror table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #E0D9CE;
+  border-right: 1px solid #E0D9CE;
+  color: #1A1612;
+  vertical-align: top;
+}
+
+.blog-content table td:last-child,
+.ProseMirror table td:last-child {
+  border-right: none;
+}
+
+.blog-content table tr:last-child td,
+.ProseMirror table tr:last-child td {
+  border-bottom: none;
+}
+
+.blog-content table tr:hover td,
+.ProseMirror table tr:hover td {
+  background-color: #FDF8F3;
+}
+
+/* Mobile scroll wrapper */
+.blog-content .tableWrapper,
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1.5rem 0;
+}
+
+/* Tiptap selected cell highlight */
+.ProseMirror .selectedCell:after {
+  background: rgba(232, 64, 42, 0.08);
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Tiptap table cell relative positioning for selection overlay */
+.ProseMirror td,
+.ProseMirror th {
+  position: relative;
+}
+
+/* Column resize handle */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #E8402A;
+  pointer-events: none;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
 /* ─── Utility Extensions ─────────────────────────────────────────────────── */
 @layer utilities {
   .text-balance {
