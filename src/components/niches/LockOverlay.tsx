@@ -10,7 +10,7 @@ interface LockOverlayProps {
 export function LockOverlay({
   title = 'Pro Niche',
   description = 'Upgrade to Pro to unlock this niche and 1,200+ more.',
-  price = '$12/mo',
+  price = '$9/mo',
 }: LockOverlayProps) {
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-end pb-8 px-6 rounded-[20px] bg-gradient-to-b from-transparent via-white/70 to-white">

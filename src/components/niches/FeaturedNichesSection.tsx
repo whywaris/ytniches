@@ -74,7 +74,7 @@ export function FeaturedNichesSection({ niches, isPremiumUser }: Props) {
                       href="/pricing"
                       className="text-xs font-semibold text-[#E8402A] hover:underline"
                     >
-                      Unlock — $12/mo
+                      Unlock — $9/mo
                     </Link>
                   </div>
                 )}

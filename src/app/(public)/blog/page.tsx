@@ -9,7 +9,7 @@ import type { BlogPost } from '@/types'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Blog — YouTube Growth Tips & Niche Research',
+  title: 'Blog',
   description: 'Learn how to find profitable YouTube niches, grow your channel and create content that gets views.',
   alternates: { canonical: 'https://ytniches.com/blog' },
 }
@@ -44,10 +44,10 @@ export default async function BlogPage() {
       <div className="container-site section-padding">
 
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-10 text-center">
           <h1 className="font-display text-4xl sm:text-5xl font-bold text-[#1A1612] mb-3">Blog</h1>
-          <p className="text-[#8A7F72] text-lg max-w-xl">
-            YouTube growth strategies, niche deep-dives, and creator tips written for people who are serious about building a channel.
+          <p className="text-[#8A7F72] text-lg max-w-xl mx-auto">
+            Grow Faster. Pick Smarter. Real talk on YouTube niches, growth strategies, and what&apos;s actually working for creators right now.
           </p>
         </div>
 
@@ -145,21 +145,6 @@ export default async function BlogPage() {
           </div>
         )}
 
-        {/* Bottom CTA */}
-        <div className="mt-16 bg-[#1A1612] rounded-[20px] p-10 text-center">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold text-white mb-3">
-            Ready to find your YouTube niche?
-          </h3>
-          <p className="text-[#C8C0B4] mb-7 max-w-md mx-auto">
-            Browse 200+ researched niches with CPM data, script hooks, title templates, and 30-day content calendars.
-          </p>
-          <Link
-            href="/niches"
-            className="inline-flex items-center gap-2 bg-[#E8402A] text-white font-semibold px-7 py-3 rounded-full hover:bg-[#CF3520] transition-colors"
-          >
-            Browse the Niche Library <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
 
       </div>
     </div>

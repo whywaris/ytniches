@@ -30,7 +30,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '$12',
+    price: '$9',
     period: '/month',
     badge: 'Most Popular',
     description: 'Serious creators who want every advantage',
@@ -52,7 +52,7 @@ const PLANS = [
   },
   {
     name: 'Lifetime',
-    price: '$249',
+    price: '$199',
     period: 'one-time',
     badge: '⚡ Founding Member',
     description: 'Committed creators who want lifetime access',

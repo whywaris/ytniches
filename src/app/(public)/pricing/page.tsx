@@ -5,7 +5,7 @@ import { FaqAccordion } from '@/components/shared/FaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Pricing — Free, Pro & Lifetime Plans',
-  description: 'Start free with 5 niches or unlock everything with Pro at $12/month. Lifetime access available for $249 one-time payment.',
+  description: 'Start free with 5 niches or unlock everything with Pro at $9/month or $72/year. Lifetime access available for $199 one-time payment.',
   alternates: { canonical: 'https://ytniches.com/pricing' },
 }
 

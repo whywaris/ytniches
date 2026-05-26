@@ -131,7 +131,16 @@ export function PricingJsonLd() {
             {
               '@type': 'Offer',
               name: 'Pro Monthly',
-              price: '7.00',
+              price: '9.00',
+              priceCurrency: 'USD',
+              priceValidUntil: '2026-12-31',
+              availability: 'https://schema.org/InStock',
+              url: 'https://ytniches.com/pricing',
+            },
+            {
+              '@type': 'Offer',
+              name: 'Pro Yearly',
+              price: '72.00',
               priceCurrency: 'USD',
               priceValidUntil: '2026-12-31',
               availability: 'https://schema.org/InStock',
@@ -140,7 +149,7 @@ export function PricingJsonLd() {
             {
               '@type': 'Offer',
               name: 'Lifetime Access',
-              price: '49.00',
+              price: '199.00',
               priceCurrency: 'USD',
               priceValidUntil: '2026-12-31',
               availability: 'https://schema.org/InStock',

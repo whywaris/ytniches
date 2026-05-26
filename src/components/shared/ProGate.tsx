@@ -46,7 +46,7 @@ export function ProGate({ feature, children }: ProGateProps) {
             {feature} is a Pro feature
           </h2>
           <p className="text-sm text-[#8A7F72] mb-6 leading-relaxed">
-            Unlock everything for $12/month — cancel anytime.
+            Unlock everything for $9/month — cancel anytime.
           </p>
 
           {/* Pro checkout — opens as LemonSqueezy overlay */}
@@ -54,7 +54,7 @@ export function ProGate({ feature, children }: ProGateProps) {
             href={proUrl}
             className="lemonsqueezy-button inline-flex items-center justify-center bg-[#E8402A] text-white font-bold text-sm px-7 py-3.5 rounded-full hover:bg-[#CF3520] transition-colors"
           >
-            Upgrade to Pro — $12/month
+            Upgrade to Pro — $9/month
           </a>
 
           {/* Lifetime / founding link */}
@@ -63,7 +63,7 @@ export function ProGate({ feature, children }: ProGateProps) {
               href={foundingUrl}
               className="lemonsqueezy-button underline underline-offset-2 hover:text-[#1A1612] transition-colors"
             >
-              Or get lifetime access for $249
+              Or get lifetime access for $199
             </a>
           </p>
         </div>

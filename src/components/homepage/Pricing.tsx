@@ -1,8 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { Check, Zap, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const PLANS = [
+const PLANS_MONTHLY = [
   {
     name: 'Free',
     price: 'Free',
@@ -23,7 +26,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '$12',
+    price: '$9',
     period: '/month',
     badge: 'Most Popular',
     description: 'Serious creators who want every advantage',
@@ -39,14 +42,80 @@ const PLANS = [
       'New niches every month',
       'Priority support',
     ],
-    cta: 'Start Pro — $12/mo',
+    cta: 'Start Pro — $9/mo',
     href: '/auth/signup',
     style: 'border-[#E8402A] bg-white ring-2 ring-[#E8402A]/10',
     buttonStyle: 'bg-[#E8402A] text-white hover:bg-[#CF3520]',
   },
   {
     name: 'Lifetime',
-    price: '$249',
+    price: '$199',
+    period: 'one-time',
+    badge: '⚡ Founding Member',
+    description: 'Committed creators who want lifetime access',
+    features: [
+      'Everything in Pro',
+      'Lifetime access — pay once',
+      'All future niches included',
+      'All future features',
+      'Founding member badge',
+      'Save unlimited niches',
+      'VIP support',
+    ],
+    cta: 'Get Lifetime Access',
+    href: '/auth/signup',
+    style: 'border-[#1A1612] bg-[#1A1612]',
+    buttonStyle: 'bg-white text-[#1A1612] hover:bg-[#F5F0E8]',
+    dark: true,
+  },
+]
+
+const PLANS_YEARLY = [
+  {
+    name: 'Free',
+    price: 'Free',
+    period: 'forever',
+    description: 'Exploring and getting started',
+    features: [
+      '20 niches access',
+      '3 video ideas / niche',
+      'Free tools',
+      'Save 3 niches',
+      '5 new niches added free/month',
+      'Basic support',
+    ],
+    cta: 'Get Started Free',
+    href: '/auth/signup',
+    style: 'border-[#E0D9CE] bg-white',
+    buttonStyle: 'border border-[#1A1612] text-[#1A1612] hover:bg-[#1A1612] hover:text-white',
+  },
+  {
+    name: 'Pro',
+    price: '$72',
+    period: '/year',
+    badge: 'Most Popular',
+    savings: 'Save $36/year',
+    description: 'Serious creators who want every advantage',
+    features: [
+      'Unlimited niche access',
+      'Unlimited video ideas',
+      'Script hooks',
+      'Title templates',
+      'Thumbnail prompts',
+      'RPM / CPM data',
+      'Free tools',
+      'Save unlimited niches',
+      'New niches every month',
+      'Priority support',
+    ],
+    cta: 'Start Pro — $72/year',
+    href: '/auth/signup',
+    style: 'border-[#E8402A] bg-white ring-2 ring-[#E8402A]/10',
+    buttonStyle: 'bg-[#E8402A] text-white hover:bg-[#CF3520]',
+  },
+  {
+    name: 'Lifetime',
+    price: '$199',
     period: 'one-time',
     badge: '⚡ Founding Member',
     description: 'Committed creators who want lifetime access',
@@ -68,6 +137,9 @@ const PLANS = [
 ]
 
 export function Pricing() {
+  const [isYearly, setIsYearly] = useState(false)
+  const PLANS = isYearly ? PLANS_YEARLY : PLANS_MONTHLY
+
   return (
     <section className="py-20 px-4 bg-[#EDE8DF]">
       <div className="max-w-7xl mx-auto">
@@ -78,7 +150,30 @@ export function Pricing() {
           <h2 className="font-display font-bold text-[32px] sm:text-[38px] text-[#1A1612] mb-3">
             Simple & Honest Pricing
           </h2>
-          <p className="text-[#8A7F72] text-sm">Start free. Upgrade when you&apos;re ready.</p>
+          <p className="text-[#8A7F72] text-sm mb-6">Start free. Upgrade when you&apos;re ready.</p>
+
+          {/* Monthly/Yearly Toggle */}
+          <div className="inline-flex items-center gap-3 bg-white rounded-full border border-[#E0D9CE] p-1">
+            <button
+              onClick={() => setIsYearly(false)}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-bold transition-all',
+                !isYearly ? 'bg-[#1A1612] text-white' : 'text-[#8A7F72] hover:text-[#1A1612]'
+              )}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setIsYearly(true)}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-bold transition-all',
+                isYearly ? 'bg-[#1A1612] text-white' : 'text-[#8A7F72] hover:text-[#1A1612]'
+              )}
+            >
+              Yearly
+              <span className="ml-1.5 text-[10px] font-bold text-[#2A7A4B]">Save 33%</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -115,6 +210,9 @@ export function Pricing() {
                 <span className={cn('text-sm ml-1', plan.dark ? 'text-[#8A7F72]' : 'text-[#8A7F72]')}>
                   {plan.period}
                 </span>
+                {'savings' in plan && plan.savings && (
+                  <span className="block text-xs font-bold text-[#2A7A4B] mt-1">{plan.savings}</span>
+                )}
               </div>
 
               <ul className="flex-1 space-y-2.5 mb-7">

@@ -63,7 +63,7 @@ export function CheckoutButton({ plan, className, children }: CheckoutButtonProp
       )}
     >
       {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-      {children ?? (plan === 'lifetime' ? 'Get Lifetime Access' : 'Start Pro — $12/mo')}
+      {children ?? (plan === 'lifetime' ? 'Get Lifetime Access' : 'Start Pro — $9/mo')}
     </button>
   )
 }

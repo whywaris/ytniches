@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import { ToastProvider } from '@/components/ui/Toast'
 import { AuthProvider } from '@/components/dashboard/AuthProvider'
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import './globals.css'
 
 // ─── Google Fonts ──────────────────────────────────────────────────────────────
@@ -113,6 +114,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col bg-background antialiased overflow-x-hidden">
         <AuthProvider>
           <ToastProvider>
+            <GoogleAnalytics />
             <main className="flex-1">{children}</main>
           </ToastProvider>
         </AuthProvider>

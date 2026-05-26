@@ -63,7 +63,7 @@ export default function TermsPage() {
           </ul>
         </div>
         <div>
-          <p className="font-semibold text-[#1A1612] mb-1">Pro Plan ($12/month):</p>
+          <p className="font-semibold text-[#1A1612] mb-1">Pro Plan ($9/month):</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Billed monthly via LemonSqueezy</li>
             <li>Cancel anytime from your dashboard — no cancellation fees</li>
@@ -71,7 +71,7 @@ export default function TermsPage() {
           </ul>
         </div>
         <div>
-          <p className="font-semibold text-[#1A1612] mb-1">Lifetime Plan ($249 one-time):</p>
+          <p className="font-semibold text-[#1A1612] mb-1">Lifetime Plan ($199 one-time):</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Single payment via LemonSqueezy</li>
             <li>Permanent access to all current and future features</li>

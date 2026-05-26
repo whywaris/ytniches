@@ -36,7 +36,7 @@ export default function RefundPage() {
         </div>
       </section>
 
-      <LegalSection id="s2" title="Monthly Pro Plan ($12/month)">
+      <LegalSection id="s2" title="Monthly Pro Plan ($9/month)">
         <div className="space-y-2">
           {[
             { ok: true, text: 'Full refund within 7 days of your first charge' },
@@ -62,7 +62,7 @@ export default function RefundPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="s3" title="Lifetime Plan ($249)">
+      <LegalSection id="s3" title="Lifetime Plan ($199)">
         <div className="space-y-2">
           {[
             { ok: true, text: 'Full refund within 7 days of purchase' },

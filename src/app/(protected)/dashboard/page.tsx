@@ -214,7 +214,7 @@ export default async function DashboardPage() {
                   </div>
                   <p className="text-xs text-muted mb-3">Unlock 1,200+ niches and full content kits</p>
                   <Link href="/pricing" className="block text-center bg-accent text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-accent-hover transition-colors">
-                    Upgrade to Pro — $12/mo
+                    Upgrade to Pro — $9/mo
                   </Link>
                 </div>
               )}
