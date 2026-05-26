@@ -94,7 +94,6 @@ const PLANS_YEARLY = [
     price: '$72',
     period: '/year',
     badge: 'Most Popular',
-    savings: 'Save $36/year',
     description: 'Serious creators who want every advantage',
     features: [
       'Unlimited niche access',
@@ -210,8 +209,8 @@ export function Pricing() {
                 <span className={cn('text-sm ml-1', plan.dark ? 'text-[#8A7F72]' : 'text-[#8A7F72]')}>
                   {plan.period}
                 </span>
-                {'savings' in plan && plan.savings && (
-                  <span className="block text-xs font-bold text-[#2A7A4B] mt-1">{plan.savings}</span>
+                {plan.name === 'Pro' && isYearly && (
+                  <span className="block text-xs font-bold text-[#2A7A4B] mt-1">Save $36/year</span>
                 )}
               </div>
 
