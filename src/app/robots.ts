@@ -7,8 +7,8 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/dashboard',
-          '/admin',
+          '/dashboard/',
+          '/admin/',
           '/api/',
           '/auth/',
           '/payment/',
@@ -18,11 +18,16 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: 'Googlebot',
         allow: '/',
         disallow: [
-          '/dashboard',
-          '/admin',
+          '/dashboard/',
+          '/admin/',
           '/api/',
           '/auth/',
         ],
+      },
+      // AdSense crawler ke liye explicitly allow
+      {
+        userAgent: 'Mediapartners-Google',
+        allow: '/',
       },
     ],
     sitemap: 'https://ytniches.com/sitemap.xml',
