@@ -6,31 +6,23 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: [
-          '/dashboard/',
-          '/admin/',
-          '/api/',
-          '/auth/',
-          '/payment/',
-        ],
+        disallow: ['/dashboard/', '/admin/', '/api/', '/payment/'],
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        disallow: [
-          '/dashboard/',
-          '/admin/',
-          '/api/',
-          '/auth/',
-        ],
+        disallow: ['/dashboard/', '/admin/', '/api/'],
       },
-      // AdSense crawler ke liye explicitly allow
       {
         userAgent: 'Mediapartners-Google',
         allow: '/',
       },
+      {
+        userAgent: 'AdsBot-Google',
+        allow: '/',
+      },
     ],
-    sitemap: 'https://ytniches.com/sitemap.xml',
     host: 'https://ytniches.com',
+    sitemap: 'https://ytniches.com/sitemap.xml',
   }
 }
