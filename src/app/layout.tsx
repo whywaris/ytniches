@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
+import Script from 'next/script'
 import { ToastProvider } from '@/components/ui/Toast'
 import { AuthProvider } from '@/components/dashboard/AuthProvider'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
@@ -115,6 +116,13 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <GoogleAnalytics />
+            {/* Google AdSense */}
+            <Script
+              async
+              src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5238937416358061"
+              crossOrigin="anonymous"
+              strategy="afterInteractive"
+            />
             <main className="flex-1">{children}</main>
           </ToastProvider>
         </AuthProvider>

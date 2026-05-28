@@ -10,11 +10,15 @@ export function sanitizeContent(dirty: string): string {
       'ul', 'ol', 'li',
       'blockquote', 'pre', 'code',
       'div', 'span',
+      // Tables
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
     ],
     allowedAttributes: {
       'a':      ['href', 'target', 'rel', 'class'],
-      'img':    ['src', 'alt', 'class', 'width', 'height'],
+      'img':    ['src', 'alt', 'class', 'width', 'height', 'title'],
       'iframe': ['src', 'width', 'height', 'allowfullscreen', 'frameborder', 'class', 'allow'],
+      'th':     ['colspan', 'rowspan', 'class', 'style'],
+      'td':     ['colspan', 'rowspan', 'class', 'style'],
       '*':      ['class', 'id', 'style', 'data-youtube-video'],
     },
     allowedIframeHostnames: ['www.youtube.com', 'youtube.com', 'player.vimeo.com'],

@@ -438,7 +438,12 @@
 
 .blog-content table tr:hover td,
 .ProseMirror table tr:hover td {
-  background-color: #FDF8F3;
+  background-color: #FDF0ED;
+}
+
+.blog-content table tr:nth-child(even) td,
+.ProseMirror table tr:nth-child(even) td {
+  background-color: #FAF8F5;
 }
 
 /* Mobile scroll wrapper */

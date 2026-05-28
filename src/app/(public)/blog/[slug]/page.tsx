@@ -91,33 +91,17 @@ export default async function BlogPostPage({ params }: Props) {
       <ReadingProgress />
       <BackToTop />
 
-      {/* Cover image hero */}
-      {post.cover_image && (
-        <div className="w-full max-h-[480px] overflow-hidden bg-[#EDE8DF]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={post.cover_image}
-            alt={post.title}
-            className="w-full h-full object-cover"
-            style={{ aspectRatio: '21/9', maxHeight: '480px', objectPosition: 'center' }}
-          />
-        </div>
-      )}
-
-      {/* Main layout — article + TOC sidebar */}
+      {/* Main layout — TOC sidebar + article */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex gap-12 items-start">
+        <div className="flex gap-8 items-start">
+
+          {/* ── TOC Sidebar — left, sticky, desktop only ─────────── */}
+          <aside className="hidden lg:block w-48 shrink-0 sticky top-24">
+            <TableOfContents content={post.content} />
+          </aside>
 
           {/* ── Article ─────────────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
-
-            {/* Back link */}
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-1.5 text-sm text-[#8A7F72] hover:text-[#1A1612] mb-8 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to Blog
-            </Link>
 
             {/* Category + meta row */}
             <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -211,25 +195,6 @@ export default async function BlogPostPage({ params }: Props) {
               </Link>
             </div>
           </div>
-
-          {/* ── TOC Sidebar — desktop only ───────────────────────── */}
-          <aside className="hidden lg:block w-52 shrink-0">
-            <TableOfContents content={post.content} />
-
-            {/* Upgrade CTA */}
-            <div className="mt-4 bg-[#FDF0ED] border border-[#F5C4BA] rounded-[20px] p-4 text-center">
-              <p className="font-semibold text-sm text-[#1A1612] mb-1">Find your niche</p>
-              <p className="text-xs text-[#8A7F72] mb-3 leading-relaxed">
-                Browse 1,200+ curated YouTube niches
-              </p>
-              <Link
-                href="/niches"
-                className="block px-4 py-2 bg-[#E8402A] text-white rounded-full text-xs font-semibold hover:bg-[#CF3520] transition-colors"
-              >
-                Browse niches →
-              </Link>
-            </div>
-          </aside>
 
         </div>
       </div>

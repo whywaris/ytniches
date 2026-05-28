@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 
 interface Heading {
   id: string
@@ -66,30 +65,28 @@ export function TableOfContents({ content }: Props) {
   if (headings.length < 2) return null
 
   return (
-    <div className="bg-white border border-[#E0D9CE] rounded-[20px] p-5 sticky top-24">
-      <p className="text-xs font-bold text-[#8A7F72] uppercase tracking-wider mb-3">
-        On this page
+    <nav aria-label="Table of contents" className="text-[13px]">
+      <p className="text-[10px] font-bold text-[#8A7F72] uppercase tracking-widest mb-2">
+        Contents
       </p>
-      <nav className="space-y-1" aria-label="Table of contents">
+      <ul className="space-y-0.5 border-l border-[#E0D9CE]">
         {headings.map((heading) => (
-          <Link
-            key={heading.id}
-            href={`#${heading.id}`}
-            className={`block text-sm leading-relaxed transition-colors py-0.5 ${
-              heading.level === 3 ? 'pl-3' : ''
-            } ${
-              activeId === heading.id
-                ? 'text-[#E8402A] font-medium'
-                : 'text-[#8A7F72] hover:text-[#1A1612]'
-            }`}
-          >
-            {heading.level === 3 && (
-              <span className="mr-1 text-[#C8C0B4]">—</span>
-            )}
-            {heading.text}
-          </Link>
+          <li key={heading.id}>
+            <a
+              href={`#${heading.id}`}
+              className={`block py-0.5 leading-snug transition-colors truncate ${
+                heading.level === 3 ? 'pl-4 text-[12px]' : 'pl-3'
+              } ${
+                activeId === heading.id
+                  ? 'text-[#E8402A] font-medium border-l-2 border-[#E8402A] -ml-px'
+                  : 'text-[#8A7F72] hover:text-[#1A1612]'
+              }`}
+            >
+              {heading.text.length > 30 ? heading.text.slice(0, 28) + '…' : heading.text}
+            </a>
+          </li>
         ))}
-      </nav>
-    </div>
+      </ul>
+    </nav>
   )
 }
