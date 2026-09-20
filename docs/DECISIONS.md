@@ -36,10 +36,11 @@ Decisions locked before or during the strategy sessions of 2026-09-17 through 20
 
 ### D-001: Tech stack
 
-- **Status:** Resolved (2026-09-17)
+- **Status:** Revisited (2026-09-20)
 - **Impacts:** Every backend + frontend spec, hosting cost model, Backend-Schema.md, TRD.md
 - **Final call:** Next.js + TypeScript + Tailwind CSS (frontend), PostgreSQL via Supabase (DB), Supabase Auth with Google OAuth (auth), Redis via Upstash (caching), Resend (email). Billing provider unresolved (see D-010).
 - **Rationale:** Modern SaaS-standard stack, low ops overhead, generous free tiers through early growth, TypeScript for maintainability given the doc-first workflow.
+- **2026-09-20 update (Phase 0 §2.1 scaffold):** pnpm pinned at `pnpm@11.1.1` (via `packageManager` in package.json / Corepack). Docs previously assumed 9.x, which was current when D-001 was written; 11.1.1 is the actual latest at scaffold time, and pinning the real installed version is correct rather than chasing a stale target. Scaffold also landed on Next.js 16.3.5 (satisfies "14+") and Tailwind v4 — the latter drops `tailwind.config.ts` in favor of CSS `@theme` blocks in `app/globals.css`; Implementation-Plan.md §2.4 and Design-System.md §6.3 carry a note flagging this pending their own update when Design-System-in-code work starts.
 
 ---
 
