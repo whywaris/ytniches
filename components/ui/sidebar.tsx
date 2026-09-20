@@ -106,7 +106,10 @@ function SidebarSection({ title, children, className }: SidebarSectionProps) {
   return (
     <div className={cn("mb-2", className)}>
       {title && !collapsed ? (
-        <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-text-tertiary uppercase">
+        // text-secondary, not text-tertiary: found to fail WCAG AA against
+        // bg-surface-1 at this size while building Table (same pattern) —
+        // see DECISIONS.md review, 2026-09-20.
+        <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-text-secondary uppercase">
           {title}
         </div>
       ) : null}
