@@ -15,6 +15,12 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   };
 }
 
+// jsdom doesn't implement scrollIntoView; cmdk (CommandPalette) calls it
+// to keep the keyboard-highlighted item in view while navigating.
+if (typeof Element.prototype.scrollIntoView === "undefined") {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
 // Explicit rather than relying on @testing-library/react's implicit
 // auto-cleanup-on-first-import: with vitest.config.ts's `isolate: false`,
 // multiple test files share a worker and its module cache, so the
