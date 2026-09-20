@@ -10,21 +10,21 @@ YTNiches is a Next.js monolith deployed on Vercel with Supabase (Postgres + Auth
 
 ### 1.1 Tech stack recap
 
-| Layer | Choice | Rationale |
-| --- | --- | --- |
-| Frontend framework | Next.js 14+ (App Router) | Locked in D-001 |
-| Language | TypeScript strict | Type safety across full stack |
-| Styling | Tailwind CSS + tokens from Design-System.md | Locked in D-001 |
-| Database | PostgreSQL via Supabase | Locked in D-001 |
-| Auth | Supabase Auth + Google OAuth | Locked in D-001 |
-| Caching + rate limiting | Redis via Upstash | Locked in D-001 |
-| Email | Resend | Locked in D-001 |
-| Background jobs | Inngest or Trigger.dev (TBD) | Both are Vercel-friendly, event-driven |
-| Hosting | Vercel | Deep Next.js integration |
-| Observability | Sentry + Vercel Analytics | Errors + web vitals |
-| Analytics | PostHog or Plausible (open) | See DECISIONS.md |
-| AI provider | Anthropic Claude API (recommended) OR OpenAI | Choose in DECISIONS.md; interface abstracts either |
-| Billing | Stripe or Paddle (D-010) | Interface abstracts both |
+| Layer                   | Choice                                       | Rationale                                          |
+| ----------------------- | -------------------------------------------- | -------------------------------------------------- |
+| Frontend framework      | Next.js 14+ (App Router)                     | Locked in D-001                                    |
+| Language                | TypeScript strict                            | Type safety across full stack                      |
+| Styling                 | Tailwind CSS + tokens from Design-System.md  | Locked in D-001                                    |
+| Database                | PostgreSQL via Supabase                      | Locked in D-001                                    |
+| Auth                    | Supabase Auth + Google OAuth                 | Locked in D-001                                    |
+| Caching + rate limiting | Redis via Upstash                            | Locked in D-001                                    |
+| Email                   | Resend                                       | Locked in D-001                                    |
+| Background jobs         | Inngest or Trigger.dev (TBD)                 | Both are Vercel-friendly, event-driven             |
+| Hosting                 | Vercel                                       | Deep Next.js integration                           |
+| Observability           | Sentry + Vercel Analytics                    | Errors + web vitals                                |
+| Analytics               | PostHog or Plausible (open)                  | See DECISIONS.md                                   |
+| AI provider             | Anthropic Claude API (recommended) OR OpenAI | Choose in DECISIONS.md; interface abstracts either |
+| Billing                 | Stripe or Paddle (D-010)                     | Interface abstracts both                           |
 
 ### 1.2 High-level architecture
 
@@ -50,11 +50,11 @@ flowchart TD
 
 ### 1.3 Deployment environments
 
-| Environment | Vercel project | Supabase project | Notes |
-| --- | --- | --- | --- |
-| dev | `ytniches-dev` | `ytniches-dev` | Every developer's local + shared dev DB |
-| preview | Per-PR | `ytniches-dev` | Reads dev DB; short-lived |
-| production | `ytniches` | `ytniches-prod` | `main` branch only |
+| Environment | Vercel project | Supabase project | Notes                                   |
+| ----------- | -------------- | ---------------- | --------------------------------------- |
+| dev         | `ytniches-dev` | `ytniches-dev`   | Every developer's local + shared dev DB |
+| preview     | Per-PR         | `ytniches-dev`   | Reads dev DB; short-lived               |
+| production  | `ytniches`     | `ytniches-prod`  | `main` branch only                      |
 
 ### 1.4 Repo structure
 
@@ -137,6 +137,10 @@ Every merged component must pass:
 - Keyboard navigation manually verified (Tab order, focus rings, Esc / Enter behaviour)
 - Color contrast per Design-System.md §6.2
 
+### 2.8 UI component primitives
+
+`components/ui/` is built on **Radix UI** primitives (dialog, select, checkbox, switch, avatar, etc.) plus **cmdk** for the command palette (Design-System.md §5.6), scaffolded via the shadcn CLI and restyled entirely to Design-System.md's tokens/variants — shadcn's own defaults are not used as-is. Variant/className management via `class-variance-authority` + `clsx` + `tailwind-merge`. See DECISIONS.md D-023.
+
 ## 3. Backend & APIs
 
 ### 3.1 Service layer pattern
@@ -148,9 +152,9 @@ No Supabase queries in components or route handlers directly. All data access go
 ```ts
 // lib/services/prompts.ts
 export async function generatePrompt(
-  ctx: RequestContext,       // holds userId, tier, workspaceId
-  input: { videoId: string; audience?: string; tone: Tone }
-): Promise<Result<Prompt, GenerationError>>
+  ctx: RequestContext, // holds userId, tier, workspaceId
+  input: { videoId: string; audience?: string; tone: Tone },
+): Promise<Result<Prompt, GenerationError>>;
 ```
 
 - `RequestContext` is constructed by middleware, carries user + tier + workspace
@@ -159,12 +163,12 @@ export async function generatePrompt(
 
 ### 3.2 API surface
 
-| Category | Style | Auth |
-| --- | --- | --- |
-| Server Actions (called from client components) | Next.js Server Actions | Session cookie |
-| Public API routes (webhooks) | Next.js Route Handlers | Signature verification per provider |
-| Cron/worker triggers | Route Handlers protected by shared secret | Bearer token in header |
-| Admin actions | Server Actions gated by super\_admin role | Session + role check |
+| Category                                       | Style                                     | Auth                                |
+| ---------------------------------------------- | ----------------------------------------- | ----------------------------------- |
+| Server Actions (called from client components) | Next.js Server Actions                    | Session cookie                      |
+| Public API routes (webhooks)                   | Next.js Route Handlers                    | Signature verification per provider |
+| Cron/worker triggers                           | Route Handlers protected by shared secret | Bearer token in header              |
+| Admin actions                                  | Server Actions gated by super\_admin role | Session + role check                |
 
 ### 3.3 Error handling
 
@@ -207,16 +211,16 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 
 ### 4.2 Job catalog
 
-| Job | Trigger | Cadence | What it does |
-| --- | --- | --- | --- |
-| `channel.sync` | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events |
-| `outlier.scan` | Scheduled | Daily (Phase 2) | Recompute baselines, flag outliers on all tracked channels |
-| `digest.email` | Scheduled | Daily 8am user local | Send email digest to users with digest enabled |
-| `credit.expire` | Scheduled | Nightly | Expire unused credits per allocation rollover rules |
-| `retention.enforce` | Scheduled | Nightly | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4) |
-| `webhook.retry` | Event-driven | On webhook failure | Exponential backoff retry (max 3), then manual queue |
-| `prompt.generate` | Event-driven | On user submit | Async because AI generation is 3–10s; UI polls or subscribes |
-| `youtube.transcript.fetch` | Event-driven | On demand | Cache transcript on first prompt generation for a video |
+| Job                        | Trigger            | Cadence                     | What it does                                                                 |
+| -------------------------- | ------------------ | --------------------------- | ---------------------------------------------------------------------------- |
+| `channel.sync`             | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events                 |
+| `outlier.scan`             | Scheduled          | Daily (Phase 2)             | Recompute baselines, flag outliers on all tracked channels                   |
+| `digest.email`             | Scheduled          | Daily 8am user local        | Send email digest to users with digest enabled                               |
+| `credit.expire`            | Scheduled          | Nightly                     | Expire unused credits per allocation rollover rules                          |
+| `retention.enforce`        | Scheduled          | Nightly                     | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4) |
+| `webhook.retry`            | Event-driven       | On webhook failure          | Exponential backoff retry (max 3), then manual queue                         |
+| `prompt.generate`          | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
+| `youtube.transcript.fetch` | Event-driven       | On demand                   | Cache transcript on first prompt generation for a video                      |
 
 ### 4.3 Job execution guarantees
 
@@ -241,12 +245,12 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 
 ### 5.1 Cache layers
 
-| Layer | Where | TTL | Purpose |
-| --- | --- | --- | --- |
-| CDN | Vercel edge | Per-page (marketing pages ISR 60s) | Public content |
-| Next.js data cache | Server | Per-fetch (opt-in via `revalidate`) | Server component fetches |
-| Redis (Upstash) | Application | Varies by key type | YouTube data, rate-limit buckets, session extras |
-| PostgreSQL (materialized views / rollups) | DB | Per rollup job | Aggregates for admin metrics |
+| Layer                                     | Where       | TTL                                 | Purpose                                          |
+| ----------------------------------------- | ----------- | ----------------------------------- | ------------------------------------------------ |
+| CDN                                       | Vercel edge | Per-page (marketing pages ISR 60s)  | Public content                                   |
+| Next.js data cache                        | Server      | Per-fetch (opt-in via `revalidate`) | Server component fetches                         |
+| Redis (Upstash)                           | Application | Varies by key type                  | YouTube data, rate-limit buckets, session extras |
+| PostgreSQL (materialized views / rollups) | DB          | Per rollup job                      | Aggregates for admin metrics                     |
 
 ### 5.2 Redis key conventions
 
@@ -288,15 +292,15 @@ YouTube Data API v3 default quota: 10,000 units/day. Search costs 100 units, mos
 
 ### 5.5 Rate limiting (Upstash's `@upstash/ratelimit`)
 
-| Endpoint / action | Limit | Scope | Response on limit |
-| --- | --- | --- | --- |
-| Signup | 5 / hour | IP | 429 + "Too many signups from this network" |
-| Login | 5 / 15 min | IP + email | 429 + "Account locked, try password reset" |
-| Password reset request | 3 / hour | Email | 429 silent (no user enumeration) |
-| Niche search | Per tier (D-011) | User | Upgrade CTA |
-| Prompt generation | Per credit balance | User | Credit-based, not rate-based |
-| Add tracked channel | Per tier | User | Upgrade CTA |
-| API webhook receiver | 100 / min | Provider IP | 429 + provider will retry |
+| Endpoint / action      | Limit              | Scope       | Response on limit                          |
+| ---------------------- | ------------------ | ----------- | ------------------------------------------ |
+| Signup                 | 5 / hour           | IP          | 429 + "Too many signups from this network" |
+| Login                  | 5 / 15 min         | IP + email  | 429 + "Account locked, try password reset" |
+| Password reset request | 3 / hour           | Email       | 429 silent (no user enumeration)           |
+| Niche search           | Per tier (D-011)   | User        | Upgrade CTA                                |
+| Prompt generation      | Per credit balance | User        | Credit-based, not rate-based               |
+| Add tracked channel    | Per tier           | User        | Upgrade CTA                                |
+| API webhook receiver   | 100 / min          | Provider IP | 429 + provider will retry                  |
 
 ## 6. Third-Party Integrations
 

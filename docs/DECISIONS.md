@@ -285,3 +285,21 @@ Decisions that still need to close before their dependent docs / features can be
   - Contrarian opinion — a strong take that most faceless-creator advice gets wrong
 - **Recommendation:** Book a 20-minute founder discovery to extract these, then draft copy in Mac's voice. Cannot fake this input.
 - **Final call:** —
+
+---
+
+### D-022: Test runner
+
+- **Status:** Resolved (2026-09-20)
+- **Impacts:** CLAUDE.md §2.4 (testing conventions), every unit/component test going forward, jest-axe accessibility tests (Design-System.md §6.2, Implementation-Plan.md §2.4)
+- **Final call:** Vitest + React Testing Library + jest-axe. No test runner existed in the repo before Phase 0 §2.4; this resolves it project-wide, not just for the component library.
+- **Rationale:** CLAUDE.md §2.4 specifies "jest-axe" as the accessibility-testing library/matcher, not literally the Jest runner — `jest-axe`'s `toHaveNoViolations` matcher works the same under Vitest's `expect.extend`. Classic Jest has known friction with Next.js 16's Turbopack/SWC toolchain; Vitest has none.
+
+---
+
+### D-023: Component implementation approach
+
+- **Status:** Resolved (2026-09-20)
+- **Impacts:** TRD.md §2 (frontend stack — see §2.8), components/ui/ build for Phase 0 §2.4 and every feature UI after
+- **Final call:** Radix UI primitives + cmdk for the command palette, scaffolded via the shadcn CLI, restyled entirely to Design-System.md tokens. Plus class-variance-authority + clsx + tailwind-merge for variant/className management.
+- **Rationale:** Focus traps, ARIA semantics, and keyboard navigation are correct in Radix out of the box. Hand-rolling these to WCAG 2.1 AA (Design-System.md §6.2) would take longer and be less reliable. The shadcn pattern (unstyled accessible primitives + our own tokens on top) is exactly what Design-System.md §5 describes — it just didn't name the library.
