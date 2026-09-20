@@ -10,3 +10,6 @@ coverage/
 *.tsbuildinfo
 next-env.d.ts
 .pnpm-debug.log*
+
+*storybook.log
+storybook-static

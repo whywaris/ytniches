@@ -1,26 +1,206 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+/* Design-System.md §2. Dark mode is the primary experience (§1.1
+   principle 1) — these :root values ARE the dark theme, no attribute
+   or class needed. Light mode is the override. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* §2.1 backgrounds */
+  --bg-base: #0a0a0b;
+  --bg-surface-1: #131315;
+  --bg-surface-2: #1c1c1f;
+  --bg-hover: #232326;
+  --bg-active: #2a2a2d;
+
+  /* §2.2 text */
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #6e6e73;
+  --text-disabled: #48484a;
+  --text-inverse: #0a0a0b;
+
+  /* §2.3 borders */
+  --border-subtle: #232326;
+  --border-default: #38383a;
+  --border-strong: #48484a;
+
+  /* §2.4 accent (Emerald) — theme-invariant, see DECISIONS.md review */
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-subtle: rgba(16, 185, 129, 0.12);
+  --accent-border: rgba(16, 185, 129, 0.35);
+
+  /* §2.5 semantic — dark-mode values, calibrated to pop on near-black */
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+
+  /* §2.6 object-type colors — dark-mode values */
+  --object-niches: #10b981;
+  --object-channels: #3b82f6;
+  --object-videos: #8b5cf6;
+  --object-prompts: #f59e0b;
+  --object-calendar: #14b8a6;
+  --object-tasks: #f43f5e;
+  --object-outliers: #fb923c;
+
+  /* §4.3 elevation shadows */
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
+/* Light mode override. Text-tertiary/disabled, semantic, and
+   object-type colors are NOT simple hue-preserving inversions of the
+   dark values — see DECISIONS.md review (contrast-safe Tailwind
+   600/700 equivalents for semantic + object colors; text-tertiary
+   bumped to clear WCAG AA at ~4.6:1 on white). */
+:root[data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-surface-1: #f7f7f8;
+  --bg-surface-2: #eeeef0;
+  --bg-hover: #e8e8ea;
+  --bg-active: #dfdfe2;
+
+  --text-primary: #0a0a0b;
+  --text-secondary: #3c3c43;
+  --text-tertiary: #6e6e73;
+  --text-disabled: #c7c7cc;
+  --text-inverse: #0a0a0b;
+
+  --border-subtle: #ececed;
+  --border-default: #d1d1d6;
+  --border-strong: #b8b8bd;
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
+
+  --object-niches: #059669;
+  --object-channels: #1d4ed8;
+  --object-videos: #6d28d9;
+  --object-prompts: #d97706;
+  --object-calendar: #0f766e;
+  --object-tasks: #e11d48;
+  --object-outliers: #ea580c;
+}
+
+/* Maps our raw tokens into Tailwind's theme namespace so utilities
+   (bg-bg-base, text-text-primary, border-border-subtle, ...) are
+   generated. Names are kept 1:1 with Design-System.md for grep-ability
+   even where that produces redundant-looking utility classes. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface-1: var(--bg-surface-1);
+  --color-bg-surface-2: var(--bg-surface-2);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-inverse: var(--text-inverse);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-border: var(--accent-border);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --color-object-niches: var(--object-niches);
+  --color-object-channels: var(--object-channels);
+  --color-object-videos: var(--object-videos);
+  --color-object-prompts: var(--object-prompts);
+  --color-object-calendar: var(--object-calendar);
+  --color-object-tasks: var(--object-tasks);
+  --color-object-outliers: var(--object-outliers);
+
+  /* §4.2 border radius — overrides Tailwind's default radius scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* §4.4 motion durations — pair with Tailwind's built-in ease-out /
+     ease-in-out timing functions, no custom easing tokens needed */
+  --duration-micro: 100ms;
+  --duration-fast: 150ms;
+  --duration-default: 200ms;
+  --duration-slow: 300ms;
+  --duration-page: 400ms;
+
+  /* §3.1 font families */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* §3.2 type scale (size + paired line-height) */
+  --text-display-lg: 60px;
+  --text-display-lg--line-height: 72px;
+  --text-display-sm: 48px;
+  --text-display-sm--line-height: 56px;
+  --text-h1: 36px;
+  --text-h1--line-height: 44px;
+  --text-h2: 30px;
+  --text-h2--line-height: 38px;
+  --text-h3: 24px;
+  --text-h3--line-height: 32px;
+  --text-h4: 20px;
+  --text-h4--line-height: 28px;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-code: 13px;
+  --text-code--line-height: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* §4.3 elevation — composite recipes as reusable utilities rather than
+   repeating border+bg+shadow combos in every component's className. */
+@utility elev-1 {
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-surface-1);
+}
+@utility elev-2 {
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface-2);
+  box-shadow: var(--shadow-md);
+}
+@utility elev-3 {
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface-2);
+  box-shadow: var(--shadow-xl);
+}
+
+@layer base {
+  body {
+    @apply bg-bg-base text-text-primary font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* §4.4: respect prefers-reduced-motion globally rather than per-component */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 50ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 50ms !important;
+    transition-timing-function: linear !important;
+    scroll-behavior: auto !important;
+  }
 }
