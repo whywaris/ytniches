@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,4 +9,10 @@ const nextConfig: NextConfig = {
   agentRules: false,
 };
 
-export default nextConfig;
+// Minimal options for now: no org/project/authToken, so no source-map
+// upload happens yet (that needs a Sentry auth token, a real secret we
+// don't have configured). withSentryConfig degrades gracefully without
+// them — error tracking itself doesn't depend on source-map upload.
+export default withSentryConfig(nextConfig, {
+  silent: true,
+});
