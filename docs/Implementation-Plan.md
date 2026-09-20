@@ -31,12 +31,12 @@ flowchart LR
 
 **Rough timeline (indicative, not committed):**
 
-| Phase | Duration | End-state |
-| --- | --- | --- |
-| Phase 0 | 2–3 weeks | Repo + DB + auth + design system deployed, one hello-world page live |
+| Phase   | Duration  | End-state                                                                            |
+| ------- | --------- | ------------------------------------------------------------------------------------ |
+| Phase 0 | 2–3 weeks | Repo + DB + auth + design system deployed, one hello-world page live                 |
 | Phase 1 | 6–8 weeks | MVP shipped: Niche Finder + Competitor Tracking + AI Prompts + Onboarding, monetized |
-| Phase 2 | 4–6 weeks | Retention layer: Outlier Finder + Notifications + Thumbnail Ideas |
-| Phase 3 | 6–8 weeks | Team layer: Workspace + Tasks + Content Calendar |
+| Phase 2 | 4–6 weeks | Retention layer: Outlier Finder + Notifications + Thumbnail Ideas                    |
+| Phase 3 | 6–8 weeks | Team layer: Workspace + Tasks + Content Calendar                                     |
 
 Total: 18–25 weeks from Phase 0 kickoff to Phase 3 complete. Landing site build runs partially in parallel (see Section 4).
 
@@ -70,6 +70,8 @@ Goal: everything a feature needs to exist before feature work begins. No user-fa
 
 ### 2.4 Design system in code
 
+> Note: Tailwind v4 is installed. Design tokens live in app/globals.css as @theme blocks, not tailwind.config.ts. Update this section before §2.4 work starts.
+
 - `tailwind.config.ts` implementing tokens from Design-System.md
 - Storybook set up with dark mode as default
 - Base components built + storied: Button, Input, Card, Table, Sidebar, Modal, Empty/Loading/Error states
@@ -101,13 +103,13 @@ Goal: launch the four MVP features (Niche Finder, Competitor Tracking, AI Prompt
 
 Built sequentially, not in parallel. Each feature gets its own sub-checkpoint before the next starts.
 
-| Order | Feature | Duration | Why this order |
-| --- | --- | --- | --- |
-| 1 | Niche Finder | 2 weeks | Entry point of the product loop; hardest data problem to solve; validates YouTube API quota model |
-| 2 | Competitor Tracking | 1.5 weeks | Consumes Niche Finder output; needed before AI Prompts (which extracts from tracked videos) |
-| 3 | AI Prompts | 1.5 weeks | Requires Competitor Tracking to source videos from; validates AI cost per free user |
-| 4 | Onboarding | 1 week | Written last so it can reflect the actual product flow, not a guessed one |
-| 5 | Billing + Monetization | 1 week (parallel with #4) | Blocks launch; wire Stripe/Paddle + credit metering + upgrade prompts |
+| Order | Feature                | Duration                  | Why this order                                                                                    |
+| ----- | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| 1     | Niche Finder           | 2 weeks                   | Entry point of the product loop; hardest data problem to solve; validates YouTube API quota model |
+| 2     | Competitor Tracking    | 1.5 weeks                 | Consumes Niche Finder output; needed before AI Prompts (which extracts from tracked videos)       |
+| 3     | AI Prompts             | 1.5 weeks                 | Requires Competitor Tracking to source videos from; validates AI cost per free user               |
+| 4     | Onboarding             | 1 week                    | Written last so it can reflect the actual product flow, not a guessed one                         |
+| 5     | Billing + Monetization | 1 week (parallel with #4) | Blocks launch; wire Stripe/Paddle + credit metering + upgrade prompts                             |
 
 ### 3.2 Per-feature build pattern
 
@@ -155,11 +157,11 @@ Goal: drive weekly return visits with high-signal features that build on the MVP
 
 **Build order:**
 
-| Order | Feature | Depends on | Why this order |
-| --- | --- | --- | --- |
-| 1 | Outlier Finder | Competitor Tracking data (Phase 1) | Uses existing tracked channels; no new data source |
-| 2 | Notifications | Outlier Finder + Tracking | Needs triggers to notify about |
-| 3 | Thumbnail Ideas | AI Prompts infra | Extends existing AI pipeline |
+| Order | Feature         | Depends on                         | Why this order                                     |
+| ----- | --------------- | ---------------------------------- | -------------------------------------------------- |
+| 1     | Outlier Finder  | Competitor Tracking data (Phase 1) | Uses existing tracked channels; no new data source |
+| 2     | Notifications   | Outlier Finder + Tracking          | Needs triggers to notify about                     |
+| 3     | Thumbnail Ideas | AI Prompts infra                   | Extends existing AI pipeline                       |
 
 **Phase 2 gate to Phase 3:**
 
@@ -176,11 +178,11 @@ Goal: unlock team-tier pricing and turn YTNiches from an individual tool into a 
 
 **Build order:**
 
-| Order | Feature | Depends on | Why this order |
-| --- | --- | --- | --- |
-| 1 | Workspace | Auth + billing (Phase 0/1) | Foundational for the other two; needs role model |
-| 2 | Tasks | Workspace | Assignments require workspace members |
-| 3 | Content Calendar | Workspace + Tasks + AI Prompts | Ties every other feature together; heaviest UI work |
+| Order | Feature          | Depends on                     | Why this order                                      |
+| ----- | ---------------- | ------------------------------ | --------------------------------------------------- |
+| 1     | Workspace        | Auth + billing (Phase 0/1)     | Foundational for the other two; needs role model    |
+| 2     | Tasks            | Workspace                      | Assignments require workspace members               |
+| 3     | Content Calendar | Workspace + Tasks + AI Prompts | Ties every other feature together; heaviest UI work |
 
 **Phase 3 gate to "post-launch" (no more phase gates, moves to continuous):**
 
@@ -248,12 +250,12 @@ Halting is not failure — it's the response that prevents the last MVP's outcom
 
 ### 5.4 Communication cadence
 
-| Cadence | What | Format |
-| --- | --- | --- |
-| Daily (async) | Progress note in shared channel | 2–4 lines: what shipped yesterday, what's shipping today, blockers |
-| Weekly | Demo + planning | 30-min call, notes captured in a `weekly-log.md` in the repo |
-| Per-feature | Sub-checkpoint review | 45-min call, notes go in the feature's spec doc as a review section |
-| Per-phase | Phase gate review | 60-min call + written go/no-go decision in DECISIONS.md |
+| Cadence       | What                            | Format                                                              |
+| ------------- | ------------------------------- | ------------------------------------------------------------------- |
+| Daily (async) | Progress note in shared channel | 2–4 lines: what shipped yesterday, what's shipping today, blockers  |
+| Weekly        | Demo + planning                 | 30-min call, notes captured in a `weekly-log.md` in the repo        |
+| Per-feature   | Sub-checkpoint review           | 45-min call, notes go in the feature's spec doc as a review section |
+| Per-phase     | Phase gate review               | 60-min call + written go/no-go decision in DECISIONS.md             |
 
 ## 6. Rollback Triggers & Risk Register
 
@@ -292,16 +294,16 @@ Any of these fires → open a DECISIONS.md entry to formally re-negotiate MVP sc
 
 Known risks and their mitigations. Reviewed at each phase gate.
 
-| Risk | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- |
-| YouTube API quota exhaustion | Medium | High | Aggressive caching (Redis), tier-based refresh cadence, apply for higher quota early |
-| AI cost per free user exceeds LTV | Medium | High | Hard credit limits on free tier, cost tracking per user in admin panel |
-| Developer execution issues (repeat of last MVP) | Medium | High | Weekly demos + sub-feature checkpoints + phase gates — catch drift early, not at end |
-| Landing illustration delays | Medium | Medium | Fallback: use Midjourney/DALL·E with consistent style prompts if designer unavailable |
-| Stripe/Paddle integration issues | Low | High | Time-box integration to 1 week; if not working, ship with manual invoicing for early users |
-| Supabase pricing at scale | Low | Medium | Monitor at every phase gate; migration path to self-hosted Postgres if needed |
-| Competitor releases matching features | Medium | Low | Positioning is Research + Execution loop, not a single feature — hard to match wholesale |
-| Mac's own capacity (30h/week assumption) | Medium | High | Ship phases sequentially; no parallel decision-making required |
+| Risk                                            | Likelihood | Impact | Mitigation                                                                                 |
+| ----------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------ |
+| YouTube API quota exhaustion                    | Medium     | High   | Aggressive caching (Redis), tier-based refresh cadence, apply for higher quota early       |
+| AI cost per free user exceeds LTV               | Medium     | High   | Hard credit limits on free tier, cost tracking per user in admin panel                     |
+| Developer execution issues (repeat of last MVP) | Medium     | High   | Weekly demos + sub-feature checkpoints + phase gates — catch drift early, not at end       |
+| Landing illustration delays                     | Medium     | Medium | Fallback: use Midjourney/DALL·E with consistent style prompts if designer unavailable      |
+| Stripe/Paddle integration issues                | Low        | High   | Time-box integration to 1 week; if not working, ship with manual invoicing for early users |
+| Supabase pricing at scale                       | Low        | Medium | Monitor at every phase gate; migration path to self-hosted Postgres if needed              |
+| Competitor releases matching features           | Medium     | Low    | Positioning is Research + Execution loop, not a single feature — hard to match wholesale   |
+| Mac's own capacity (30h/week assumption)        | Medium     | High   | Ship phases sequentially; no parallel decision-making required                             |
 
 ### 6.5 What is NOT a trigger
 

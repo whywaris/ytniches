@@ -10,13 +10,13 @@ YTNiches' interface is built on a 4-layer inspiration stack, with a personality 
 
 **The stack:**
 
-| Layer | Reference | What it governs |
-| --- | --- | --- |
-| Overall shell | Linear | Sidebar, navigation, command palette, settings, keyboard-first speed |
-| Research pages | Ahrefs | Filters, data tables, metric cards, drill-down flow |
-| Relational objects | Attio | Card-based views, custom views (grid / list / kanban), colored object types |
-| Calendar | Notion Calendar | Drag-and-drop scheduling, color-coded events, smooth animations |
-| Personality overlay | Fibery | Warm copy, illustrated empty states, playful microcopy |
+| Layer               | Reference       | What it governs                                                             |
+| ------------------- | --------------- | --------------------------------------------------------------------------- |
+| Overall shell       | Linear          | Sidebar, navigation, command palette, settings, keyboard-first speed        |
+| Research pages      | Ahrefs          | Filters, data tables, metric cards, drill-down flow                         |
+| Relational objects  | Attio           | Card-based views, custom views (grid / list / kanban), colored object types |
+| Calendar            | Notion Calendar | Drag-and-drop scheduling, color-coded events, smooth animations             |
+| Personality overlay | Fibery          | Warm copy, illustrated empty states, playful microcopy                      |
 
 **Core principles:**
 
@@ -35,67 +35,67 @@ Dark mode is the default and reference. Light mode tokens follow at the end.
 
 Deepest to highest surface. Elevation is signalled by lightening, not shadow.
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `bg-base` | #0a0a0b | App background, deepest layer |
-| `bg-surface-1` | #131315 | Cards, panels, table rows |
-| `bg-surface-2` | #1c1c1f | Modals, dropdowns, popovers |
-| `bg-hover` | #232326 | Interactive hover overlay |
-| `bg-active` | #2a2a2d | Active / pressed states |
+| Token          | Hex     | Use                           |
+| -------------- | ------- | ----------------------------- |
+| `bg-base`      | #0a0a0b | App background, deepest layer |
+| `bg-surface-1` | #131315 | Cards, panels, table rows     |
+| `bg-surface-2` | #1c1c1f | Modals, dropdowns, popovers   |
+| `bg-hover`     | #232326 | Interactive hover overlay     |
+| `bg-active`    | #2a2a2d | Active / pressed states       |
 
 ### 2.2 Dark mode — text
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `text-primary` | #f5f5f7 | Headings, primary content |
-| `text-secondary` | #a1a1a6 | Body text, labels |
-| `text-tertiary` | #6e6e73 | Supporting info, timestamps |
-| `text-disabled` | #48484a | Disabled controls |
-| `text-inverse` | #0a0a0b | Text on accent-color backgrounds |
+| Token            | Hex     | Use                              |
+| ---------------- | ------- | -------------------------------- |
+| `text-primary`   | #f5f5f7 | Headings, primary content        |
+| `text-secondary` | #a1a1a6 | Body text, labels                |
+| `text-tertiary`  | #6e6e73 | Supporting info, timestamps      |
+| `text-disabled`  | #48484a | Disabled controls                |
+| `text-inverse`   | #0a0a0b | Text on accent-color backgrounds |
 
 ### 2.3 Dark mode — borders
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `border-subtle` | #232326 | Barely-visible dividers |
-| `border-default` | #38383a | Standard borders |
-| `border-strong` | #48484a | Emphasis borders, focus rings |
+| Token            | Hex     | Use                           |
+| ---------------- | ------- | ----------------------------- |
+| `border-subtle`  | #232326 | Barely-visible dividers       |
+| `border-default` | #38383a | Standard borders              |
+| `border-strong`  | #48484a | Emphasis borders, focus rings |
 
 ### 2.4 Accent color
 
 Single accent, used sparingly. **Recommendation:** Emerald.
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `accent` | #10b981 | Primary buttons, active nav items, links |
-| `accent-hover` | #059669 | Hover state |
-| `accent-subtle` | rgba(16, 185, 129, 0.12) | Tag backgrounds, subtle emphasis |
-| `accent-border` | rgba(16, 185, 129, 0.35) | Borders of accent-tinted surfaces |
+| Token           | Value                    | Use                                      |
+| --------------- | ------------------------ | ---------------------------------------- |
+| `accent`        | #10b981                  | Primary buttons, active nav items, links |
+| `accent-hover`  | #059669                  | Hover state                              |
+| `accent-subtle` | rgba(16, 185, 129, 0.12) | Tag backgrounds, subtle emphasis         |
+| `accent-border` | rgba(16, 185, 129, 0.35) | Borders of accent-tinted surfaces        |
 
 > **Open decision:** Emerald is a recommendation because YouTube tools rarely use green (differentiation), it signals growth/monetization, and works well in dark mode. Alternatives: violet (Linear-esque), cyan (research-tool signal). Mac to confirm or override.
 
 ### 2.5 Semantic colors
 
-| Token | Hex | Use |
-| --- | --- | --- |
+| Token     | Hex     | Use                              |
+| --------- | ------- | -------------------------------- |
 | `success` | #4ade80 | Success states, positive metrics |
-| `warning` | #fbbf24 | Warnings, degraded states |
-| `error` | #f87171 | Errors, destructive actions |
-| `info` | #60a5fa | Informational states, tooltips |
+| `warning` | #fbbf24 | Warnings, degraded states        |
+| `error`   | #f87171 | Errors, destructive actions      |
+| `info`    | #60a5fa | Informational states, tooltips   |
 
 ### 2.6 Object type colors (Attio pattern)
 
 Muted, distinguishable colors per object type. Used for icons, category badges, calendar events — never as full backgrounds.
 
-| Object | Color | Hex |
-| --- | --- | --- |
-| Niches | Emerald (matches accent) | #10b981 |
-| Channels | Blue | #3b82f6 |
-| Videos | Violet | #8b5cf6 |
-| Prompts | Amber | #f59e0b |
-| Calendar events | Teal | #14b8a6 |
-| Tasks | Rose | #f43f5e |
-| Outliers | Orange | #fb923c |
+| Object          | Color                    | Hex     |
+| --------------- | ------------------------ | ------- |
+| Niches          | Emerald (matches accent) | #10b981 |
+| Channels        | Blue                     | #3b82f6 |
+| Videos          | Violet                   | #8b5cf6 |
+| Prompts         | Amber                    | #f59e0b |
+| Calendar events | Teal                     | #14b8a6 |
+| Tasks           | Rose                     | #f43f5e |
+| Outliers        | Orange                   | #fb923c |
 
 ### 2.7 Light mode (alternative theme)
 
@@ -105,11 +105,11 @@ Complete mapping of every dark token to a light equivalent — same semantics, i
 
 ### 3.1 Font families
 
-| Role | Family | Fallback |
-| --- | --- | --- |
-| UI (default) | Inter | system-ui, sans-serif |
-| Display (marketing hero only) | Instrument Serif | Georgia, serif |
-| Monospace (code, IDs) | JetBrains Mono | ui-monospace, monospace |
+| Role                          | Family           | Fallback                |
+| ----------------------------- | ---------------- | ----------------------- |
+| UI (default)                  | Inter            | system-ui, sans-serif   |
+| Display (marketing hero only) | Instrument Serif | Georgia, serif          |
+| Monospace (code, IDs)         | JetBrains Mono   | ui-monospace, monospace |
 
 Inter serves the app; Instrument Serif adds Fibery-style personality on the landing page only (never in-app).
 
@@ -117,19 +117,19 @@ Inter serves the app; Instrument Serif adds Fibery-style personality on the land
 
 All values in `size / line-height` (px). Tailwind-aligned.
 
-| Token | Size / LH | Weight | Use |
-| --- | --- | --- | --- |
-| `display-lg` | 60 / 72 | 700 | Marketing hero |
-| `display-sm` | 48 / 56 | 700 | Landing section headers |
-| `h1` | 36 / 44 | 600 | Page titles |
-| `h2` | 30 / 38 | 600 | Section headers |
-| `h3` | 24 / 32 | 600 | Card titles |
-| `h4` | 20 / 28 | 600 | Subsection headers |
-| `body-lg` | 16 / 24 | 400 | Prominent body |
-| `body` | 14 / 20 | 400 | Default UI text |
-| `body-sm` | 13 / 18 | 400 | Secondary info |
-| `caption` | 12 / 16 | 500 | Timestamps, labels |
-| `code` | 13 / 20 | 400 | Mono for IDs, code |
+| Token        | Size / LH | Weight | Use                     |
+| ------------ | --------- | ------ | ----------------------- |
+| `display-lg` | 60 / 72   | 700    | Marketing hero          |
+| `display-sm` | 48 / 56   | 700    | Landing section headers |
+| `h1`         | 36 / 44   | 600    | Page titles             |
+| `h2`         | 30 / 38   | 600    | Section headers         |
+| `h3`         | 24 / 32   | 600    | Card titles             |
+| `h4`         | 20 / 28   | 600    | Subsection headers      |
+| `body-lg`    | 16 / 24   | 400    | Prominent body          |
+| `body`       | 14 / 20   | 400    | Default UI text         |
+| `body-sm`    | 13 / 18   | 400    | Secondary info          |
+| `caption`    | 12 / 16   | 500    | Timestamps, labels      |
+| `code`       | 13 / 20   | 400    | Mono for IDs, code      |
 
 ### 3.3 Font weights
 
@@ -160,24 +160,24 @@ Common patterns:
 
 ### 4.2 Border radius
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `radius-xs` | 4px | Chips, tags, badges |
-| `radius-sm` | 6px | Buttons, inputs, small cards |
-| `radius-md` | 8px | Cards |
-| `radius-lg` | 12px | Modals, elevated panels |
-| `radius-xl` | 16px | Major surfaces (landing feature blocks) |
-| `radius-full` | 9999px | Avatars, pills |
+| Token         | Value  | Use                                     |
+| ------------- | ------ | --------------------------------------- |
+| `radius-xs`   | 4px    | Chips, tags, badges                     |
+| `radius-sm`   | 6px    | Buttons, inputs, small cards            |
+| `radius-md`   | 8px    | Cards                                   |
+| `radius-lg`   | 12px   | Modals, elevated panels                 |
+| `radius-xl`   | 16px   | Major surfaces (landing feature blocks) |
+| `radius-full` | 9999px | Avatars, pills                          |
 
 ### 4.3 Elevation
 
 Dark mode shadows are subtle. Rely on background lightening + border, not drop shadows alone.
 
-| Token | Style | Use |
-| --- | --- | --- |
-| `elev-0` | none | Base surfaces |
-| `elev-1` | `border-subtle` + `bg-surface-1` | Cards, table rows |
-| `elev-2` | `border-default` + `bg-surface-2` + `shadow-md` | Dropdowns, popovers |
+| Token    | Style                                                                  | Use                     |
+| -------- | ---------------------------------------------------------------------- | ----------------------- |
+| `elev-0` | none                                                                   | Base surfaces           |
+| `elev-1` | `border-subtle` + `bg-surface-1`                                       | Cards, table rows       |
+| `elev-2` | `border-default` + `bg-surface-2` + `shadow-md`                        | Dropdowns, popovers     |
 | `elev-3` | `border-default` + `bg-surface-2` + `shadow-xl` + top border highlight | Modals, command palette |
 
 - `shadow-md`: `0 4px 12px rgba(0, 0, 0, 0.3)`
@@ -185,13 +185,13 @@ Dark mode shadows are subtle. Rely on background lightening + border, not drop s
 
 ### 4.4 Motion
 
-| Token | Duration | Easing | Use |
-| --- | --- | --- | --- |
-| `motion-micro` | 100ms | ease-out | Button press, checkbox tick |
-| `motion-fast` | 150ms | ease-out | Hover, focus rings |
-| `motion-default` | 200ms | ease-out | Standard transitions |
-| `motion-slow` | 300ms | ease-in-out | Modals, panels, larger transitions |
-| `motion-page` | 400ms | ease-in-out | Page transitions (max) |
+| Token            | Duration | Easing      | Use                                |
+| ---------------- | -------- | ----------- | ---------------------------------- |
+| `motion-micro`   | 100ms    | ease-out    | Button press, checkbox tick        |
+| `motion-fast`    | 150ms    | ease-out    | Hover, focus rings                 |
+| `motion-default` | 200ms    | ease-out    | Standard transitions               |
+| `motion-slow`    | 300ms    | ease-in-out | Modals, panels, larger transitions |
+| `motion-page`    | 400ms    | ease-in-out | Page transitions (max)             |
 
 - Respect `prefers-reduced-motion` — reduce to 50ms with linear easing
 - Never animate more than 3 properties simultaneously
@@ -367,6 +367,8 @@ Charts appear on: Niche Finder metric cards, Competitor Tracking activity graphs
 ---
 
 ### 6.3 Developer handoff
+
+> Note: Tailwind v4 is installed. Design tokens live in app/globals.css as @theme blocks, not tailwind.config.ts. Update this section before §2.4 work starts.
 
 - Tailwind config generated from this spec: `tailwind.config.ts` in repo, tokens exported
 - Component library maintained in Storybook (Phase 0 task in Implementation-Plan.md)

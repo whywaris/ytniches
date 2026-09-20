@@ -6,3 +6,7 @@ coverage/
 .env*.local
 .DS_Store
 *.log
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.pnpm-debug.log*
