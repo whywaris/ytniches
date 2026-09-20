@@ -1,0 +1,103 @@
+import { NextResponse, type NextRequest } from "next/server";
+
+import { createServerClient } from "@supabase/ssr";
+
+// Application-Flow.md §2.1-2.4 route tables. Prefix-matched here — Next.js
+// route groups like (app)/(auth) never appear in the actual URL — so
+// adding a new page under an existing group later doesn't require
+// touching this file. Includes routes that don't have a page yet (e.g.
+// /niches, /admin/*): hitting one just 404s after the auth check passes,
+// which is correct.
+const AUTH_ROUTES = ["/signup", "/login", "/forgot-password", "/reset-password", "/verify"];
+const APP_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/onboarding",
+  "/niches",
+  "/tracking",
+  "/prompts",
+  "/calendar",
+  "/workspace",
+  "/settings",
+];
+const ADMIN_PREFIX = "/admin";
+
+export type RouteAccess = "public" | "auth" | "app" | "admin";
+
+export function classifyRoute(pathname: string): RouteAccess {
+  if (pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`)) {
+    return "admin";
+  }
+  if (AUTH_ROUTES.includes(pathname)) {
+    return "auth";
+  }
+  if (
+    APP_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  ) {
+    return "app";
+  }
+  return "public";
+}
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
+      },
+    },
+  );
+
+  // Also refreshes the session (extends TTL) on every authenticated
+  // request, per Security.md §2.3.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname, search } = request.nextUrl;
+  const access = classifyRoute(pathname);
+
+  if (access === "app" && !user) {
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("redirect", pathname + search);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (access === "auth" && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (access === "admin") {
+    // Application-Flow.md §2.6: non-super-admin -> hard 403, always,
+    // including anonymous visitors — not a login redirect.
+    if (!user) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (profile?.role !== "super_admin") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+};

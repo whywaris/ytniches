@@ -53,6 +53,8 @@ Deepest to highest surface. Elevation is signalled by lightening, not shadow.
 | `text-disabled`  | #48484a | Disabled controls                |
 | `text-inverse`   | #0a0a0b | Text on accent-color backgrounds |
 
+> Note: text-tertiary (#6e6e73 light) clears AA against bg-base (#ffffff, ~4.6:1) but fails against bg-surface-1 (#f7f7f8, ~3.65:1). Use text-secondary on surface-1 backgrounds for body/label text. text-tertiary is safe for timestamps and supporting info on bg-base only.
+
 ### 2.3 Dark mode — borders
 
 | Token            | Hex     | Use                           |
