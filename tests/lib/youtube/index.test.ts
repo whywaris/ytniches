@@ -11,6 +11,7 @@ const searchChannels = vi.fn();
 const fetchChannelsByIds = vi.fn();
 const fetchVideosByIds = vi.fn();
 const fetchPlaylistItemVideoIds = vi.fn();
+const fetchChannelByHandle = vi.fn();
 
 const checkAndIncrement = vi.fn();
 
@@ -29,13 +30,14 @@ vi.mock("@/lib/youtube/client", () => ({
   fetchChannelsByIds: (...args: unknown[]) => fetchChannelsByIds(...args),
   fetchVideosByIds: (...args: unknown[]) => fetchVideosByIds(...args),
   fetchPlaylistItemVideoIds: (...args: unknown[]) => fetchPlaylistItemVideoIds(...args),
+  fetchChannelByHandle: (...args: unknown[]) => fetchChannelByHandle(...args),
 }));
 
 vi.mock("@/lib/youtube/quota", () => ({
   checkAndIncrement: (...args: unknown[]) => checkAndIncrement(...args),
 }));
 
-const { searchChannelIds, getChannelById, getChannelVideos, getChannelsByIds } =
+const { searchChannelIds, getChannelById, getChannelVideos, getChannelsByIds, resolveChannelUrl } =
   await import("@/lib/youtube");
 
 beforeEach(() => {
@@ -274,5 +276,75 @@ describe("getChannelVideos", () => {
         message: "channel UC1 has no uploads playlist",
       });
     }
+  });
+});
+
+describe("resolveChannelUrl", () => {
+  it("extracts the ID directly from a /channel/ URL without any API call", async () => {
+    const result = await resolveChannelUrl("https://www.youtube.com/channel/UC12345/");
+
+    expect(result).toEqual({ ok: true, value: "UC12345" });
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+    expect(fetchChannelByHandle).not.toHaveBeenCalled();
+  });
+
+  it("resolves a /@handle URL via channels.list?forHandle=, stripping the @ first", async () => {
+    const channel = { id: "UC-from-handle" };
+    fetchChannelByHandle.mockResolvedValueOnce({ ok: true, value: channel });
+
+    const result = await resolveChannelUrl("https://www.youtube.com/@SleepSoundsDaily");
+
+    expect(result).toEqual({ ok: true, value: "UC-from-handle" });
+    expect(checkAndIncrement).toHaveBeenCalledWith(1);
+    // The handle passed to the API must not include the leading "@".
+    expect(fetchChannelByHandle).toHaveBeenCalledWith("SleepSoundsDaily");
+    expect(setCachedChannel).toHaveBeenCalledWith("UC-from-handle", channel);
+  });
+
+  it("normalizes https://, www., and a trailing slash before parsing", async () => {
+    const withoutProtocol = await resolveChannelUrl("youtube.com/channel/UC1");
+    const withHttp = await resolveChannelUrl("http://youtube.com/channel/UC1");
+    const withWww = await resolveChannelUrl("https://www.youtube.com/channel/UC1");
+    const withTrailingSlash = await resolveChannelUrl("https://www.youtube.com/channel/UC1/");
+
+    expect(withoutProtocol).toEqual({ ok: true, value: "UC1" });
+    expect(withHttp).toEqual({ ok: true, value: "UC1" });
+    expect(withWww).toEqual({ ok: true, value: "UC1" });
+    expect(withTrailingSlash).toEqual({ ok: true, value: "UC1" });
+  });
+
+  it("returns invalid_url for anything that isn't a recognized channel/handle URL", async () => {
+    const result = await resolveChannelUrl("https://example.com/not-youtube");
+
+    expect(result).toEqual({ ok: false, error: { type: "invalid_url" } });
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+  });
+
+  it("returns not_found when the handle doesn't resolve to any channel", async () => {
+    fetchChannelByHandle.mockResolvedValueOnce({ ok: true, value: null });
+
+    const result = await resolveChannelUrl("https://youtube.com/@doesnotexist");
+
+    expect(result).toEqual({ ok: false, error: { type: "not_found" } });
+  });
+
+  it("propagates a quota_exceeded error without calling the API for a handle URL", async () => {
+    checkAndIncrement.mockResolvedValueOnce({ allowed: false, used: 10001 });
+
+    const result = await resolveChannelUrl("https://youtube.com/@someone");
+
+    expect(result).toEqual({ ok: false, error: { type: "quota_exceeded" } });
+    expect(fetchChannelByHandle).not.toHaveBeenCalled();
+  });
+
+  it("propagates the client error when the handle lookup itself fails", async () => {
+    fetchChannelByHandle.mockResolvedValueOnce({
+      ok: false,
+      error: { type: "network_error", message: "timeout" },
+    });
+
+    const result = await resolveChannelUrl("https://youtube.com/@someone");
+
+    expect(result).toEqual({ ok: false, error: { type: "network_error", message: "timeout" } });
   });
 });

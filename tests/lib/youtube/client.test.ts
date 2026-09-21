@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  fetchChannelByHandle,
   fetchChannelsByIds,
   fetchPlaylistItemVideoIds,
   fetchVideosByIds,
@@ -117,6 +118,38 @@ describe("fetchChannelsByIds", () => {
     await fetchChannelsByIds(ids);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("fetchChannelByHandle", () => {
+  it("queries forHandle= (not id=) and returns the parsed channel on 200", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse(200, {
+        items: [
+          {
+            id: "UC1",
+            snippet: { title: "Sleep Sounds Daily", publishedAt: "2020-01-01T00:00:00Z" },
+            statistics: { viewCount: "1000", subscriberCount: "2000", videoCount: "30" },
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchChannelByHandle("SleepSoundsDaily");
+
+    expect(result).toEqual({ ok: true, value: expect.objectContaining({ id: "UC1" }) });
+    const url = urlOf(fetchMock.mock.calls[0]);
+    expect(url.searchParams.get("forHandle")).toBe("SleepSoundsDaily");
+    expect(url.searchParams.has("id")).toBe(false);
+  });
+
+  it("returns null (not an error) when no channel matches the handle", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse(200, { items: [] })));
+
+    const result = await fetchChannelByHandle("doesnotexist");
+
+    expect(result).toEqual({ ok: true, value: null });
   });
 });
 

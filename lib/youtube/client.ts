@@ -121,6 +121,26 @@ export async function fetchChannelsByIds(
   return ok(items);
 }
 
+// channels.list?forHandle= — 1 unit, same resource/shape as
+// fetchChannelsByIds's id= lookup, just a different query param. `handle`
+// must already have any leading "@" stripped by the caller.
+export async function fetchChannelByHandle(
+  handle: string,
+): Promise<Result<YouTubeChannelItem | null, YouTubeClientError>> {
+  const result = await fetchYouTube("channels", {
+    part: "snippet,statistics,brandingSettings,contentDetails",
+    forHandle: handle,
+  });
+  if (!result.ok) return result;
+
+  const parsed = YouTubeChannelResponseSchema.safeParse(result.value);
+  if (!parsed.success) {
+    return err({ type: "invalid_response", message: parsed.error.message });
+  }
+
+  return ok(parsed.data.items[0] ?? null);
+}
+
 async function fetchVideosBatch(
   ids: string[],
 ): Promise<Result<YouTubeVideoItem[], YouTubeClientError>> {

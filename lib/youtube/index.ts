@@ -8,6 +8,7 @@ import {
 } from "@/lib/youtube/cache";
 import {
   BATCH_SIZE,
+  fetchChannelByHandle,
   fetchChannelsByIds,
   fetchPlaylistItemVideoIds,
   fetchVideosByIds,
@@ -24,6 +25,8 @@ const SEARCH_COST = 100;
 const LOOKUP_COST = 1;
 
 export type YouTubeError = YouTubeClientError;
+
+export type YouTubeResolveError = { type: "invalid_url" } | { type: "not_found" } | YouTubeError;
 
 // "Never fetch what's cached fresh" (TRD.md §5.3): every export here checks
 // Redis first, only spends quota on a miss, and writes through on success.
@@ -183,4 +186,54 @@ export async function getChannelVideos(
 
   await setCachedChannelVideos(youtubeChannelId, videosResult.value);
   return ok(videosResult.value);
+}
+
+// PRD.md §6.2 "paste channel URL directly" / Application-Flow.md §4.2's
+// validating state. Only two URL shapes are recognized -- anything else is
+// invalid_url without spending quota. A /channel/<id> URL's ID is trusted
+// as-is (no API call, no cost); a /@handle URL requires an actual
+// channels.list?forHandle= lookup (1 unit) since the handle -> ID mapping
+// only YouTube knows.
+const CHANNEL_ID_URL_PATTERN = /^youtube\.com\/channel\/([^/]+)$/i;
+const HANDLE_URL_PATTERN = /^youtube\.com\/@([^/]+)$/i;
+
+function normalizeChannelUrl(url: string): string {
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/+$/, "");
+}
+
+export async function resolveChannelUrl(url: string): Promise<Result<string, YouTubeResolveError>> {
+  const normalized = normalizeChannelUrl(url);
+
+  const channelIdMatch = CHANNEL_ID_URL_PATTERN.exec(normalized);
+  if (channelIdMatch) {
+    return ok(channelIdMatch[1]);
+  }
+
+  const handleMatch = HANDLE_URL_PATTERN.exec(normalized);
+  if (handleMatch) {
+    const quota = await checkAndIncrement(LOOKUP_COST);
+    if (!quota.allowed) {
+      return err({ type: "quota_exceeded" });
+    }
+
+    const result = await fetchChannelByHandle(handleMatch[1]);
+    if (!result.ok) {
+      return result;
+    }
+    if (!result.value) {
+      return err({ type: "not_found" });
+    }
+
+    // Free win: we already have the full channel item, so a subsequent
+    // getChannelById(id) for this same channel hits cache instead of
+    // spending another unit.
+    await setCachedChannel(result.value.id, result.value);
+    return ok(result.value.id);
+  }
+
+  return err({ type: "invalid_url" });
 }
