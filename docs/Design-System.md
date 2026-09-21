@@ -310,6 +310,17 @@ Every data view must spec all three. Templates:
 - **Fallback:** initials on `bg-surface-2` when no image
 - **Group:** overlapping stack with count badge ("+3")
 
+---
+
+### 5.12 Tabs
+
+Added during Competitor Tracking build (Implementation-Plan.md §3.1 Phase 1 Task 2) — the add-channel modal and per-channel detail page both need tabbed navigation and no primitive existed yet, same gap as §5.2's Switch.
+
+- **Structure:** underlined trigger row (`border-b border-border-subtle`) + panel below
+- **Active tab:** `text-primary` label + 2px `accent` underline
+- **Keyboard:** arrow keys move focus and activate (roving tabindex), Home/End jump to first/last — via Radix `Tabs`, not hand-rolled
+- **Disabled tab:** supported via the underlying `disabled` prop, `opacity-50` + `pointer-events-none`
+
 ## 6. Data Visualization & Accessibility
 
 ### 6.1 Data visualization
