@@ -465,13 +465,22 @@ export interface VideoSummary {
 // (already populated by workers/channel-sync.ts), never lib/youtube/: no
 // reason to spend API quota re-fetching what a background job already
 // wrote to Postgres.
-export async function listVideosForChannel(channelId: string): Promise<VideoSummary[]> {
+export async function listVideosForChannel(
+  channelId: string,
+  options: { sortBy?: "views" | "published"; limit?: number } = {},
+): Promise<VideoSummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("videos")
     .select("id, title, thumbnail_url, view_count, published_at, duration_seconds")
     .eq("channel_id", channelId)
-    .order("published_at", { ascending: false });
+    .order(options.sortBy === "views" ? "view_count" : "published_at", { ascending: false });
+
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`listVideosForChannel query failed: ${error.message}`);

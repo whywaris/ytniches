@@ -560,6 +560,8 @@ Turn a winning video into ready-to-use prompts. URL: `/prompts`.
 - "Save selected" (if user picked specific items)
 - "Discard" (ghost, confirms first)
 
+_(Note, 2026-09-21: generation already persists the row on success — Backend-Schema.md §3.4 stores one output blob per row, nothing partial to select. "Save all"/"Save selected" dropped; only "Discard" (deletes the row) and "Generate another" remain. See DECISIONS.md D-031.)_
+
 ### 7.4 Prompt detail (from library)
 
 URL: `/prompts/[promptId]`.

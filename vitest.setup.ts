@@ -21,6 +21,14 @@ if (typeof Element.prototype.scrollIntoView === "undefined") {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
 }
 
+// jsdom doesn't implement the Pointer Capture API; Radix Select (and other
+// Radix primitives using pointer-based interactions) calls these on click.
+if (typeof Element.prototype.hasPointerCapture === "undefined") {
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+}
+
 // Explicit rather than relying on @testing-library/react's implicit
 // auto-cleanup-on-first-import: with vitest.config.ts's `isolate: false`,
 // multiple test files share a worker and its module cache, so the

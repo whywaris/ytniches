@@ -388,11 +388,14 @@ describe("getChannelDetail", () => {
 
 describe("listVideosForChannel", () => {
   function videosByChannelTable(result: { data: unknown[]; error: unknown }) {
-    return {
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ order: vi.fn(() => Promise.resolve(result)) })),
-      })),
+    const builder = {
+      select: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      order: vi.fn(() => builder),
+      limit: vi.fn(() => builder),
+      then: (resolve: (value: typeof result) => void) => resolve(result),
     };
+    return builder;
   }
 
   it("reshapes cached video rows, newest first", async () => {
@@ -434,5 +437,32 @@ describe("listVideosForChannel", () => {
     await expect(listVideosForChannel("internal-1")).rejects.toThrow(
       "listVideosForChannel query failed",
     );
+  });
+
+  it("sorts by view_count when sortBy is 'views'", async () => {
+    const builder = videosByChannelTable({ data: [], error: null });
+    sessionFrom.mockReturnValueOnce(builder);
+
+    await listVideosForChannel("internal-1", { sortBy: "views" });
+
+    expect(builder.order).toHaveBeenCalledWith("view_count", { ascending: false });
+  });
+
+  it("applies a limit when given (e.g. top 10 by views for the prompt generator's video picker)", async () => {
+    const builder = videosByChannelTable({ data: [], error: null });
+    sessionFrom.mockReturnValueOnce(builder);
+
+    await listVideosForChannel("internal-1", { sortBy: "views", limit: 10 });
+
+    expect(builder.limit).toHaveBeenCalledWith(10);
+  });
+
+  it("does not call limit when none is given", async () => {
+    const builder = videosByChannelTable({ data: [], error: null });
+    sessionFrom.mockReturnValueOnce(builder);
+
+    await listVideosForChannel("internal-1");
+
+    expect(builder.limit).not.toHaveBeenCalled();
   });
 });

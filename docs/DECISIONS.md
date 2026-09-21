@@ -366,3 +366,12 @@ Decisions that still need to close before their dependent docs / features can be
 - **Impacts:** PRD.md §6.3 Prompt Library section, new-user empty-state experience
 - **Recommendation:** Defer past Task 3, same treatment as the `notes` table (Backend-Schema.md §3.5) — both are real PRD-listed features that don't block the core generate/save/regenerate loop.
 - **Final call:** —
+
+---
+
+### D-031: Generation results bottom bar — no "Save all" / "Save selected"
+
+- **Status:** Resolved (2026-09-21)
+- **Impacts:** UI-UX-Flow.md §7.3
+- **Context:** UI-UX-Flow.md §7.3 specs a bottom bar on the results view with "Save all to library" (primary), "Save selected" (if items picked), and "Discard" (ghost, confirms). But `lib/services/prompts.ts`'s `generatePrompts` already inserts the `prompts` row on a successful AI call (Backend-Schema.md §3.4 has no draft/unsaved state — output is one JSON blob per row, not per-category rows a user could partially select). By the time results render, the generation is already persisted; there is nothing left to "save," and no per-item granularity to select from. Per CLAUDE.md §3.2, Backend-Schema wins on data model over UI-UX-Flow's bottom-bar copy.
+- **Final call:** Drop "Save all to library" and "Save selected" — generation auto-saves. Keep "Discard" (ghost, confirms first), wired to `deletePrompt` (soft-delete via `deleted_at`) on the row just created, plus a "Generate another" ghost action to reset the form. UI-UX-Flow.md §7.3 annotated with this deviation rather than rewritten.
