@@ -29,16 +29,16 @@ Each section covers one page or a related cluster. Screens are described top-dow
 
 **Screen inventory (Phase 1 MVP):**
 
-| Screen | Section |
-| --- | --- |
-| Landing, blog, free tools, VS pages | 2 |
-| Signup, login, forgot password, email verify | 2 |
-| Onboarding (5 steps) | 3 |
-| App shell (sidebar, top bar, command palette) | 4 |
-| Niche Finder (search, results, channel detail) | 5 |
-| Competitor Tracking (overview, detail, compare) | 6 |
-| AI Prompts (video select, generation, library) | 7 |
-| Settings + admin panel entry | 8 |
+| Screen                                          | Section |
+| ----------------------------------------------- | ------- |
+| Landing, blog, free tools, VS pages             | 2       |
+| Signup, login, forgot password, email verify    | 2       |
+| Onboarding (5 steps)                            | 3       |
+| App shell (sidebar, top bar, command palette)   | 4       |
+| Niche Finder (search, results, channel detail)  | 5       |
+| Competitor Tracking (overview, detail, compare) | 6       |
+| AI Prompts (video select, generation, library)  | 7       |
+| Settings + admin panel entry                    | 8       |
 
 ## 2. Public Marketing Site + Auth
 
@@ -523,6 +523,7 @@ Turn a winning video into ready-to-use prompts. URL: `/prompts`.
   - Target audience (free text, e.g. "beginners", "US teens")
   - Tone (dropdown: neutral / casual / educational / dramatic / clickbait-lite)
 - Primary button: "Generate prompts" (shows credit cost inline: "Uses 1 credit")
+  _(Note, 2026-09-21: this "1 credit" figure was a placeholder — Monetization.md §3.1 is the authoritative cost, 5 credits to generate / 3 to regenerate. Copy should read "Uses 5 credits.")_
 
 ### 7.2 Generation loading state
 
@@ -582,6 +583,7 @@ URL: `/prompts/[promptId]`.
 - **Loading (during generation):** see 7.2
 - **Error (generation failed):** "Something went wrong. Your credit was not charged. Retry?"
 - **Video unsupported (no transcript, private, deleted):** "This video can't be analyzed — \[reason\]. Try a different one."
+  _(Note, 2026-09-21: narrowed to private/deleted only. A missing/unfetchable transcript no longer hard-blocks generation — it soft-degrades instead (all 5 categories still generate from title/description/tags; hook variants are inferred from title+description rather than the transcript). Only "Hook variants" in PRD.md §6.3 actually depends on the transcript, so blocking the whole generation over it was a worse product experience than degrading gracefully. See DECISIONS.md.)_
 - **Rate/credit limit:** "Not enough credits. \[Get more\]" with upgrade CTA
 
 ## 8. Settings + Admin

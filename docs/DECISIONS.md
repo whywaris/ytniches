@@ -250,14 +250,14 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-018: AI Prompts in MVP or Phase 2
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-21)
 - **Impacts:** PRD Phase 1 scope, Monetization.md (AI cost per user), launch timeline
 - **Options:**
   - A: AI Prompts in Phase 1 MVP (current PRD assumption)
   - B: AI Prompts deferred to Phase 2, MVP ships with Niche Finder + Competitor Tracking + Onboarding only
 - **Trade-offs:** In MVP = stronger differentiation vs Nexlev/OutlierKit/TubeLab at launch, higher AI cost per free user (risk). Deferred = leaner MVP, faster ship, but weaker "Research + Execution" story at launch.
 - **Recommendation:** Option A, gated by credit limits per tier so free-tier AI cost is bounded. This is what makes the launch position true.
-- **Final call:** — (this is the question in the PRD comment)
+- **Final call:** Option A. AI Prompts ships in Phase 1 (Task 3, Implementation-Plan.md §3.1 build order item 3), gated by the credit costs in Monetization.md §3.1 (generation 5 / regenerate 3).
 
 ---
 
@@ -330,4 +330,39 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** The "Search" tab in AddChannelModal calls searchNichesAction directly, which consumes 1 credit per search. This is consistent with Niche Finder billing but may feel unexpected to users adding a channel (they're not "doing research," they're navigating). Alternative: a separate no-credit channel-lookup endpoint.
 - **Impacts:** Monetization.md §3.1, UX of tracking flow
 - **Recommendation:** Keep for MVP (consistent billing model, low-friction to implement), revisit if user feedback flags it as confusing.
+- **Final call:** —
+
+---
+
+### D-027: Transcript fetching — unofficial timedtext endpoint
+
+- **Status:** Resolved (2026-09-21)
+- **Context:** TRD.md §6.2 says "YouTube auto-captions where available," but the official `captions.download` endpoint requires OAuth consent from the video's owner — it can't fetch captions for an arbitrary third-party (competitor) video with just an API key. The only practical way to get transcript text for someone else's public video is YouTube's unofficial, undocumented `timedtext` endpoint, which is what effectively every "YouTube transcript" tool in the wild actually uses.
+- **Final call:** Use the unofficial `timedtext` endpoint. Hard fallback to an empty transcript on any failure (network error, no captions track, endpoint shape change) — never throws, never blocks generation. Called out in code with a comment naming it as unofficial, plus the endpoint format, since it isn't part of documented YouTube Data API v3 and could change or break without notice.
+
+---
+
+### D-028: Prompt generation architecture — synchronous, not async + polling
+
+- **Status:** Resolved (2026-09-21)
+- **Context:** UI-UX-Flow.md §7.2 shows a 5-item progress checklist ticked one step at a time, and TRD.md §6.2 says "prompt generation is UI-poll based" — taken literally, that implies a background job (Inngest) plus a polling Server Action, mirroring Task 2's channel-sync architecture.
+- **Trade-offs:** Async + polling matches the literal spec mechanism and would support a real multi-minute pipeline later, but is meaningfully more infrastructure (job definition, status table or row, polling action, client poll loop) for a call that, in practice, completes in ~5-15 seconds. Synchronous is far simpler to build, test, and reason about, and fits comfortably inside a Server Action's timeout budget.
+- **Final call:** A single synchronous Server Action does the full generation (fetch metadata, fetch transcript, call the AI, write the row) and returns the finished result. The UI-UX-Flow §7.2 checklist is rendered as a cosmetic, client-side progressive reveal (timed, not server-driven) rather than real step-by-step status tracking. This is a deliberate deviation from TRD §6.2's "UI-poll based" framing — revisit if generation latency grows enough to need real progress reporting.
+
+---
+
+### D-029: AI model tiering deferred — single model for MVP
+
+- **Status:** Resolved (2026-09-21)
+- **Context:** TRD.md §6.2 suggests a cheaper model for title variants + hooks and a higher-tier model for the full outline, i.e. two model configs and likely two API calls per generation.
+- **Final call:** Single model (`claude-sonnet-5`, via `@anthropic-ai/sdk`) generates all 5 categories in one call for Phase 1. Simpler to build and reason about, one cost line to monitor. Revisit tiering once real per-category cost/quality data exists to justify the added complexity.
+
+---
+
+### D-030: Pre-built starter prompts deferred
+
+- **Status:** Open
+- **Context:** PRD.md §6.3's Prompt Library lists "Pre-built starter prompts (curated by YTNiches) for common video types" as in-scope. This is a content-curation feature (someone has to write and maintain the starter prompt content), not just a code change, and Task 3's build plan doesn't include a content-authoring step.
+- **Impacts:** PRD.md §6.3 Prompt Library section, new-user empty-state experience
+- **Recommendation:** Defer past Task 3, same treatment as the `notes` table (Backend-Schema.md §3.5) — both are real PRD-listed features that don't block the core generate/save/regenerate loop.
 - **Final call:** —
