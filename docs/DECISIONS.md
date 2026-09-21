@@ -321,3 +321,13 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** `pnpm supabase:types` uses the Supabase CLI, which requires `supabase login` / `SUPABASE_ACCESS_TOKEN`. This isn't available in the Claude Code environment. Running the script silently wipes `database.types.ts` — it fails, and the `>` redirect overwrites the file with the auth-error JSON.
 - **Final call:** Generate types via the Supabase MCP tool (`generate_typescript_types`) and apply by hand after each migration set. The script stays in `package.json` for future use once a proper token is available, marked with a warning comment.
 - **Action taken:** Added the caveat to `database.types.ts`'s header — do NOT run `pnpm supabase:types` without a valid token.
+
+---
+
+### D-026: Add-channel modal search tab credit cost
+
+- **Status:** Open
+- **Context:** The "Search" tab in AddChannelModal calls searchNichesAction directly, which consumes 1 credit per search. This is consistent with Niche Finder billing but may feel unexpected to users adding a channel (they're not "doing research," they're navigating). Alternative: a separate no-credit channel-lookup endpoint.
+- **Impacts:** Monetization.md §3.1, UX of tracking flow
+- **Recommendation:** Keep for MVP (consistent billing model, low-friction to implement), revisit if user feedback flags it as confusing.
+- **Final call:** —
