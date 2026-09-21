@@ -13,7 +13,11 @@ import type { YouTubeChannelItem } from "@/lib/youtube/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 
 const SEARCH_CREDIT_COST = 1;
-const RESULTS_PER_PAGE = 20;
+// Exported for other server-side consumers. The client component can't
+// import it directly (this module is server-only — service-role client,
+// env vars — and any value import would pull it into the client bundle),
+// so it keeps its own duplicated copy in sync by hand.
+export const RESULTS_PER_PAGE = 20;
 
 // Monetization.md §3.6 fair-use cap: 60 niche searches/hour, same for every
 // tier (this is abuse protection, not a tier gate).

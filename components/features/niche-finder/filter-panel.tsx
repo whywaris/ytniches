@@ -10,6 +10,10 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { NumberInput } from "@/components/ui/number-input";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
+import {
+  DEFAULT_FILTER_VALUES,
+  type NicheFilterValues,
+} from "@/components/features/niche-finder/filter-values";
 
 // UI-UX-Flow.md §5.1 filter panel. Controlled + presentational: the page
 // owns the URL <-> values sync (Application-Flow.md §2.5 — filters live in
@@ -17,31 +21,14 @@ import { Select } from "@/components/ui/select";
 // changes. String fields for the numeric ranges (not number) so the native
 // inputs stay controlled without empty-string/NaN edge cases; the page
 // coerces to number before calling the Server Action.
-export interface NicheFilterValues {
-  keyword: string;
-  subscribersMin: string;
-  subscribersMax: string;
-  avgViewsMin: string;
-  avgViewsMax: string;
-  uploadFrequency: "any" | "weekly" | "2-4-week" | "daily-plus";
-  monetized: "any" | "yes" | "no";
-  languages: string[];
-  countries: string[];
-  createdAfter: string;
-}
-
-export const DEFAULT_FILTER_VALUES: NicheFilterValues = {
-  keyword: "",
-  subscribersMin: "",
-  subscribersMax: "",
-  avgViewsMin: "",
-  avgViewsMax: "",
-  uploadFrequency: "any",
-  monetized: "any",
-  languages: [],
-  countries: [],
-  createdAfter: "",
-};
+//
+// NicheFilterValues/DEFAULT_FILTER_VALUES live in filter-values.ts, not
+// here, and are re-exported below for client-side consumers only — server
+// code (url-filters.ts) must import the value directly from filter-values.ts.
+// Importing a value export from a "use client" file (this one) from server
+// code gets a client-reference proxy, not the real object; DEFAULT_FILTER_VALUES
+// silently stopped being the real default shape when it lived here.
+export { DEFAULT_FILTER_VALUES, type NicheFilterValues };
 
 export interface FilterPanelProps {
   values: NicheFilterValues;
