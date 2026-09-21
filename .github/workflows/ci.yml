@@ -1,3 +1,6 @@
+# TODO §2.2: Replace this stub with real pipeline.
+# Blocked on: GitHub remote not yet configured.
+# See DECISIONS.md D-024.
 name: CI
 
 on:
