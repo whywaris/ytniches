@@ -2,13 +2,15 @@ import { cookies } from "next/headers";
 
 import { createServerClient } from "@supabase/ssr";
 
+import type { Database } from "@/lib/supabase/database.types";
+
 // For Server Components, Server Actions, and Route Handlers. Anon key +
 // the user's own session only — never the service role key (TRD.md §3.1:
 // admin/service-role access is a separate, explicit path with an audit log).
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
