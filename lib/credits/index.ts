@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import type { RequestContext } from "@/lib/context";
 
@@ -71,4 +72,40 @@ export async function consume(
   }
 
   return ok(undefined);
+}
+
+// D-027/Monetization.md §3.3: "Refunded automatically if action fails."
+// Service role, not the session client -- the `users_insert_own_consumption`
+// RLS policy deliberately only allows `authenticated` to insert their own
+// negative-amount 'consumption' rows, never a 'refund' row (a user must
+// never be able to self-issue a refund). This makes the caller's own
+// success/failure check the trust boundary, not RLS -- only call this after
+// confirming the paid action actually failed. The ledger row itself is the
+// audit trail (CLAUDE.md §4.2's "admin action -> service role + audit log").
+//
+// `relatedIdempotencyKey` must be the SAME key passed to the original
+// consume() call, suffixed here -- idempotency_key has a table-wide unique
+// index (not scoped per event_type), so reusing the bare key would collide
+// with the consumption row it's refunding.
+export async function refund(
+  ctx: RequestContext,
+  amount: number,
+  reason: string,
+  relatedIdempotencyKey: string,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("credit_events").insert({
+    user_id: ctx.userId,
+    event_type: "refund",
+    amount,
+    reason,
+    idempotency_key: `${relatedIdempotencyKey}:refund`,
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      return; // already refunded for this action -- idempotent no-op
+    }
+    throw new Error(`refund insert failed: ${error.message}`);
+  }
 }

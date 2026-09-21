@@ -28,7 +28,7 @@ describe("fetchTranscript", () => {
 
     const result = await fetchTranscript("vid1");
 
-    expect(result).toBe("Hey everyone & welcome back to the channel");
+    expect(result).toEqual({ text: "Hey everyone & welcome back to the channel", language: "en" });
     const trackCallUrl = String(fetchMock.mock.calls[1][0]);
     expect(trackCallUrl).toContain("lang=en");
   });

@@ -162,7 +162,11 @@ describe("fetchVideosByIds", () => {
           items: [
             {
               id: "vid1",
-              snippet: { title: "How to pick a niche", publishedAt: "2024-01-01T00:00:00Z" },
+              snippet: {
+                title: "How to pick a niche",
+                publishedAt: "2024-01-01T00:00:00Z",
+                channelId: "UC1",
+              },
               contentDetails: { duration: "PT10M" },
             },
           ],

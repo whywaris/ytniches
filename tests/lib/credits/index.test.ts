@@ -10,6 +10,9 @@ let selectResult: { data: { amount: number }[] | null; error: { message: string 
 let insertResult: { error: { message: string; code?: string } | null } = { error: null };
 const insertSpy = vi.fn(() => Promise.resolve(insertResult));
 
+let refundInsertResult: { error: { message: string; code?: string } | null } = { error: null };
+const refundInsertSpy = vi.fn(() => Promise.resolve(refundInsertResult));
+
 function makeSelectBuilder() {
   const builder = {
     eq: vi.fn(() => builder),
@@ -27,13 +30,21 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-const { getBalance, consume } = await import("@/lib/credits");
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: vi.fn(() => ({
+    from: vi.fn(() => ({ insert: refundInsertSpy })),
+  })),
+}));
+
+const { getBalance, consume, refund } = await import("@/lib/credits");
 const ctx = { userId: "user-1" };
 
 beforeEach(() => {
   selectResult = { data: [], error: null };
   insertResult = { error: null };
   insertSpy.mockClear();
+  refundInsertResult = { error: null };
+  refundInsertSpy.mockClear();
 });
 
 describe("getBalance", () => {
@@ -95,5 +106,35 @@ describe("consume", () => {
     insertResult = { error: { message: "connection reset", code: "08000" } };
 
     await expect(consume(ctx, 1, "Niche search", "key-1")).rejects.toThrow("connection reset");
+  });
+});
+
+describe("refund", () => {
+  it("inserts a positive refund row keyed off the original idempotency key", async () => {
+    await refund(ctx, 5, "Prompt generation failed", "gen-key-1");
+
+    expect(refundInsertSpy).toHaveBeenCalledWith({
+      user_id: "user-1",
+      event_type: "refund",
+      amount: 5,
+      reason: "Prompt generation failed",
+      idempotency_key: "gen-key-1:refund",
+    });
+  });
+
+  it("treats a duplicate refund idempotency key as an already-succeeded replay", async () => {
+    refundInsertResult = {
+      error: { message: "duplicate key value violates unique constraint", code: "23505" },
+    };
+
+    await expect(refund(ctx, 5, "Prompt generation failed", "gen-key-1")).resolves.toBeUndefined();
+  });
+
+  it("throws on a non-idempotency insert error", async () => {
+    refundInsertResult = { error: { message: "connection reset", code: "08000" } };
+
+    await expect(refund(ctx, 5, "Prompt generation failed", "gen-key-1")).rejects.toThrow(
+      "connection reset",
+    );
   });
 });

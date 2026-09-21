@@ -123,6 +123,7 @@ describe("YouTubeVideoResponseSchema", () => {
     snippet: {
       title: "How to pick a faceless niche",
       publishedAt: "2024-05-01T00:00:00Z",
+      channelId: "UC123",
     },
     contentDetails: { duration: "PT12M34S" },
   };

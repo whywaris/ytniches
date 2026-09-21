@@ -114,6 +114,14 @@ export const YouTubeVideoResponseSchema = z
               thumbnails: youtubeThumbnailsSchema.optional(),
               tags: z.array(z.string()).default([]),
               defaultLanguage: z.string().optional(),
+              // Not needed by workers/channel-sync.ts (the channel is
+              // already known from context there), but AI Prompts' "From
+              // URL" entry path (Phase 1 Task 3) discovers a standalone
+              // video with no prior channel context, so it needs this to
+              // upsert the video's channel before the video itself
+              // (videos.channel_id is a NOT NULL FK).
+              channelId: z.string(),
+              channelTitle: z.string().optional(),
             })
             .passthrough(),
           statistics: z

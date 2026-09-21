@@ -39,10 +39,15 @@ function extractTranscriptText(trackXml: string): string {
 //   list tracks:  https://www.youtube.com/api/timedtext?type=list&v=<videoId>
 //   fetch a track: https://www.youtube.com/api/timedtext?v=<videoId>&lang=<langCode>
 //
+export interface FetchedTranscript {
+  text: string;
+  language: string;
+}
+
 // Hard fallback to null on any failure -- never throws, never blocks
 // prompt generation (soft-degrade, see DECISIONS.md D-027 and
 // UI-UX-Flow.md §7.6's deviation note).
-export async function fetchTranscript(youtubeVideoId: string): Promise<string | null> {
+export async function fetchTranscript(youtubeVideoId: string): Promise<FetchedTranscript | null> {
   try {
     const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(youtubeVideoId)}`;
     const listResponse = await fetch(listUrl);
@@ -57,8 +62,8 @@ export async function fetchTranscript(youtubeVideoId: string): Promise<string | 
     if (!trackResponse.ok) return null;
 
     const trackXml = await trackResponse.text();
-    const transcript = extractTranscriptText(trackXml);
-    return transcript.length > 0 ? transcript : null;
+    const text = extractTranscriptText(trackXml);
+    return text.length > 0 ? { text, language: lang } : null;
   } catch {
     return null;
   }
