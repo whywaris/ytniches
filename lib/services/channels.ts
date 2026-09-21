@@ -129,8 +129,10 @@ function toChannelRow(
 // Upserts fetched channels into the shared cache table (service-role write
 // — Backend-Schema.md §6.1: no per-user ownership to scope an authenticated
 // RLS policy to, unlike credit_events/tracked_channels) and returns the
-// internal channels.id for each, keyed by youtube_channel_id.
-async function upsertChannels(channels: YouTubeChannelItem[]): Promise<Map<string, string>> {
+// internal channels.id for each, keyed by youtube_channel_id. Exported —
+// workers/channel-sync.ts reuses this exact mapping rather than
+// duplicating the YouTubeChannelItem -> DB row logic.
+export async function upsertChannels(channels: YouTubeChannelItem[]): Promise<Map<string, string>> {
   if (channels.length === 0) {
     return new Map();
   }

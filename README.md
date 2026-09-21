@@ -15,6 +15,20 @@ pnpm dev
 
 App runs at [http://localhost:3000](http://localhost:3000).
 
+## Development
+
+Background jobs (TRD.md §4) run on Inngest. Local dev needs a second terminal running the Inngest dev server alongside `pnpm dev`, or scheduled/triggered jobs (channel sync, the sync cron) never fire:
+
+```bash
+# terminal 1
+pnpm dev
+
+# terminal 2
+pnpm dev:inngest
+```
+
+The Inngest dev UI runs at [http://localhost:8288](http://localhost:8288) and auto-discovers functions from `app/api/inngest/route.ts`.
+
 ## Common commands
 
 | Command          | What it does                        |

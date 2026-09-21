@@ -584,7 +584,12 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      find_due_channel_ids: {
+        Args: never;
+        Returns: {
+          channel_id: string;
+        }[];
+      };
     };
     Enums: {
       credit_event_type: "allocation" | "consumption" | "grant" | "refund" | "expiration";
