@@ -452,6 +452,41 @@ export async function getChannelDetail(
   });
 }
 
+export interface VideoSummary {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  viewCount: number;
+  publishedAt: string;
+  durationSeconds: number;
+}
+
+// UI-UX-Flow.md §6.2's Videos tab -- straight from the cached videos table
+// (already populated by workers/channel-sync.ts), never lib/youtube/: no
+// reason to spend API quota re-fetching what a background job already
+// wrote to Postgres.
+export async function listVideosForChannel(channelId: string): Promise<VideoSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("videos")
+    .select("id, title, thumbnail_url, view_count, published_at, duration_seconds")
+    .eq("channel_id", channelId)
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`listVideosForChannel query failed: ${error.message}`);
+  }
+
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    thumbnailUrl: row.thumbnail_url,
+    viewCount: row.view_count,
+    publishedAt: row.published_at,
+    durationSeconds: row.duration_seconds,
+  }));
+}
+
 export async function saveChannelToTracking(
   ctx: RequestContext,
   channelId: string,

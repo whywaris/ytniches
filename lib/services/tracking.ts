@@ -1,8 +1,9 @@
-import { resolveChannelUrl } from "@/lib/youtube";
+import { getChannelById, resolveChannelUrl } from "@/lib/youtube";
 import { createClient } from "@/lib/supabase/server";
 import { err, ok, type Result } from "@/lib/result";
 import {
   saveChannelToTracking,
+  upsertChannels,
   type NotFoundError,
   type SaveChannelError,
 } from "@/lib/services/channels";
@@ -44,6 +45,18 @@ export interface TrackedChannel {
   customLabel: string | null;
   refreshCadenceHours: number;
   notificationsEnabled: boolean;
+}
+
+// UI-UX-Flow.md §6.5's "previews channel info before confirm" -- the
+// channelId here is always our internal channels.id, never the raw
+// YouTube ID, so it's directly usable as addChannelToTracking's
+// { channelId } input once the user confirms.
+export interface ChannelPreview {
+  channelId: string;
+  name: string;
+  avatarUrl: string | null;
+  subscriberCount: number;
+  videoCount: number;
 }
 
 // Keyset pagination cursor. Spec calls this "base64url-encoded notification/
@@ -130,6 +143,8 @@ export async function getActivityFeed(
     limit?: number;
     cursor?: string;
     filter?: "all" | "new_video" | "view_spike" | "cadence_change";
+    /** ISO timestamp cutoff — UI-UX-Flow.md §6.1's 24h/7d/30d time range. */
+    since?: string;
   } = {},
 ): Promise<
   Result<{ notifications: NotificationWithEvent[]; nextCursor: string | null }, TrackingError>
@@ -155,6 +170,9 @@ export async function getActivityFeed(
 
   if (options.filter && options.filter !== "all") {
     query = query.eq("notification_type", options.filter);
+  }
+  if (options.since) {
+    query = query.gte("created_at", options.since);
   }
   if (cursor) {
     query = query.or(
@@ -241,6 +259,62 @@ async function findTrackedChannelRow(
   return data;
 }
 
+// resolveChannelUrl (lib/youtube) only returns a *YouTube* channel ID --
+// never our internal channels.id, which is what tracked_channels.channel_id
+// actually foreign-keys to. Any URL-based flow needs the full channel
+// fetched and cached (same upsertChannels step searchNiches already does)
+// before it has a usable internal ID, not just the resolved YouTube ID.
+// Shared by previewChannelFromUrl and addChannelToTracking's url branch so
+// there's exactly one resolve-then-cache implementation.
+async function resolveAndCacheChannelFromUrl(
+  url: string,
+): Promise<Result<ChannelPreview, InvalidUrlError | NotFoundError>> {
+  const resolved = await resolveChannelUrl(url);
+  if (!resolved.ok) {
+    if (resolved.error.type === "not_found") {
+      return err({ type: "not_found" });
+    }
+    // invalid_url, plus any transient YouTube-side failure (quota,
+    // network, API, bad response) -- all mean "couldn't validate this URL
+    // right now," which the caller should treat as the same invalid-URL
+    // state (Application-Flow.md §4.2's `invalid`), not a distinct case.
+    return err({ type: "invalid_url" });
+  }
+
+  const channelResult = await getChannelById(resolved.value);
+  if (!channelResult.ok) {
+    return err({ type: "invalid_url" });
+  }
+
+  const idByYoutubeId = await upsertChannels([channelResult.value]);
+  const internalId = idByYoutubeId.get(channelResult.value.id);
+  if (!internalId) {
+    // upsertChannels throws on failure and otherwise maps every input row
+    // -- unreachable in practice, kept because the Map lookup is typed
+    // optional.
+    return err({ type: "invalid_url" });
+  }
+
+  return ok({
+    channelId: internalId,
+    name: channelResult.value.snippet.title,
+    avatarUrl:
+      channelResult.value.snippet.thumbnails?.high?.url ??
+      channelResult.value.snippet.thumbnails?.medium?.url ??
+      null,
+    subscriberCount: channelResult.value.statistics.subscriberCount,
+    videoCount: channelResult.value.statistics.videoCount,
+  });
+}
+
+// Application-Flow.md §4.2's validating state: resolves + caches the
+// channel and returns preview data, without adding it to tracking yet.
+export async function previewChannelFromUrl(
+  url: string,
+): Promise<Result<ChannelPreview, InvalidUrlError | NotFoundError>> {
+  return resolveAndCacheChannelFromUrl(url);
+}
+
 // Application-Flow.md §4.2's validating -> previewing -> adding states:
 // a URL input resolves to a channel ID first (validating), then both input
 // shapes converge on the same saveChannelToTracking call (adding).
@@ -256,18 +330,11 @@ export async function addChannelToTracking(
   let channelId: string;
 
   if ("url" in input) {
-    const resolved = await resolveChannelUrl(input.url);
-    if (!resolved.ok) {
-      if (resolved.error.type === "not_found") {
-        return err({ type: "not_found" });
-      }
-      // invalid_url, plus any transient YouTube-side failure (quota,
-      // network, API, bad response) -- all mean "couldn't validate this URL
-      // right now," which the caller should treat as the same invalid-URL
-      // state (Application-Flow.md §4.2's `invalid`), not a distinct case.
-      return err({ type: "invalid_url" });
+    const preview = await resolveAndCacheChannelFromUrl(input.url);
+    if (!preview.ok) {
+      return err(preview.error);
     }
-    channelId = resolved.value;
+    channelId = preview.value.channelId;
   } else {
     channelId = input.channelId;
   }
@@ -328,6 +395,95 @@ export async function markNotificationRead(
   }
 
   return ok(undefined);
+}
+
+// UI-UX-Flow.md §6.2's "Tracked since [date]" chip. `.maybeSingle()`, not
+// `.single()` (which findTrackedChannelRow above uses) -- this caller needs
+// to distinguish "not tracked" (null) from an actual query failure, since
+// the [channelId] page uses this to decide whether the viewer may be here
+// at all.
+export async function getTrackedChannel(
+  ctx: RequestContext,
+  channelId: string,
+): Promise<TrackedChannel | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tracked_channels")
+    .select("*")
+    .eq("user_id", ctx.userId)
+    .eq("channel_id", channelId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`getTrackedChannel query failed: ${error.message}`);
+  }
+  return data ? toTrackedChannel(data) : null;
+}
+
+export interface TrackedChannelWithActivity {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  lastActivityAt: string | null;
+}
+
+// UI-UX-Flow.md §6.1's right-side "Tracked channels" panel. Two extra
+// queries at most (channels, tracked_events), regardless of how many
+// channels the user tracks -- never one query per channel.
+export async function listTrackedChannelsSummary(
+  ctx: RequestContext,
+): Promise<TrackedChannelWithActivity[]> {
+  const supabase = await createClient();
+  const { data: tracked, error } = await supabase
+    .from("tracked_channels")
+    .select("channel_id")
+    .eq("user_id", ctx.userId);
+
+  if (error) {
+    throw new Error(`listTrackedChannelsSummary query failed: ${error.message}`);
+  }
+  if (tracked.length === 0) {
+    return [];
+  }
+
+  const channelIds = tracked.map((row) => row.channel_id);
+
+  const [{ data: channels, error: channelsError }, { data: events, error: eventsError }] =
+    await Promise.all([
+      supabase.from("channels").select("id, name, avatar_url").in("id", channelIds),
+      supabase
+        .from("tracked_events")
+        .select("channel_id, detected_at")
+        .in("channel_id", channelIds)
+        .order("detected_at", { ascending: false }),
+    ]);
+
+  if (channelsError) {
+    throw new Error(`listTrackedChannelsSummary channels query failed: ${channelsError.message}`);
+  }
+  if (eventsError) {
+    throw new Error(`listTrackedChannelsSummary events query failed: ${eventsError.message}`);
+  }
+
+  const lastActivityByChannel = new Map<string, string>();
+  for (const event of events) {
+    // Rows arrive ordered newest-first, so the first hit per channel is
+    // its most recent event.
+    if (!lastActivityByChannel.has(event.channel_id)) {
+      lastActivityByChannel.set(event.channel_id, event.detected_at);
+    }
+  }
+  const channelById = new Map(channels.map((channel) => [channel.id, channel]));
+
+  return channelIds.map((channelId) => {
+    const channel = channelById.get(channelId);
+    return {
+      id: channelId,
+      name: channel?.name ?? "Unknown channel",
+      avatarUrl: channel?.avatar_url ?? null,
+      lastActivityAt: lastActivityByChannel.get(channelId) ?? null,
+    };
+  });
 }
 
 export async function dismissNotification(

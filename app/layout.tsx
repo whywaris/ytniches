@@ -1,5 +1,7 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
 
+import { ToastProvider } from "@/components/ui/toast-provider";
+
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -24,7 +26,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

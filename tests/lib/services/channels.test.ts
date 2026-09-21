@@ -42,7 +42,7 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom }),
 }));
 
-const { searchNiches, saveChannelToTracking, getChannelDetail } =
+const { searchNiches, saveChannelToTracking, getChannelDetail, listVideosForChannel } =
   await import("@/lib/services/channels");
 
 const ctx = { userId: "user-1" };
@@ -383,5 +383,56 @@ describe("getChannelDetail", () => {
     if (result.ok) {
       expect(result.value.youtubeUrl).toBe("https://www.youtube.com/@sleepsounds");
     }
+  });
+});
+
+describe("listVideosForChannel", () => {
+  function videosByChannelTable(result: { data: unknown[]; error: unknown }) {
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ order: vi.fn(() => Promise.resolve(result)) })),
+      })),
+    };
+  }
+
+  it("reshapes cached video rows, newest first", async () => {
+    sessionFrom.mockReturnValueOnce(
+      videosByChannelTable({
+        data: [
+          {
+            id: "vid-1",
+            title: "How to pick a niche",
+            thumbnail_url: "https://example.com/thumb.jpg",
+            view_count: 91_200,
+            published_at: "2026-01-01T00:00:00Z",
+            duration_seconds: 605,
+          },
+        ],
+        error: null,
+      }),
+    );
+
+    const result = await listVideosForChannel("internal-1");
+
+    expect(result).toEqual([
+      {
+        id: "vid-1",
+        title: "How to pick a niche",
+        thumbnailUrl: "https://example.com/thumb.jpg",
+        viewCount: 91_200,
+        publishedAt: "2026-01-01T00:00:00Z",
+        durationSeconds: 605,
+      },
+    ]);
+  });
+
+  it("throws on a query failure", async () => {
+    sessionFrom.mockReturnValueOnce(
+      videosByChannelTable({ data: [], error: { message: "db down" } }),
+    );
+
+    await expect(listVideosForChannel("internal-1")).rejects.toThrow(
+      "listVideosForChannel query failed",
+    );
   });
 });
