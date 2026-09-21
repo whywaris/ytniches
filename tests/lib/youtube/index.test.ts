@@ -24,6 +24,7 @@ vi.mock("@/lib/youtube/cache", () => ({
 }));
 
 vi.mock("@/lib/youtube/client", () => ({
+  BATCH_SIZE: 50,
   searchChannels: (...args: unknown[]) => searchChannels(...args),
   fetchChannelsByIds: (...args: unknown[]) => fetchChannelsByIds(...args),
   fetchVideosByIds: (...args: unknown[]) => fetchVideosByIds(...args),
@@ -34,7 +35,8 @@ vi.mock("@/lib/youtube/quota", () => ({
   checkAndIncrement: (...args: unknown[]) => checkAndIncrement(...args),
 }));
 
-const { searchChannelIds, getChannelById, getChannelVideos } = await import("@/lib/youtube");
+const { searchChannelIds, getChannelById, getChannelVideos, getChannelsByIds } =
+  await import("@/lib/youtube");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -122,6 +124,95 @@ describe("getChannelById", () => {
 
     expect(result).toEqual({ ok: false, error: { type: "quota_exceeded" } });
     expect(fetchChannelsByIds).not.toHaveBeenCalled();
+  });
+});
+
+describe("getChannelsByIds", () => {
+  it("returns [] immediately without any cache or API calls for an empty input", async () => {
+    const result = await getChannelsByIds([]);
+
+    expect(result).toEqual({ ok: true, value: [] });
+    expect(getCachedChannel).not.toHaveBeenCalled();
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+  });
+
+  it("makes one batched fetch for every cache miss, not one call per miss", async () => {
+    getCachedChannel.mockResolvedValue(null);
+    fetchChannelsByIds.mockResolvedValueOnce({
+      ok: true,
+      value: [{ id: "UC1" }, { id: "UC2" }, { id: "UC3" }],
+    });
+
+    const result = await getChannelsByIds(["UC1", "UC2", "UC3"]);
+
+    expect(result.ok).toBe(true);
+    expect(fetchChannelsByIds).toHaveBeenCalledTimes(1);
+    expect(fetchChannelsByIds).toHaveBeenCalledWith(["UC1", "UC2", "UC3"]);
+    // 1 batch of misses -> 1 unit, not 3
+    expect(checkAndIncrement).toHaveBeenCalledWith(1);
+  });
+
+  it("checks quota for ceil(misses / BATCH_SIZE) units when misses span multiple batches", async () => {
+    const ids = Array.from({ length: 51 }, (_, i) => `UC${i}`);
+    getCachedChannel.mockResolvedValue(null);
+    fetchChannelsByIds.mockResolvedValueOnce({
+      ok: true,
+      value: ids.map((id) => ({ id })),
+    });
+
+    await getChannelsByIds(ids);
+
+    expect(checkAndIncrement).toHaveBeenCalledWith(2); // ceil(51 / 50)
+  });
+
+  it("skips quota and the API entirely when every ID is already cached", async () => {
+    getCachedChannel.mockImplementation((id: string) => Promise.resolve({ id }));
+
+    const result = await getChannelsByIds(["UC1", "UC2"]);
+
+    expect(result).toEqual({ ok: true, value: [{ id: "UC1" }, { id: "UC2" }] });
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+    expect(fetchChannelsByIds).not.toHaveBeenCalled();
+  });
+
+  it("returns quota_exceeded without calling the API when quota is exhausted", async () => {
+    getCachedChannel.mockResolvedValue(null);
+    checkAndIncrement.mockResolvedValueOnce({ allowed: false, used: 10001 });
+
+    const result = await getChannelsByIds(["UC1"]);
+
+    expect(result).toEqual({ ok: false, error: { type: "quota_exceeded" } });
+    expect(fetchChannelsByIds).not.toHaveBeenCalled();
+  });
+
+  it("silently omits an ID that comes back missing from the API (deleted channel)", async () => {
+    getCachedChannel.mockResolvedValue(null);
+    fetchChannelsByIds.mockResolvedValueOnce({ ok: true, value: [{ id: "UC1" }] });
+
+    const result = await getChannelsByIds(["UC1", "UC-deleted"]);
+
+    expect(result).toEqual({ ok: true, value: [{ id: "UC1" }] });
+  });
+
+  it("preserves input order regardless of which IDs were cached vs freshly fetched", async () => {
+    const cache: Record<string, { id: string } | null> = {
+      UC1: { id: "UC1" },
+      UC2: null,
+      UC3: { id: "UC3" },
+      UC4: null,
+    };
+    getCachedChannel.mockImplementation((id: string) => Promise.resolve(cache[id] ?? null));
+    fetchChannelsByIds.mockResolvedValueOnce({
+      ok: true,
+      value: [{ id: "UC4" }, { id: "UC2" }], // API returns misses in a different order
+    });
+
+    const result = await getChannelsByIds(["UC1", "UC2", "UC3", "UC4"]);
+
+    expect(result).toEqual({
+      ok: true,
+      value: [{ id: "UC1" }, { id: "UC2" }, { id: "UC3" }, { id: "UC4" }],
+    });
   });
 });
 

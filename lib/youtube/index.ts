@@ -7,6 +7,7 @@ import {
   setCachedSearchResult,
 } from "@/lib/youtube/cache";
 import {
+  BATCH_SIZE,
   fetchChannelsByIds,
   fetchPlaylistItemVideoIds,
   fetchVideosByIds,
@@ -78,6 +79,59 @@ export async function getChannelById(
 
   await setCachedChannel(youtubeChannelId, channel);
   return ok(channel);
+}
+
+// Batches the *cache-check* layer, not just the API call: checks Redis for
+// every ID individually, then does exactly ceil(misses / BATCH_SIZE)
+// channels.list calls for everything that missed — not one call per miss.
+// Preserves the input order in the returned array regardless of which
+// entries came from cache vs. a fresh fetch.
+export async function getChannelsByIds(
+  youtubeChannelIds: string[],
+): Promise<Result<YouTubeChannelItem[], YouTubeError>> {
+  if (youtubeChannelIds.length === 0) {
+    return ok([]);
+  }
+
+  const cachedById = await Promise.all(
+    youtubeChannelIds.map(async (id) => [id, await getCachedChannel(id)] as const),
+  );
+  const cacheMap = new Map(cachedById);
+  const missingIds = youtubeChannelIds.filter((id) => !cacheMap.get(id));
+
+  const fetchedById = new Map<string, YouTubeChannelItem>();
+  if (missingIds.length > 0) {
+    const batchCount = Math.ceil(missingIds.length / BATCH_SIZE);
+    const quota = await checkAndIncrement(LOOKUP_COST * batchCount);
+    if (!quota.allowed) {
+      return err({ type: "quota_exceeded" });
+    }
+
+    const result = await fetchChannelsByIds(missingIds);
+    if (!result.ok) {
+      return result;
+    }
+
+    await Promise.all(
+      result.value.map((channel) => {
+        fetchedById.set(channel.id, channel);
+        return setCachedChannel(channel.id, channel);
+      }),
+    );
+  }
+
+  // A requested ID that doesn't come back from either cache or the API
+  // (deleted/suspended channel) is silently omitted rather than failing the
+  // whole batch — matches Application-Flow.md §5.6's soft-delete handling.
+  const items: YouTubeChannelItem[] = [];
+  for (const id of youtubeChannelIds) {
+    const channel = cacheMap.get(id) ?? fetchedById.get(id);
+    if (channel) {
+      items.push(channel);
+    }
+  }
+
+  return ok(items);
 }
 
 export async function getChannelVideos(

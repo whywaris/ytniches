@@ -12,7 +12,10 @@ const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
 // YouTube's max IDs per channels.list/videos.list call (TRD.md §5.3: 1 unit
 // total for up to 50 IDs, vs 1 unit per call if fetched one at a time).
-const BATCH_SIZE = 50;
+// Exported so index.ts can pre-compute exact quota cost for a batch of IDs
+// before calling fetchChannelsByIds, rather than under-counting quota when
+// a single logical lookup fans out into multiple real API calls.
+export const BATCH_SIZE = 50;
 
 export type YouTubeClientError =
   | { type: "quota_exceeded" }
