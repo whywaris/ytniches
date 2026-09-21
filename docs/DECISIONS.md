@@ -312,3 +312,12 @@ Decisions that still need to close before their dependent docs / features can be
 - **Impacts:** Implementation-Plan.md §2.2, §2.6 item 2
 - **Context:** Implementation-Plan.md §2.6 item 2 requires "CI passes on a sample PR (lint + typecheck + test all green)." The `.github/workflows/ci.yml` stub exists but contains only a placeholder echo command. §2.2 (real GitHub Actions pipeline) was not completed because no GitHub remote exists yet — local git only.
 - **Final call:** Phase 0 declared conditionally complete. §2.2 is the first task after a GitHub remote is configured. Phase 1 proceeds without a CI gate, with the explicit understanding that §2.2 must be done before any real feature PRs are reviewed. Deferred, not skipped — Mac to configure the GitHub remote when ready, then §2.2 immediately.
+
+---
+
+### D-025: Supabase type generation workflow
+
+- **Status:** Resolved (2026-09-21)
+- **Context:** `pnpm supabase:types` uses the Supabase CLI, which requires `supabase login` / `SUPABASE_ACCESS_TOKEN`. This isn't available in the Claude Code environment. Running the script silently wipes `database.types.ts` — it fails, and the `>` redirect overwrites the file with the auth-error JSON.
+- **Final call:** Generate types via the Supabase MCP tool (`generate_typescript_types`) and apply by hand after each migration set. The script stays in `package.json` for future use once a proper token is available, marked with a warning comment.
+- **Action taken:** Added the caveat to `database.types.ts`'s header — do NOT run `pnpm supabase:types` without a valid token.
