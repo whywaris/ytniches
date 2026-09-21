@@ -151,6 +151,25 @@ describe("Table", () => {
     expect(firstCell().className).toMatch(/\bpy-3\b/);
   });
 
+  it("density toggle: fires the optional onDensityChange callback so a consumer can persist it", async () => {
+    const user = userEvent.setup();
+    const onDensityChange = vi.fn();
+    render(
+      <Table
+        data={DATA}
+        columns={COLUMNS}
+        getRowKey={(row) => row.id}
+        onDensityChange={onDensityChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Compact" }));
+    expect(onDensityChange).toHaveBeenCalledWith("compact");
+
+    await user.click(screen.getByRole("button", { name: "Comfortable" }));
+    expect(onDensityChange).toHaveBeenCalledWith("comfortable");
+  });
+
   it("column visibility: hiding a column removes its header and cells from the DOM", async () => {
     const user = userEvent.setup();
     render(<Table data={DATA} columns={COLUMNS} getRowKey={(row) => row.id} />);

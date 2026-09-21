@@ -44,6 +44,10 @@ export interface TableProps<T> {
   onSelectionChange?: (selectedRows: T[]) => void;
   renderBulkActions?: (selectedRows: T[], clearSelection: () => void) => React.ReactNode;
   defaultDensity?: TableDensity;
+  /** Fires on every density change (compact/comfortable toggle) — lets a
+   * consumer persist the preference (TRD.md §2.3), Table itself never
+   * touches localStorage. Purely additive: omit it and nothing changes. */
+  onDensityChange?: (density: TableDensity) => void;
   defaultSort?: TableSort;
   pagination?: TablePaginationProps;
   loading?: boolean;
@@ -63,6 +67,7 @@ function Table<T>({
   onSelectionChange,
   renderBulkActions,
   defaultDensity = "comfortable",
+  onDensityChange,
   defaultSort,
   pagination,
   loading,
@@ -96,6 +101,11 @@ function Table<T>({
     });
     return sort.direction === "desc" ? sorted.reverse() : sorted;
   }, [data, sort, columns]);
+
+  function handleDensityChange(next: TableDensity) {
+    setDensity(next);
+    onDensityChange?.(next);
+  }
 
   function handleSortChange(key: string) {
     setSort((current) => {
@@ -170,7 +180,7 @@ function Table<T>({
         visibleColumnKeys={visibleKeys}
         onToggleColumn={toggleColumn}
         density={density}
-        onDensityChange={setDensity}
+        onDensityChange={handleDensityChange}
         selectedRows={selectedRows}
         renderBulkActions={renderBulkActions}
         onClearSelection={clearSelection}
