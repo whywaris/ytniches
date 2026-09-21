@@ -136,36 +136,37 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-010: Billing provider
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-19)
 - **Impacts:** Monetization.md, backend billing integration, checkout UX, tax handling, Backend-Schema.md (subscription tables)
 - **Options:**
   - A: Stripe
   - B: Paddle
+  - C: Creem.io
 - **Trade-offs:**
   - Stripe: bigger ecosystem, more docs, more flexibility, requires the merchant to handle tax (or add Stripe Tax); developer familiarity is common
   - Paddle: Merchant of Record model — handles VAT/sales tax globally, simpler for solo founder; less flexible, higher fees
-- **Recommendation:** Paddle for a solo-founder SaaS with global customers (Mac's likely case). Reconsider if Mac plans to hire a finance operator early.
-- **Final call:** —
+  - Creem: Merchant of Record model, simpler solo-founder integration, competitive fees (3.9% + $0.40)
+- **Final call:** Creem.io (Merchant of Record). Full integration spec in Monetization.md §4. This entry was left "Open" after Monetization.md resolved it — housekeeping fix, no new decision made; Monetization.md is the authoritative record per CLAUDE.md §3.2 (newest record wins).
 
 ---
 
 ### D-011: Pricing tiers structure
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-19)
 - **Impacts:** Monetization.md, Landing pricing section, feature gating throughout app
 - **Options:**
   - A: 3 tiers (Free / Pro / Team)
   - B: 4 tiers (Free / Starter / Pro / Team)
   - C: 2 tiers + credits top-up (Free / Pro with pay-as-you-go credits)
-- **Trade-offs:** More tiers = more upsell surface but more decision friction. Credits-based = fair for variable usage but harder to communicate value.
-- **Recommendation:** Benchmark Nexlev / OutlierKit / TubeLab actual pricing first (blocks decision). Default lean: 3 tiers with per-tier credit allocations.
-- **Final call:** —
+  - D: No permanent free tier — 14-day Pro-access trial + Starter / Pro / Team paid tiers, each with a monthly credit allocation
+- **Trade-offs:** More tiers = more upsell surface but more decision friction. Credits-based = fair for variable usage but harder to communicate value. A permanent free tier invites free-tier abuse against per-action AI/API costs (Monetization.md §1.2).
+- **Final call:** Option D. Starter $19/mo, Pro $49/mo, Team $99/mo (3 seats). No permanent free tier — trial only. Full structure in Monetization.md §2. This entry was left "Open" after Monetization.md resolved it — housekeeping fix, no new decision made; Monetization.md is the authoritative record per CLAUDE.md §3.2 (newest record wins). Actual pricing benchmarking against Nexlev/OutlierKit/TubeLab (referenced in the original recommendation) still tracked as open in Monetization.md §1.4.
 
 ---
 
 ### D-012: Credit costs per action
 
-- **Status:** Open (blocks after D-011)
+- **Status:** Resolved (2026-09-19)
 - **Impacts:** Monetization.md, backend usage tracking, UI credit displays
 - **Cost dimensions to define:**
   - Niche search (per query)
@@ -174,22 +175,21 @@ Decisions that still need to close before their dependent docs / features can be
   - Outlier scan (per channel)
   - Thumbnail idea generation
 - **Trade-offs:** Higher credits = more perceived value but slower quota consumption limits upsell. Lower = frequent upsell prompts but risks feeling stingy.
-- **Recommendation:** Model YouTube API + AI generation cost per action, then price credits at 3–5x cost to fund infra + margin. Deferred until D-011 closes.
-- **Final call:** —
+- **Final call:** Niche search = 1 credit, add channel to tracking = 1 credit, prompt generation = 5 credits, regenerate with feedback = 3 credits, outlier scan (Phase 2) = 2 credits, thumbnail idea (Phase 2) = 5 credits. Full table + rationale in Monetization.md §3.1. This entry was left "Open" after Monetization.md resolved it — housekeeping fix, no new decision made; Monetization.md is the authoritative record per CLAUDE.md §3.2 (newest record wins).
 
 ---
 
 ### D-013: Refresh cadence per tier
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-19)
 - **Impacts:** Backend-Schema.md (poll job schedules), TRD.md (API quota model), Monetization.md (feature gating)
 - **Options:**
   - A: Free = daily, Starter = 12h, Pro = 6h, Team = 1h
   - B: Free = weekly, Starter = daily, Pro = 6h, Team = real-time
   - C: Real-time for all (uses API quota heavily; needs cost model)
+  - D: Starter = 24h, Pro = 6h, Team = 1h (no permanent free tier, per D-011)
 - **Trade-offs:** Faster refresh = better product feel but costs API quota linearly. Free tier cadence directly affects free-tier cost model.
-- **Recommendation:** Option A. Free tier daily keeps API cost low; Pro at 6h feels fresh enough; Team at 1h justifies the premium.
-- **Final call:** —
+- **Final call:** Option D. Starter 24h, Pro 6h, Team 1h. Full table in Monetization.md §2.5. This entry was left "Open" after Monetization.md resolved it — housekeeping fix, no new decision made; Monetization.md is the authoritative record per CLAUDE.md §3.2 (newest record wins).
 
 ---
 
