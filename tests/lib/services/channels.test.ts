@@ -219,6 +219,54 @@ describe("searchNiches", () => {
       expect(result.value.map((r) => r.youtubeChannelId)).toEqual(["UC1"]);
     }
   });
+
+  it("returns viewTrend sorted oldest-to-newest regardless of DB row order", async () => {
+    getCachedSearchResult.mockResolvedValueOnce(null);
+    getBalance.mockResolvedValueOnce(10);
+    searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
+    getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel({ id: "UC1" })] });
+    serviceFrom.mockReturnValueOnce(
+      channelsUpsertTable({ data: [{ id: "internal-1", youtube_channel_id: "UC1" }], error: null }),
+    );
+    sessionFrom.mockReturnValueOnce(
+      videosTable({
+        data: [
+          // Rows arrive out of chronological order.
+          { channel_id: "internal-1", view_count: 300, published_at: "2024-03-01T00:00:00Z" },
+          { channel_id: "internal-1", view_count: 100, published_at: "2024-01-01T00:00:00Z" },
+          { channel_id: "internal-1", view_count: 200, published_at: "2024-02-01T00:00:00Z" },
+        ],
+        error: null,
+      }),
+    );
+    consume.mockResolvedValueOnce({ ok: true, value: undefined });
+
+    const result = await searchNiches(ctx, defaultFilters(), "key-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value[0].viewTrend).toEqual([100, 200, 300]);
+    }
+  });
+
+  it("returns an empty viewTrend for a cold-cache channel with no video rows", async () => {
+    getCachedSearchResult.mockResolvedValueOnce(null);
+    getBalance.mockResolvedValueOnce(10);
+    searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
+    getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel({ id: "UC1" })] });
+    serviceFrom.mockReturnValueOnce(
+      channelsUpsertTable({ data: [{ id: "internal-1", youtube_channel_id: "UC1" }], error: null }),
+    );
+    sessionFrom.mockReturnValueOnce(videosTable({ data: [], error: null }));
+    consume.mockResolvedValueOnce({ ok: true, value: undefined });
+
+    const result = await searchNiches(ctx, defaultFilters(), "key-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value[0].viewTrend).toEqual([]);
+    }
+  });
 });
 
 describe("saveChannelToTracking", () => {

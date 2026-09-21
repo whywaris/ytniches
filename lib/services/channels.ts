@@ -55,6 +55,11 @@ export interface ChannelSearchResult {
   language: string | null;
   country: string | null;
   youtubeCreatedAt: string;
+  // View counts of whatever videos we already have cached for this channel,
+  // sorted oldest -> newest. Empty for a cold-cache channel (UI renders no
+  // sparkline rather than a fake one) — computed alongside the aggregates
+  // below, same fetched rows, no extra query.
+  viewTrend: number[];
 }
 
 export interface ChannelDetail extends ChannelSearchResult {
@@ -143,6 +148,7 @@ interface ChannelMetrics {
   avgViewsLast30Days: number;
   avgViewsLifetime: number;
   uploadFrequencyPerWeek: number;
+  viewTrend: number[];
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -174,7 +180,11 @@ async function computeChannelMetrics(
   const now = Date.now();
   const byChannel = new Map<
     string,
-    { views: number[]; recentViews: number[]; recentUploads: number }
+    {
+      views: { count: number; publishedAt: number }[];
+      recentViews: number[];
+      recentUploads: number;
+    }
   >();
 
   for (const video of data) {
@@ -183,9 +193,9 @@ async function computeChannelMetrics(
       recentViews: [],
       recentUploads: 0,
     };
-    bucket.views.push(video.view_count);
-
     const publishedAt = new Date(video.published_at).getTime();
+    bucket.views.push({ count: video.view_count, publishedAt });
+
     if (now - publishedAt <= THIRTY_DAYS_MS) {
       bucket.recentViews.push(video.view_count);
     }
@@ -203,13 +213,16 @@ async function computeChannelMetrics(
         avgViewsLast30Days: 0,
         avgViewsLifetime: 0,
         uploadFrequencyPerWeek: 0,
+        viewTrend: [],
       });
       continue;
     }
+    const sortedByDate = [...bucket.views].sort((a, b) => a.publishedAt - b.publishedAt);
     metrics.set(channelId, {
       avgViewsLast30Days: average(bucket.recentViews),
-      avgViewsLifetime: average(bucket.views),
+      avgViewsLifetime: average(bucket.views.map((video) => video.count)),
       uploadFrequencyPerWeek: bucket.recentUploads / 4,
+      viewTrend: sortedByDate.map((video) => video.count),
     });
   }
 
@@ -311,6 +324,7 @@ async function toSearchResults(
       avgViewsLast30Days: 0,
       avgViewsLifetime: 0,
       uploadFrequencyPerWeek: 0,
+      viewTrend: [],
     };
     return [
       {
@@ -409,6 +423,7 @@ export async function getChannelDetail(
     avgViewsLast30Days: 0,
     avgViewsLifetime: 0,
     uploadFrequencyPerWeek: 0,
+    viewTrend: [],
   };
 
   return ok({
