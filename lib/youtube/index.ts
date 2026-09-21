@@ -2,9 +2,11 @@ import {
   getCachedChannel,
   getCachedChannelVideos,
   getCachedSearchResult,
+  getCachedVideo,
   setCachedChannel,
   setCachedChannelVideos,
   setCachedSearchResult,
+  setCachedVideo,
 } from "@/lib/youtube/cache";
 import {
   BATCH_SIZE,
@@ -197,7 +199,7 @@ export async function getChannelVideos(
 const CHANNEL_ID_URL_PATTERN = /^youtube\.com\/channel\/([^/]+)$/i;
 const HANDLE_URL_PATTERN = /^youtube\.com\/@([^/]+)$/i;
 
-function normalizeChannelUrl(url: string): string {
+function normalizeYoutubeUrl(url: string): string {
   return url
     .trim()
     .replace(/^https?:\/\//i, "")
@@ -206,7 +208,7 @@ function normalizeChannelUrl(url: string): string {
 }
 
 export async function resolveChannelUrl(url: string): Promise<Result<string, YouTubeResolveError>> {
-  const normalized = normalizeChannelUrl(url);
+  const normalized = normalizeYoutubeUrl(url);
 
   const channelIdMatch = CHANNEL_ID_URL_PATTERN.exec(normalized);
   if (channelIdMatch) {
@@ -236,4 +238,65 @@ export async function resolveChannelUrl(url: string): Promise<Result<string, You
   }
 
   return err({ type: "invalid_url" });
+}
+
+export async function getVideoById(
+  youtubeVideoId: string,
+): Promise<Result<YouTubeVideoItem, YouTubeError>> {
+  const cached = await getCachedVideo(youtubeVideoId);
+  if (cached) {
+    return ok(cached);
+  }
+
+  const quota = await checkAndIncrement(LOOKUP_COST);
+  if (!quota.allowed) {
+    return err({ type: "quota_exceeded" });
+  }
+
+  const result = await fetchVideosByIds([youtubeVideoId]);
+  if (!result.ok) {
+    return result;
+  }
+
+  const video = result.value[0];
+  if (!video) {
+    return err({
+      type: "api_error",
+      status: 404,
+      message: `video ${youtubeVideoId} not found`,
+    });
+  }
+
+  await setCachedVideo(youtubeVideoId, video);
+  return ok(video);
+}
+
+// PRD.md §6.3 "Video URL ... pasted from YouTube" (AI Prompts' "From URL"
+// entry path). Three URL shapes, ID extracted directly -- no API call, no
+// quota cost, mirroring resolveChannelUrl's /channel/<id> branch. The
+// actual video fetch (and its quota cost) happens separately via
+// getVideoById once the caller has this ID.
+const YOUTU_BE_PATTERN = /^youtu\.be\/([^/?]+)/i;
+const SHORTS_URL_PATTERN = /^youtube\.com\/shorts\/([^/?]+)/i;
+const WATCH_URL_PATTERN = /^youtube\.com\/watch\?(.*)$/i;
+
+function extractVideoId(normalized: string): string | null {
+  const shortMatch = YOUTU_BE_PATTERN.exec(normalized);
+  if (shortMatch) return shortMatch[1];
+
+  const shortsMatch = SHORTS_URL_PATTERN.exec(normalized);
+  if (shortsMatch) return shortsMatch[1];
+
+  const watchMatch = WATCH_URL_PATTERN.exec(normalized);
+  if (watchMatch) {
+    const videoId = new URLSearchParams(watchMatch[1]).get("v");
+    if (videoId) return videoId;
+  }
+
+  return null;
+}
+
+export function resolveVideoUrl(url: string): Result<string, { type: "invalid_url" }> {
+  const videoId = extractVideoId(normalizeYoutubeUrl(url));
+  return videoId ? ok(videoId) : err({ type: "invalid_url" });
 }

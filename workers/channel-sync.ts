@@ -84,7 +84,10 @@ function toVideoRow(
   };
 }
 
-async function upsertVideos(
+// Exported -- lib/services/prompts.ts (Phase 1 Task 3) reuses this exact
+// mapping for the "From URL" entry path, same reasoning as
+// lib/services/channels.ts's upsertChannels export.
+export async function upsertVideos(
   channelId: string,
   videos: YouTubeVideoItem[],
 ): Promise<Map<string, string>> {

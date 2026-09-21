@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getCachedChannel = vi.fn();
 const getCachedChannelVideos = vi.fn();
 const getCachedSearchResult = vi.fn();
+const getCachedVideo = vi.fn();
 const setCachedChannel = vi.fn();
 const setCachedChannelVideos = vi.fn();
 const setCachedSearchResult = vi.fn();
+const setCachedVideo = vi.fn();
 
 const searchChannels = vi.fn();
 const fetchChannelsByIds = vi.fn();
@@ -19,9 +21,11 @@ vi.mock("@/lib/youtube/cache", () => ({
   getCachedChannel: (...args: unknown[]) => getCachedChannel(...args),
   getCachedChannelVideos: (...args: unknown[]) => getCachedChannelVideos(...args),
   getCachedSearchResult: (...args: unknown[]) => getCachedSearchResult(...args),
+  getCachedVideo: (...args: unknown[]) => getCachedVideo(...args),
   setCachedChannel: (...args: unknown[]) => setCachedChannel(...args),
   setCachedChannelVideos: (...args: unknown[]) => setCachedChannelVideos(...args),
   setCachedSearchResult: (...args: unknown[]) => setCachedSearchResult(...args),
+  setCachedVideo: (...args: unknown[]) => setCachedVideo(...args),
 }));
 
 vi.mock("@/lib/youtube/client", () => ({
@@ -37,8 +41,15 @@ vi.mock("@/lib/youtube/quota", () => ({
   checkAndIncrement: (...args: unknown[]) => checkAndIncrement(...args),
 }));
 
-const { searchChannelIds, getChannelById, getChannelVideos, getChannelsByIds, resolveChannelUrl } =
-  await import("@/lib/youtube");
+const {
+  searchChannelIds,
+  getChannelById,
+  getChannelVideos,
+  getChannelsByIds,
+  resolveChannelUrl,
+  getVideoById,
+  resolveVideoUrl,
+} = await import("@/lib/youtube");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -346,5 +357,88 @@ describe("resolveChannelUrl", () => {
     const result = await resolveChannelUrl("https://youtube.com/@someone");
 
     expect(result).toEqual({ ok: false, error: { type: "network_error", message: "timeout" } });
+  });
+});
+
+describe("getVideoById", () => {
+  it("returns the cached video without touching quota or the API", async () => {
+    const video = { id: "vid1" };
+    getCachedVideo.mockResolvedValueOnce(video);
+
+    const result = await getVideoById("vid1");
+
+    expect(result).toEqual({ ok: true, value: video });
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+  });
+
+  it("on a cache miss, fetches, caches, and returns the video", async () => {
+    getCachedVideo.mockResolvedValueOnce(null);
+    const video = { id: "vid1" };
+    fetchVideosByIds.mockResolvedValueOnce({ ok: true, value: [video] });
+
+    const result = await getVideoById("vid1");
+
+    expect(result).toEqual({ ok: true, value: video });
+    expect(setCachedVideo).toHaveBeenCalledWith("vid1", video);
+  });
+
+  it("returns a 404 api_error when the video doesn't exist", async () => {
+    getCachedVideo.mockResolvedValueOnce(null);
+    fetchVideosByIds.mockResolvedValueOnce({ ok: true, value: [] });
+
+    const result = await getVideoById("vid-missing");
+
+    expect(result).toEqual({
+      ok: false,
+      error: { type: "api_error", status: 404, message: "video vid-missing not found" },
+    });
+  });
+
+  it("returns quota_exceeded without calling the API when quota is exhausted", async () => {
+    getCachedVideo.mockResolvedValueOnce(null);
+    checkAndIncrement.mockResolvedValueOnce({ allowed: false, used: 10001 });
+
+    const result = await getVideoById("vid1");
+
+    expect(result).toEqual({ ok: false, error: { type: "quota_exceeded" } });
+    expect(fetchVideosByIds).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveVideoUrl", () => {
+  it("extracts the ID from a youtu.be short link", () => {
+    expect(resolveVideoUrl("https://youtu.be/abc123")).toEqual({ ok: true, value: "abc123" });
+  });
+
+  it("extracts the ID from a /shorts/ URL", () => {
+    expect(resolveVideoUrl("https://www.youtube.com/shorts/abc123")).toEqual({
+      ok: true,
+      value: "abc123",
+    });
+  });
+
+  it("extracts the ID from a /watch?v= URL, regardless of other query params", () => {
+    expect(resolveVideoUrl("https://www.youtube.com/watch?list=xyz&v=abc123&t=30s")).toEqual({
+      ok: true,
+      value: "abc123",
+    });
+  });
+
+  it("normalizes https/www/trailing slash the same as resolveChannelUrl", () => {
+    expect(resolveVideoUrl("youtube.com/watch?v=abc123")).toEqual({ ok: true, value: "abc123" });
+  });
+
+  it("returns invalid_url for anything that isn't a recognized video URL", () => {
+    expect(resolveVideoUrl("https://example.com/not-youtube")).toEqual({
+      ok: false,
+      error: { type: "invalid_url" },
+    });
+  });
+
+  it("returns invalid_url for a channel URL (not a video URL)", () => {
+    expect(resolveVideoUrl("https://youtube.com/channel/UC123")).toEqual({
+      ok: false,
+      error: { type: "invalid_url" },
+    });
   });
 });

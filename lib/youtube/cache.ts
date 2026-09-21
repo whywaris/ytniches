@@ -8,6 +8,7 @@ import type { YouTubeChannelItem, YouTubeVideoItem } from "@/lib/youtube/schemas
 const CHANNEL_TTL_SECONDS = 6 * 60 * 60;
 const CHANNEL_VIDEOS_TTL_SECONDS = 6 * 60 * 60;
 const SEARCH_TTL_SECONDS = 6 * 60 * 60;
+const VIDEO_TTL_SECONDS = 6 * 60 * 60;
 
 function channelKey(youtubeChannelId: string): string {
   return `youtube:channel:${youtubeChannelId}`;
@@ -15,6 +16,10 @@ function channelKey(youtubeChannelId: string): string {
 
 function channelVideosKey(youtubeChannelId: string): string {
   return `youtube:channel:${youtubeChannelId}:videos`;
+}
+
+function videoKey(youtubeVideoId: string): string {
+  return `youtube:video:${youtubeVideoId}`;
 }
 
 function searchKey(hash: string): string {
@@ -48,6 +53,20 @@ export async function setCachedChannel(
 ): Promise<void> {
   const redis = getRedis();
   await redis.set(channelKey(youtubeChannelId), channel, { ex: CHANNEL_TTL_SECONDS });
+}
+
+export async function getCachedVideo(youtubeVideoId: string): Promise<YouTubeVideoItem | null> {
+  const redis = getRedis();
+  const cached = await redis.get<YouTubeVideoItem>(videoKey(youtubeVideoId));
+  return cached ?? null;
+}
+
+export async function setCachedVideo(
+  youtubeVideoId: string,
+  video: YouTubeVideoItem,
+): Promise<void> {
+  const redis = getRedis();
+  await redis.set(videoKey(youtubeVideoId), video, { ex: VIDEO_TTL_SECONDS });
 }
 
 export async function getCachedChannelVideos(
