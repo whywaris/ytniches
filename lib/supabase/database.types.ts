@@ -360,6 +360,73 @@ export type Database = {
         };
         Relationships: [];
       };
+      prompts: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          feedback_tags: string[];
+          id: string;
+          output: Json;
+          regeneration_of: string | null;
+          source_video_id: string;
+          target_audience: string | null;
+          tone: string;
+          updated_at: string;
+          user_id: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          feedback_tags?: string[];
+          id?: string;
+          output: Json;
+          regeneration_of?: string | null;
+          source_video_id: string;
+          target_audience?: string | null;
+          tone?: string;
+          updated_at?: string;
+          user_id: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          feedback_tags?: string[];
+          id?: string;
+          output?: Json;
+          regeneration_of?: string | null;
+          source_video_id?: string;
+          target_audience?: string | null;
+          tone?: string;
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "prompts_regeneration_of_fkey";
+            columns: ["regeneration_of"];
+            isOneToOne: false;
+            referencedRelation: "prompts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompts_source_video_id_fkey";
+            columns: ["source_video_id"];
+            isOneToOne: false;
+            referencedRelation: "videos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       subscriptions: {
         Row: {
           cancelled_at: string | null;
@@ -504,6 +571,47 @@ export type Database = {
             columns: ["channel_id"];
             isOneToOne: false;
             referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      video_transcripts_cache: {
+        Row: {
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          language: string;
+          source: string;
+          transcript_text: string;
+          updated_at: string;
+          video_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          language: string;
+          source: string;
+          transcript_text: string;
+          updated_at?: string;
+          video_id: string;
+        };
+        Update: {
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          language?: string;
+          source?: string;
+          transcript_text?: string;
+          updated_at?: string;
+          video_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "video_transcripts_cache_video_id_fkey";
+            columns: ["video_id"];
+            isOneToOne: true;
+            referencedRelation: "videos";
             referencedColumns: ["id"];
           },
         ];
