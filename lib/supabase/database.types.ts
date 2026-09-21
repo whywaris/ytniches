@@ -1,6 +1,13 @@
 // Generated via Supabase MCP generate_typescript_types against ytniches-dev
-// (ossrqwoorqxbgyzzoosz). Regenerate with `pnpm supabase:types` after every
-// migration (CLAUDE.md §4.1 "Add a new DB table" step 5). Do not hand-edit.
+// (ossrqwoorqxbgyzzoosz). Regenerate after every migration (CLAUDE.md §4.1
+// "Add a new DB table" step 5). Do not hand-edit.
+//
+// `pnpm supabase:types` needs `supabase login` / SUPABASE_ACCESS_TOKEN,
+// neither available in this environment — it fails with
+// LegacyPlatformAuthRequiredError and, because of the `>` redirect,
+// overwrites this file with that error message. Until a token is
+// configured, regenerate via the Supabase MCP's generate_typescript_types
+// tool and apply the diff by hand instead of running that script.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -166,6 +173,148 @@ export type Database = {
           },
         ];
       };
+      notification_channel_overrides: {
+        Row: {
+          channel_id: string;
+          created_at: string;
+          id: string;
+          notifications_enabled: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          created_at?: string;
+          id?: string;
+          notifications_enabled?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          created_at?: string;
+          id?: string;
+          notifications_enabled?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_channel_overrides_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notification_channel_overrides_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_preferences: {
+        Row: {
+          created_at: string;
+          digest_cadence: string;
+          email_enabled: boolean;
+          id: string;
+          in_app_enabled: boolean;
+          notification_type: string;
+          quiet_hours_end: string | null;
+          quiet_hours_start: string | null;
+          slack_enabled: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_cadence?: string;
+          email_enabled?: boolean;
+          id?: string;
+          in_app_enabled?: boolean;
+          notification_type: string;
+          quiet_hours_end?: string | null;
+          quiet_hours_start?: string | null;
+          slack_enabled?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_cadence?: string;
+          email_enabled?: boolean;
+          id?: string;
+          in_app_enabled?: boolean;
+          notification_type?: string;
+          quiet_hours_end?: string | null;
+          quiet_hours_start?: string | null;
+          slack_enabled?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          body: string | null;
+          created_at: string;
+          delivered_channels: string[];
+          dismissed_at: string | null;
+          id: string;
+          notification_type: string;
+          read_at: string | null;
+          related_resource: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          body?: string | null;
+          created_at?: string;
+          delivered_channels?: string[];
+          dismissed_at?: string | null;
+          id?: string;
+          notification_type: string;
+          read_at?: string | null;
+          related_resource?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          body?: string | null;
+          created_at?: string;
+          delivered_channels?: string[];
+          dismissed_at?: string | null;
+          id?: string;
+          notification_type?: string;
+          read_at?: string | null;
+          related_resource?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -321,6 +470,44 @@ export type Database = {
           },
         ];
       };
+      tracked_events: {
+        Row: {
+          channel_id: string;
+          created_at: string;
+          detected_at: string;
+          event_type: Database["public"]["Enums"]["tracked_event_type"];
+          id: string;
+          payload: Json;
+          updated_at: string;
+        };
+        Insert: {
+          channel_id: string;
+          created_at?: string;
+          detected_at?: string;
+          event_type: Database["public"]["Enums"]["tracked_event_type"];
+          id?: string;
+          payload?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          channel_id?: string;
+          created_at?: string;
+          detected_at?: string;
+          event_type?: Database["public"]["Enums"]["tracked_event_type"];
+          id?: string;
+          payload?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tracked_events_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       videos: {
         Row: {
           channel_id: string;
@@ -403,6 +590,8 @@ export type Database = {
       credit_event_type: "allocation" | "consumption" | "grant" | "refund" | "expiration";
       subscription_status: "active" | "trialing" | "past_due" | "cancelled" | "paused";
       subscription_tier: "free" | "starter" | "pro" | "team";
+      tracked_event_type:
+        "new_video" | "view_spike" | "cadence_change" | "subscriber_milestone" | "outlier_detected";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -527,6 +716,13 @@ export const Constants = {
       credit_event_type: ["allocation", "consumption", "grant", "refund", "expiration"],
       subscription_status: ["active", "trialing", "past_due", "cancelled", "paused"],
       subscription_tier: ["free", "starter", "pro", "team"],
+      tracked_event_type: [
+        "new_video",
+        "view_spike",
+        "cadence_change",
+        "subscriber_milestone",
+        "outlier_detected",
+      ],
     },
   },
 } as const;
