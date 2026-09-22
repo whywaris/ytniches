@@ -1,9 +1,30 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { toHaveNoViolations } from "jest-axe";
-import { afterEach, expect } from "vitest";
+import { afterEach, expect, vi } from "vitest";
 
 expect.extend(toHaveNoViolations);
+
+// D-039: the actual leak mechanism (diagnosed via 10x isolated runs on
+// every D-039-listed file, all clean, plus 5 full-suite runs producing two
+// distinct failure signatures whose stack traces showed the WRONG mock
+// shape active -- e.g. credits/index.test.ts's own createClient() mock
+// swapped for a differently-shaped one). Root cause: under `isolate:
+// false`, shared library modules (lib/credits/index.ts, lib/youtube/
+// cache.ts, etc.) are only evaluated ONCE per worker -- Node/Vite's SSR
+// module cache treats the first test file that `await import()`s them as
+// authoritative, and every later file's dynamic import in the same worker
+// gets that SAME cached instance, already bound to the FIRST file's
+// vi.mock() factories, not its own. This is why it only ever reproduced on
+// full-suite runs (multiple files sharing a worker) and never in
+// isolation (single file = first and only importer). setupFiles run fresh
+// per test file even under isolate:false (see the cleanup() comment
+// below) -- resetModules() here, before that file's own vi.mock() +
+// `await import()` lines run, forces every file to re-evaluate its
+// module graph fresh against its OWN mocks instead of reusing a stale,
+// wrongly-bound instance left by whichever file happened to import it
+// first.
+vi.resetModules();
 
 // jsdom doesn't implement ResizeObserver; Radix Toast (and some other
 // Radix primitives) use it internally to measure elements.
