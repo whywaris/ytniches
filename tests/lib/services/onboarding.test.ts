@@ -5,8 +5,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: sessionFrom }),
 }));
 
-const { getOnboardingStep, updateOnboardingStep, updateProfile, skipOnboarding } =
-  await import("@/lib/services/onboarding");
+const {
+  getOnboardingStep,
+  getOnboardingProfile,
+  updateOnboardingStep,
+  updateProfile,
+  skipOnboarding,
+  shouldShowFinishOnboardingBanner,
+} = await import("@/lib/services/onboarding");
 
 const ctx = { userId: "user-1" };
 
@@ -55,6 +61,51 @@ describe("getOnboardingStep", () => {
     );
 
     await expect(getOnboardingStep(ctx)).rejects.toThrow("connection reset");
+  });
+});
+
+describe("getOnboardingProfile", () => {
+  it("maps the row to the OnboardingProfile shape", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: {
+          onboarding_step: 2,
+          name: "Ada",
+          primary_goal: "grower",
+          onboarding_skipped_at: null,
+        },
+        error: null,
+      }),
+    );
+
+    const result = await getOnboardingProfile(ctx);
+
+    expect(result).toEqual({
+      step: 2,
+      name: "Ada",
+      primaryGoal: "grower",
+      skippedAt: null,
+    });
+  });
+
+  it("scopes the query to the caller's own row", async () => {
+    const builder = makeQueryBuilder({
+      data: { onboarding_step: 0, name: null, primary_goal: null, onboarding_skipped_at: null },
+      error: null,
+    });
+    sessionFrom.mockReturnValueOnce(builder);
+
+    await getOnboardingProfile(ctx);
+
+    expect(builder.eq).toHaveBeenCalledWith("id", ctx.userId);
+  });
+
+  it("throws on an unexpected query error", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: null, error: { message: "connection reset" } }),
+    );
+
+    await expect(getOnboardingProfile(ctx)).rejects.toThrow("connection reset");
   });
 });
 
@@ -120,5 +171,23 @@ describe("skipOnboarding", () => {
     );
 
     await expect(skipOnboarding(ctx)).rejects.toThrow("connection reset");
+  });
+});
+
+describe("shouldShowFinishOnboardingBanner", () => {
+  it("shows for a skipped, still-incomplete user", () => {
+    expect(shouldShowFinishOnboardingBanner({ skippedAt: "2026-09-22T00:00:00Z", step: 2 })).toBe(
+      true,
+    );
+  });
+
+  it("hides once the user reaches step 5, even if they skipped", () => {
+    expect(shouldShowFinishOnboardingBanner({ skippedAt: "2026-09-22T00:00:00Z", step: 5 })).toBe(
+      false,
+    );
+  });
+
+  it("hides for a user who never skipped", () => {
+    expect(shouldShowFinishOnboardingBanner({ skippedAt: null, step: 2 })).toBe(false);
   });
 });

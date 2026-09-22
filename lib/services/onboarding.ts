@@ -1,6 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import type { RequestContext } from "@/lib/context";
-import type { UpdateProfileInput } from "@/lib/services/onboarding.schema";
+import type { PrimaryGoal, UpdateProfileInput } from "@/lib/services/onboarding.schema";
+
+export interface OnboardingProfile {
+  step: number;
+  name: string | null;
+  primaryGoal: PrimaryGoal | null;
+  skippedAt: string | null;
+}
+
+// dashboard/page.tsx: both a skip and a genuine finish set step to 5 --
+// skippedAt is the only signal that tells them apart (Backend-Schema.md
+// §2.2), so the "Finish onboarding" banner (UI-UX-Flow.md §3) only shows
+// for a skip that's still actually incomplete.
+export function shouldShowFinishOnboardingBanner(profile: {
+  skippedAt: string | null;
+  step: number;
+}): boolean {
+  return profile.skippedAt !== null && profile.step < 5;
+}
 
 // Application-Flow.md §3.1 / auth/callback/route.ts: decides whether a
 // freshly-authenticated user lands on /onboarding or /dashboard. Every
@@ -19,6 +37,28 @@ export async function getOnboardingStep(ctx: RequestContext): Promise<number> {
     throw new Error(`getOnboardingStep query failed: ${error.message}`);
   }
   return data.onboarding_step;
+}
+
+// app/(app)/onboarding/page.tsx's initial render (Step 1's name pre-fill,
+// resuming at the right step) and the dashboard's "Finish onboarding"
+// banner (UI-UX-Flow.md §3) -- one query covers both call sites.
+export async function getOnboardingProfile(ctx: RequestContext): Promise<OnboardingProfile> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("onboarding_step, name, primary_goal, onboarding_skipped_at")
+    .eq("id", ctx.userId)
+    .single();
+
+  if (error) {
+    throw new Error(`getOnboardingProfile query failed: ${error.message}`);
+  }
+  return {
+    step: data.onboarding_step,
+    name: data.name,
+    primaryGoal: data.primary_goal as PrimaryGoal | null,
+    skippedAt: data.onboarding_skipped_at,
+  };
 }
 
 // UI-UX-Flow.md §3: persisted immediately on each step's "Continue" so a

@@ -6,6 +6,7 @@ import { z } from "zod";
 // 20260920095003_create_profiles.sql) -- kept in sync by hand, same as
 // every other enum-shaped Zod schema in this codebase.
 export const PrimaryGoalSchema = z.enum(["explorer", "stuck", "grower", "operator"]);
+export type PrimaryGoal = z.infer<typeof PrimaryGoalSchema>;
 
 export const UpdateProfileInputSchema = z
   .object({

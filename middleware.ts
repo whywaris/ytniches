@@ -79,18 +79,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (access === "admin") {
+  if (access === "admin" && !user) {
     // Application-Flow.md §2.6: non-super-admin -> hard 403, always,
     // including anonymous visitors — not a login redirect.
-    if (!user) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  // Onboarding gate (UI-UX-Flow.md §3) and the admin role check share one
+  // profiles query -- both only matter once `user` exists and the route
+  // isn't purely public/auth. A skipped user never hits the onboarding
+  // redirect: skipOnboarding() sets onboarding_step to 5, same as a
+  // genuine finish (Backend-Schema.md §2.2's onboarding_skipped_at is what
+  // tells those two apart, not relevant here).
+  if ((access === "app" || access === "admin") && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, onboarding_step")
       .eq("id", user.id)
       .single();
-    if (profile?.role !== "super_admin") {
+
+    const onOnboardingRoute = pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+    if (access === "app" && profile?.onboarding_step === 0 && !onOnboardingRoute) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+
+    if (access === "admin" && profile?.role !== "super_admin") {
       return new NextResponse("Forbidden", { status: 403 });
     }
   }

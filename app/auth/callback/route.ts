@@ -2,23 +2,28 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSafeRedirect } from "@/lib/supabase/redirect";
+import { getOnboardingStep } from "@/lib/services/onboarding";
 
 // Where Google (via Supabase) redirects back to after the OAuth consent
-// screen. Exchanges the auth code for a session, then continues on to
-// wherever the user was originally headed (Application-Flow.md §2.6).
-//
-// TODO Phase 1: redirect to /onboarding instead of /dashboard once
-// onboarding is built (Application-Flow.md §3.1).
+// screen (also the landing spot for an email-verification link -- both of
+// Application-Flow.md §3.1's signup branches end at the same
+// exchangeCodeForSession call). An explicit ?redirect= is a deep link and
+// always wins; otherwise a brand-new or still-onboarding user (step < 5)
+// goes to /onboarding, a completed one goes to /dashboard.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const redirectTarget = getSafeRedirect(searchParams.get("redirect"));
+  const explicitRedirect = searchParams.get("redirect");
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${redirectTarget}`);
+      if (explicitRedirect) {
+        return NextResponse.redirect(`${origin}${getSafeRedirect(explicitRedirect)}`);
+      }
+      const step = await getOnboardingStep({ userId: data.user.id });
+      return NextResponse.redirect(`${origin}${step < 5 ? "/onboarding" : "/dashboard"}`);
     }
   }
 
