@@ -393,3 +393,21 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** UI-UX-Flow §3 says filters "vary by persona" but only one concrete set is specified. Phase 1 uses same defaults for all 4 personas.
 - **Impacts:** app/(app)/onboarding/page.tsx
 - **Final call:** —
+
+---
+
+### D-034: Credit top-up purchases deferred
+
+- **Status:** Open
+- **Context:** Monetization.md §3.5 specs one-time credit top-up packs (100/500/2000 credits, $10/$40/$120) as a purchase path independent of tier upgrades. Task 5's actual build scope (checkout signature `createCheckout(ctx, tier, billingFrequency)`, the env var list, the webhook event list) has no top-up product IDs or top-up checkout path — it covers tier subscriptions only.
+- **Impacts:** Monetization.md §3.5, `/settings/billing`, `lib/billing/products.ts` (would need top-up product IDs), `lib/services/billing.ts` (would need a top-up checkout path)
+- **Final call:** —
+
+---
+
+### D-035: Graduated dunning access enforcement deferred
+
+- **Status:** Open
+- **Context:** Monetization.md §6.4 specs a graduated access schedule during payment failure (day 0-3 full access, day 3-7 limited/read-only, day 7+ suspended, day 21+ auto-cancelled). Task 5's webhook handler records the right `subscriptions.status` transitions (`past_due` on `payment.failed`, `active` on `payment.recovered`) but does not enforce graduated access — no feature-gating-by-status middleware exists anywhere in this codebase yet, for any dimension (tier or dunning), and building that generic layer is beyond this task's webhook-integration scope.
+- **Impacts:** Monetization.md §6.4, a future feature-gating/middleware task
+- **Final call:** —
