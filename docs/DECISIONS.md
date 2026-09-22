@@ -375,3 +375,21 @@ Decisions that still need to close before their dependent docs / features can be
 - **Impacts:** UI-UX-Flow.md §7.3
 - **Context:** UI-UX-Flow.md §7.3 specs a bottom bar on the results view with "Save all to library" (primary), "Save selected" (if items picked), and "Discard" (ghost, confirms). But `lib/services/prompts.ts`'s `generatePrompts` already inserts the `prompts` row on a successful AI call (Backend-Schema.md §3.4 has no draft/unsaved state — output is one JSON blob per row, not per-category rows a user could partially select). By the time results render, the generation is already persisted; there is nothing left to "save," and no per-item granularity to select from. Per CLAUDE.md §3.2, Backend-Schema wins on data model over UI-UX-Flow's bottom-bar copy.
 - **Final call:** Drop "Save all to library" and "Save selected" — generation auto-saves. Keep "Discard" (ghost, confirms first), wired to `deletePrompt` (soft-delete via `deleted_at`) on the row just created, plus a "Generate another" ghost action to reset the form. UI-UX-Flow.md §7.3 annotated with this deviation rather than rewritten.
+
+---
+
+### D-032: AI provider switch — Anthropic → OpenAI
+
+- **Status:** Resolved (2026-09-21)
+- **Impacts:** `lib/ai/client.ts` only — `lib/ai/index.ts`, `lib/services/prompts.ts`, Server Actions, and the UI are unchanged, per TRD.md §6.2's provider-abstraction design (D-029's rationale already assumed a future Claude ↔ OpenAI swap would be config-only).
+- **Context:** Anthropic's card for API credits was declined; OpenAI credits were purchased instead. Requested ID for this entry was D-030, but that ID is already assigned to "Pre-built starter prompts deferred" (still Open) — per §1's "IDs are stable across the project's lifetime — never renumber," this entry takes the next free ID (D-032) instead of overwriting it.
+- **Final call:** `lib/ai/client.ts` now calls the `openai` SDK (`chat.completions.parse` + `zodResponseFormat`) instead of `@anthropic-ai/sdk`, model `gpt-4o` (replaces `claude-sonnet-5`). Same `generateStructuredOutput(system, user)` signature, same `AiClientError` union, same Zod response schema (`PromptOutputSchema`). `ANTHROPIC_API_KEY` removed from `.env.example`, `OPENAI_API_KEY` added. Reverting to Anthropic later is a `client.ts` + env var swap only, per the interface boundary TRD.md §6.2 already called for.
+
+---
+
+### D-033: Per-persona onboarding filter values
+
+- **Status:** Open
+- **Context:** UI-UX-Flow §3 says filters "vary by persona" but only one concrete set is specified. Phase 1 uses same defaults for all 4 personas.
+- **Impacts:** app/(app)/onboarding/page.tsx
+- **Final call:** —
