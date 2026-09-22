@@ -19,11 +19,11 @@ PostgreSQL 15+ via Supabase. Row-Level Security (RLS) enabled on every user-scop
 
 ### 1.2 Standard columns (every table)
 
-| Column | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `id` | `uuid` | `gen_random_uuid()` | Primary key |
-| `created_at` | `timestamptz` | `now()` | Immutable |
-| `updated_at` | `timestamptz` | `now()` | Auto-updated via trigger on any row change |
+| Column       | Type          | Default             | Notes                                      |
+| ------------ | ------------- | ------------------- | ------------------------------------------ |
+| `id`         | `uuid`        | `gen_random_uuid()` | Primary key                                |
+| `created_at` | `timestamptz` | `now()`             | Immutable                                  |
+| `updated_at` | `timestamptz` | `now()`             | Auto-updated via trigger on any row change |
 
 ### 1.3 Soft-delete pattern
 
@@ -55,36 +55,37 @@ Supabase Auth manages the `auth.users` table (id, email, encrypted\_password, em
 
 One-to-one with `auth.users`, holds public-facing profile data and app-specific settings.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` | FK to `auth.users.id`, primary key |
-| `name` | `text` | From OAuth or user input |
-| `avatar_url` | `text` nullable | From OAuth or user upload |
-| `time_zone` | `text` | IANA timezone (e.g. `Asia/Karachi`) |
-| `onboarding_step` | `int` | 0 (not started) through 5 (completed) |
-| `primary_goal` | `text` | 'explorer' / 'stuck' / 'grower' / 'operator' |
-| `youtube_channel_id` | `text` nullable | If user connected their channel |
-| `role` | `text` | 'user' (default) / 'staff' / 'super\_admin' |
-| `theme_preference` | `text` | 'system' / 'dark' / 'light' |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column                  | Type                   | Notes                                                                                                                                                                                                                                                                                |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                    | `uuid`                 | FK to `auth.users.id`, primary key                                                                                                                                                                                                                                                   |
+| `name`                  | `text`                 | From OAuth or user input                                                                                                                                                                                                                                                             |
+| `avatar_url`            | `text` nullable        | From OAuth or user upload                                                                                                                                                                                                                                                            |
+| `time_zone`             | `text`                 | IANA timezone (e.g. `Asia/Karachi`)                                                                                                                                                                                                                                                  |
+| `onboarding_step`       | `int`                  | 0 (not started) through 5 (completed)                                                                                                                                                                                                                                                |
+| `onboarding_skipped_at` | `timestamptz` nullable | Set when the user skips onboarding (any step); null if never skipped, including full natural completion. Distinguishes a skip from a genuine finish — both set `onboarding_step = 5` — so the dashboard can show the "Finish onboarding" banner only to skippers (UI-UX-Flow.md §3). |
+| `primary_goal`          | `text`                 | 'explorer' / 'stuck' / 'grower' / 'operator'                                                                                                                                                                                                                                         |
+| `youtube_channel_id`    | `text` nullable        | If user connected their channel                                                                                                                                                                                                                                                      |
+| `role`                  | `text`                 | 'user' (default) / 'staff' / 'super\_admin'                                                                                                                                                                                                                                          |
+| `theme_preference`      | `text`                 | 'system' / 'dark' / 'light'                                                                                                                                                                                                                                                          |
+| `deleted_at`            | `timestamptz` nullable | Soft-delete                                                                                                                                                                                                                                                                          |
 
 ### 2.3 subscriptions
 
 One-to-one active per user; historical rows preserved for audit.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `tier` | `subscription_tier` enum | 'free' / 'starter' / 'pro' / 'team' (final tiers per D-011) |
-| `status` | `subscription_status` enum | 'active' / 'trialing' / 'past\_due' / 'cancelled' / 'paused' |
-| `provider` | `text` | 'stripe' / 'paddle' / 'manual' (per D-010) |
-| `provider_subscription_id` | `text` nullable | External ID from provider |
-| `current_period_start` | `timestamptz` |  |
-| `current_period_end` | `timestamptz` |  |
-| `trial_ends_at` | `timestamptz` nullable |  |
-| `cancelled_at` | `timestamptz` nullable |  |
-| `is_current` | `boolean` | Only one row per user has `true` |
+| Column                     | Type                       | Notes                                                        |
+| -------------------------- | -------------------------- | ------------------------------------------------------------ |
+| `id`                       | `uuid`                     |                                                              |
+| `user_id`                  | `uuid`                     | FK to `profiles.id`                                          |
+| `tier`                     | `subscription_tier` enum   | 'free' / 'starter' / 'pro' / 'team' (final tiers per D-011)  |
+| `status`                   | `subscription_status` enum | 'active' / 'trialing' / 'past\_due' / 'cancelled' / 'paused' |
+| `provider`                 | `text`                     | 'stripe' / 'paddle' / 'manual' (per D-010)                   |
+| `provider_subscription_id` | `text` nullable            | External ID from provider                                    |
+| `current_period_start`     | `timestamptz`              |                                                              |
+| `current_period_end`       | `timestamptz`              |                                                              |
+| `trial_ends_at`            | `timestamptz` nullable     |                                                              |
+| `cancelled_at`             | `timestamptz` nullable     |                                                              |
+| `is_current`               | `boolean`                  | Only one row per user has `true`                             |
 
 > **Blocked on decisions:** Tier enum values (D-011) and provider (D-010) will be finalized once those close. Structure holds regardless.
 
@@ -92,30 +93,30 @@ One-to-one active per user; historical rows preserved for audit.
 
 How many credits each tier grants per billing cycle. Seeded per tier; overridden per user for grants (bonuses, comps).
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` nullable | Null = default allocation for tier; set = per-user override |
-| `tier` | `subscription_tier` |  |
-| `credits_per_cycle` | `int` | Values TBD per D-011 |
-| `rollover_max` | `int` | 0 = no rollover; > 0 = max unused credits carried to next cycle |
-| `effective_from` | `timestamptz` |  |
-| `effective_until` | `timestamptz` nullable |  |
+| Column              | Type                   | Notes                                                           |
+| ------------------- | ---------------------- | --------------------------------------------------------------- |
+| `id`                | `uuid`                 |                                                                 |
+| `user_id`           | `uuid` nullable        | Null = default allocation for tier; set = per-user override     |
+| `tier`              | `subscription_tier`    |                                                                 |
+| `credits_per_cycle` | `int`                  | Values TBD per D-011                                            |
+| `rollover_max`      | `int`                  | 0 = no rollover; > 0 = max unused credits carried to next cycle |
+| `effective_from`    | `timestamptz`          |                                                                 |
+| `effective_until`   | `timestamptz` nullable |                                                                 |
 
 ### 2.5 credit\_events
 
 Append-only ledger of every credit movement. Balance is derived, not stored.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` |  |
-| `event_type` | `credit_event_type` enum | 'allocation' / 'consumption' / 'grant' / 'refund' / 'expiration' |
-| `amount` | `int` | Positive for grants/allocations, negative for consumption |
-| `reason` | `text` | Human-readable (e.g. "Monthly Pro allocation", "Niche search", "Refund: generation failed") |
-| `metadata` | `jsonb` | Structured context (e.g. `{ "action": "niche_search", "query_hash": "..." }`) |
-| `related_resource` | `text` nullable | e.g. `prompt:<uuid>`, `channel:<uuid>` |
-| `idempotency_key` | `text` nullable | Prevents double-charging on retries |
+| Column             | Type                     | Notes                                                                                       |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------- |
+| `id`               | `uuid`                   |                                                                                             |
+| `user_id`          | `uuid`                   |                                                                                             |
+| `event_type`       | `credit_event_type` enum | 'allocation' / 'consumption' / 'grant' / 'refund' / 'expiration'                            |
+| `amount`           | `int`                    | Positive for grants/allocations, negative for consumption                                   |
+| `reason`           | `text`                   | Human-readable (e.g. "Monthly Pro allocation", "Niche search", "Refund: generation failed") |
+| `metadata`         | `jsonb`                  | Structured context (e.g. `{ "action": "niche_search", "query_hash": "..." }`)               |
+| `related_resource` | `text` nullable          | e.g. `prompt:<uuid>`, `channel:<uuid>`                                                      |
+| `idempotency_key`  | `text` nullable          | Prevents double-charging on retries                                                         |
 
 **Balance query:** `SUM(amount) WHERE user_id = ? AND created_at >= <cycle_start>`
 
@@ -137,91 +138,91 @@ YouTube data cached in our DB to reduce API calls. Every YouTube entity has a co
 
 Cached YouTube channel data. Shared across users — not user-scoped.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` | Our internal ID |
-| `youtube_channel_id` | `text` unique | e.g. `UC-lHJZR3Gqxm24_Vd_AJ5Yw` |
-| `handle` | `text` nullable | e.g. `@channelname` |
-| `name` | `text` |  |
-| `description` | `text` nullable |  |
-| `avatar_url` | `text` nullable |  |
-| `banner_url` | `text` nullable |  |
-| `subscriber_count` | `bigint` | Snapshot at last sync |
-| `video_count` | `int` | Snapshot |
-| `total_view_count` | `bigint` | Snapshot |
-| `country` | `text` nullable | ISO country code |
-| `language` | `text` nullable | ISO language code |
-| `is_monetized` | `boolean` nullable | Inferred from ads on recent videos |
-| `youtube_created_at` | `timestamptz` | Channel creation date on YouTube |
-| `last_synced_at` | `timestamptz` | When we last refreshed from API |
-| `unavailable_since` | `timestamptz` nullable | If channel deleted / suspended |
+| Column               | Type                   | Notes                              |
+| -------------------- | ---------------------- | ---------------------------------- |
+| `id`                 | `uuid`                 | Our internal ID                    |
+| `youtube_channel_id` | `text` unique          | e.g. `UC-lHJZR3Gqxm24_Vd_AJ5Yw`    |
+| `handle`             | `text` nullable        | e.g. `@channelname`                |
+| `name`               | `text`                 |                                    |
+| `description`        | `text` nullable        |                                    |
+| `avatar_url`         | `text` nullable        |                                    |
+| `banner_url`         | `text` nullable        |                                    |
+| `subscriber_count`   | `bigint`               | Snapshot at last sync              |
+| `video_count`        | `int`                  | Snapshot                           |
+| `total_view_count`   | `bigint`               | Snapshot                           |
+| `country`            | `text` nullable        | ISO country code                   |
+| `language`           | `text` nullable        | ISO language code                  |
+| `is_monetized`       | `boolean` nullable     | Inferred from ads on recent videos |
+| `youtube_created_at` | `timestamptz`          | Channel creation date on YouTube   |
+| `last_synced_at`     | `timestamptz`          | When we last refreshed from API    |
+| `unavailable_since`  | `timestamptz` nullable | If channel deleted / suspended     |
 
 ### 3.2 videos
 
 Cached YouTube video data. Shared across users.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `youtube_video_id` | `text` unique |  |
-| `channel_id` | `uuid` | FK to `channels.id` |
-| `title` | `text` |  |
-| `description` | `text` nullable |  |
-| `thumbnail_url` | `text` | Highest-res thumbnail |
-| `duration_seconds` | `int` |  |
-| `view_count` | `bigint` | Snapshot |
-| `like_count` | `int` nullable |  |
-| `comment_count` | `int` nullable |  |
-| `published_at` | `timestamptz` |  |
-| `tags` | `text[]` |  |
-| `language` | `text` nullable |  |
-| `has_transcript` | `boolean` |  |
-| `last_synced_at` | `timestamptz` |  |
-| `unavailable_since` | `timestamptz` nullable |  |
+| Column              | Type                   | Notes                 |
+| ------------------- | ---------------------- | --------------------- |
+| `id`                | `uuid`                 |                       |
+| `youtube_video_id`  | `text` unique          |                       |
+| `channel_id`        | `uuid`                 | FK to `channels.id`   |
+| `title`             | `text`                 |                       |
+| `description`       | `text` nullable        |                       |
+| `thumbnail_url`     | `text`                 | Highest-res thumbnail |
+| `duration_seconds`  | `int`                  |                       |
+| `view_count`        | `bigint`               | Snapshot              |
+| `like_count`        | `int` nullable         |                       |
+| `comment_count`     | `int` nullable         |                       |
+| `published_at`      | `timestamptz`          |                       |
+| `tags`              | `text[]`               |                       |
+| `language`          | `text` nullable        |                       |
+| `has_transcript`    | `boolean`              |                       |
+| `last_synced_at`    | `timestamptz`          |                       |
+| `unavailable_since` | `timestamptz` nullable |                       |
 
 ### 3.3 video\_transcripts\_cache
 
 Separate table because transcripts are large and only fetched on demand (for AI Prompts generation).
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `video_id` | `uuid` unique | FK to `videos.id` |
-| `transcript_text` | `text` | Full transcript |
-| `language` | `text` | Detected language |
-| `source` | `text` | 'youtube\_captions' / 'whisper\_generated' |
-| `fetched_at` | `timestamptz` |  |
+| Column            | Type          | Notes                                      |
+| ----------------- | ------------- | ------------------------------------------ |
+| `id`              | `uuid`        |                                            |
+| `video_id`        | `uuid` unique | FK to `videos.id`                          |
+| `transcript_text` | `text`        | Full transcript                            |
+| `language`        | `text`        | Detected language                          |
+| `source`          | `text`        | 'youtube\_captions' / 'whisper\_generated' |
+| `fetched_at`      | `timestamptz` |                                            |
 
 ### 3.4 prompts
 
 User-owned. Each prompt is one generation output tied to a source video.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `workspace_id` | `uuid` nullable | FK to `workspaces.id` (Phase 3) |
-| `source_video_id` | `uuid` | FK to `videos.id` |
-| `target_audience` | `text` nullable | User-provided context |
-| `tone` | `text` | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite' |
-| `output` | `jsonb` | Structured: `{ title_variants, thumbnail_concepts, hook_variants, script_outline, description_template }` |
-| `regeneration_of` | `uuid` nullable | FK to prior `prompts.id` if this was a regenerate |
-| `feedback_tags` | `text[]` | e.g. `['more_casual', 'shorter']` if regenerated |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column            | Type                   | Notes                                                                                                     |
+| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `id`              | `uuid`                 |                                                                                                           |
+| `user_id`         | `uuid`                 | FK to `profiles.id`                                                                                       |
+| `workspace_id`    | `uuid` nullable        | FK to `workspaces.id` (Phase 3)                                                                           |
+| `source_video_id` | `uuid`                 | FK to `videos.id`                                                                                         |
+| `target_audience` | `text` nullable        | User-provided context                                                                                     |
+| `tone`            | `text`                 | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite'                                     |
+| `output`          | `jsonb`                | Structured: `{ title_variants, thumbnail_concepts, hook_variants, script_outline, description_template }` |
+| `regeneration_of` | `uuid` nullable        | FK to prior `prompts.id` if this was a regenerate                                                         |
+| `feedback_tags`   | `text[]`               | e.g. `['more_casual', 'shorter']` if regenerated                                                          |
+| `deleted_at`      | `timestamptz` nullable | Soft-delete                                                                                               |
 
 ### 3.5 notes
 
 Per-user private annotations on any object (channel, video, prompt).
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `workspace_id` | `uuid` nullable | FK to `workspaces.id` (Phase 3, if shared) |
-| `subject_type` | `text` | 'channel' / 'video' / 'prompt' |
-| `subject_id` | `uuid` | Polymorphic FK to the subject table |
-| `body` | `text` | Markdown |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column         | Type                   | Notes                                      |
+| -------------- | ---------------------- | ------------------------------------------ |
+| `id`           | `uuid`                 |                                            |
+| `user_id`      | `uuid`                 | FK to `profiles.id`                        |
+| `workspace_id` | `uuid` nullable        | FK to `workspaces.id` (Phase 3, if shared) |
+| `subject_type` | `text`                 | 'channel' / 'video' / 'prompt'             |
+| `subject_id`   | `uuid`                 | Polymorphic FK to the subject table        |
+| `body`         | `text`                 | Markdown                                   |
+| `deleted_at`   | `timestamptz` nullable | Soft-delete                                |
 
 ## 4. Tracking & Notifications
 
@@ -229,16 +230,16 @@ Per-user private annotations on any object (channel, video, prompt).
 
 Join table: which user tracks which channel.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `workspace_id` | `uuid` nullable | FK to `workspaces.id` (Phase 3, if team-shared) |
-| `channel_id` | `uuid` | FK to `channels.id` |
-| `tracked_since` | `timestamptz` |  |
-| `custom_label` | `text` nullable | User's rename for the channel |
-| `refresh_cadence_hours` | `int` | Effective per-user cadence (from tier default, override possible per D-013) |
-| `notifications_enabled` | `boolean` | Master toggle per channel |
+| Column                  | Type            | Notes                                                                       |
+| ----------------------- | --------------- | --------------------------------------------------------------------------- |
+| `id`                    | `uuid`          |                                                                             |
+| `user_id`               | `uuid`          | FK to `profiles.id`                                                         |
+| `workspace_id`          | `uuid` nullable | FK to `workspaces.id` (Phase 3, if team-shared)                             |
+| `channel_id`            | `uuid`          | FK to `channels.id`                                                         |
+| `tracked_since`         | `timestamptz`   |                                                                             |
+| `custom_label`          | `text` nullable | User's rename for the channel                                               |
+| `refresh_cadence_hours` | `int`           | Effective per-user cadence (from tier default, override possible per D-013) |
+| `notifications_enabled` | `boolean`       | Master toggle per channel                                                   |
 
 **Unique constraint:** `(user_id, channel_id)` unless workspace context differs.
 
@@ -246,13 +247,13 @@ Join table: which user tracks which channel.
 
 Append-only log of events detected on tracked channels. Powers the activity feed.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `channel_id` | `uuid` | FK to `channels.id` |
-| `event_type` | `tracked_event_type` enum | 'new\_video' / 'view\_spike' / 'cadence\_change' / 'subscriber\_milestone' / 'outlier\_detected' (Phase 2) |
-| `payload` | `jsonb` | Event-specific data (e.g. `{ "video_id": "...", "crossed_threshold": 100000 }`) |
-| `detected_at` | `timestamptz` |  |
+| Column        | Type                      | Notes                                                                                                      |
+| ------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`          | `uuid`                    |                                                                                                            |
+| `channel_id`  | `uuid`                    | FK to `channels.id`                                                                                        |
+| `event_type`  | `tracked_event_type` enum | 'new\_video' / 'view\_spike' / 'cadence\_change' / 'subscriber\_milestone' / 'outlier\_detected' (Phase 2) |
+| `payload`     | `jsonb`                   | Event-specific data (e.g. `{ "video_id": "...", "crossed_threshold": 100000 }`)                            |
+| `detected_at` | `timestamptz`             |                                                                                                            |
 
 Note: `tracked_events` is not per-user — events are per-channel and shown to all users tracking that channel. RLS filters at read time.
 
@@ -260,33 +261,33 @@ Note: `tracked_events` is not per-user — events are per-channel and shown to a
 
 User-scoped notifications derived from tracked\_events + system events.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `notification_type` | `text` | Matches preference categories |
-| `title` | `text` |  |
-| `body` | `text` nullable |  |
-| `related_resource` | `text` nullable | e.g. `channel:<uuid>`, `video:<uuid>` |
-| `read_at` | `timestamptz` nullable | Null = unread |
-| `dismissed_at` | `timestamptz` nullable | Null = still in feed |
-| `delivered_channels` | `text[]` | Which delivery channels succeeded: `['in_app', 'email']` |
+| Column               | Type                   | Notes                                                    |
+| -------------------- | ---------------------- | -------------------------------------------------------- |
+| `id`                 | `uuid`                 |                                                          |
+| `user_id`            | `uuid`                 | FK to `profiles.id`                                      |
+| `notification_type`  | `text`                 | Matches preference categories                            |
+| `title`              | `text`                 |                                                          |
+| `body`               | `text` nullable        |                                                          |
+| `related_resource`   | `text` nullable        | e.g. `channel:<uuid>`, `video:<uuid>`                    |
+| `read_at`            | `timestamptz` nullable | Null = unread                                            |
+| `dismissed_at`       | `timestamptz` nullable | Null = still in feed                                     |
+| `delivered_channels` | `text[]`               | Which delivery channels succeeded: `['in_app', 'email']` |
 
 ### 4.4 notification\_preferences
 
 Per-user, per-notification-type toggles.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `notification_type` | `text` | Matches types in `notifications.notification_type` |
-| `in_app_enabled` | `boolean` | Default true |
-| `email_enabled` | `boolean` | Default false (opt-in) |
-| `slack_enabled` | `boolean` | Phase 3, team tier |
-| `digest_cadence` | `text` | 'off' / 'daily' / 'weekly' (email-only) |
-| `quiet_hours_start` | `time` nullable | Local to user's `time_zone` |
-| `quiet_hours_end` | `time` nullable |  |
+| Column              | Type            | Notes                                              |
+| ------------------- | --------------- | -------------------------------------------------- |
+| `id`                | `uuid`          |                                                    |
+| `user_id`           | `uuid`          | FK to `profiles.id`                                |
+| `notification_type` | `text`          | Matches types in `notifications.notification_type` |
+| `in_app_enabled`    | `boolean`       | Default true                                       |
+| `email_enabled`     | `boolean`       | Default false (opt-in)                             |
+| `slack_enabled`     | `boolean`       | Phase 3, team tier                                 |
+| `digest_cadence`    | `text`          | 'off' / 'daily' / 'weekly' (email-only)            |
+| `quiet_hours_start` | `time` nullable | Local to user's `time_zone`                        |
+| `quiet_hours_end`   | `time` nullable |                                                    |
 
 **Per-channel override table:** `notification_channel_overrides (user_id, channel_id, notifications_enabled)` — exists only when user overrides the default for a specific channel.
 
@@ -308,25 +309,25 @@ Defined now so Phase 1 tables can carry the `workspace_id` column, avoiding a co
 
 ### 5.1 workspaces
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `name` | `text` |  |
-| `slug` | `text` unique | URL-safe |
-| `owner_id` | `uuid` | FK to `profiles.id` — the account that owns billing |
-| `subscription_id` | `uuid` | FK to `subscriptions.id` — team plan applies to whole workspace |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column            | Type                   | Notes                                                           |
+| ----------------- | ---------------------- | --------------------------------------------------------------- |
+| `id`              | `uuid`                 |                                                                 |
+| `name`            | `text`                 |                                                                 |
+| `slug`            | `text` unique          | URL-safe                                                        |
+| `owner_id`        | `uuid`                 | FK to `profiles.id` — the account that owns billing             |
+| `subscription_id` | `uuid`                 | FK to `subscriptions.id` — team plan applies to whole workspace |
+| `deleted_at`      | `timestamptz` nullable | Soft-delete                                                     |
 
 ### 5.2 workspace\_members
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `workspace_id` | `uuid` | FK to `workspaces.id` |
-| `user_id` | `uuid` | FK to `profiles.id` |
-| `role` | `workspace_role` enum | 'admin' / 'editor' / 'viewer' |
-| `invited_by` | `uuid` nullable | FK to `profiles.id` |
-| `joined_at` | `timestamptz` |  |
+| Column         | Type                  | Notes                         |
+| -------------- | --------------------- | ----------------------------- |
+| `id`           | `uuid`                |                               |
+| `workspace_id` | `uuid`                | FK to `workspaces.id`         |
+| `user_id`      | `uuid`                | FK to `profiles.id`           |
+| `role`         | `workspace_role` enum | 'admin' / 'editor' / 'viewer' |
+| `invited_by`   | `uuid` nullable       | FK to `profiles.id`           |
+| `joined_at`    | `timestamptz`         |                               |
 
 **Unique constraint:** `(workspace_id, user_id)`.
 
@@ -334,48 +335,48 @@ Defined now so Phase 1 tables can carry the `workspace_id` column, avoiding a co
 
 Outstanding invites not yet accepted.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `workspace_id` | `uuid` |  |
-| `email` | `text` | Invited email address |
-| `role` | `workspace_role` | Role they'll get on accept |
-| `token` | `text` unique | For accept URL |
-| `expires_at` | `timestamptz` | Default 7 days |
-| `accepted_at` | `timestamptz` nullable |  |
-| `invited_by` | `uuid` | FK to `profiles.id` |
+| Column         | Type                   | Notes                      |
+| -------------- | ---------------------- | -------------------------- |
+| `id`           | `uuid`                 |                            |
+| `workspace_id` | `uuid`                 |                            |
+| `email`        | `text`                 | Invited email address      |
+| `role`         | `workspace_role`       | Role they'll get on accept |
+| `token`        | `text` unique          | For accept URL             |
+| `expires_at`   | `timestamptz`          | Default 7 days             |
+| `accepted_at`  | `timestamptz` nullable |                            |
+| `invited_by`   | `uuid`                 | FK to `profiles.id`        |
 
 ### 5.4 tasks
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `workspace_id` | `uuid` | FK to `workspaces.id` |
-| `title` | `text` |  |
-| `description` | `text` nullable |  |
-| `assignee_id` | `uuid` nullable | FK to `profiles.id` (must be workspace member) |
-| `due_date` | `date` nullable |  |
-| `status` | `task_status` enum | 'open' / 'in\_progress' / 'done' |
-| `linked_type` | `text` nullable | 'channel' / 'prompt' / 'calendar\_entry' |
-| `linked_id` | `uuid` nullable | Polymorphic FK |
-| `created_by` | `uuid` | FK to `profiles.id` |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column         | Type                   | Notes                                          |
+| -------------- | ---------------------- | ---------------------------------------------- |
+| `id`           | `uuid`                 |                                                |
+| `workspace_id` | `uuid`                 | FK to `workspaces.id`                          |
+| `title`        | `text`                 |                                                |
+| `description`  | `text` nullable        |                                                |
+| `assignee_id`  | `uuid` nullable        | FK to `profiles.id` (must be workspace member) |
+| `due_date`     | `date` nullable        |                                                |
+| `status`       | `task_status` enum     | 'open' / 'in\_progress' / 'done'               |
+| `linked_type`  | `text` nullable        | 'channel' / 'prompt' / 'calendar\_entry'       |
+| `linked_id`    | `uuid` nullable        | Polymorphic FK                                 |
+| `created_by`   | `uuid`                 | FK to `profiles.id`                            |
+| `deleted_at`   | `timestamptz` nullable | Soft-delete                                    |
 
 ### 5.5 calendar\_entries
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `workspace_id` | `uuid` nullable | Null = personal calendar entry; set = team |
-| `user_id` | `uuid` | Creator |
-| `channel_id` | `uuid` nullable | Which channel this entry is for |
-| `title` | `text` |  |
-| `description` | `text` nullable |  |
-| `linked_prompts` | `uuid[]` | Array of `prompts.id` |
-| `status` | `calendar_status` enum | 'idea' / 'scripted' / 'filmed' / 'edited' / 'published' |
-| `scheduled_for` | `timestamptz` nullable | When to publish |
-| `assignee_id` | `uuid` nullable | FK to `profiles.id` |
-| `deleted_at` | `timestamptz` nullable | Soft-delete |
+| Column           | Type                   | Notes                                                   |
+| ---------------- | ---------------------- | ------------------------------------------------------- |
+| `id`             | `uuid`                 |                                                         |
+| `workspace_id`   | `uuid` nullable        | Null = personal calendar entry; set = team              |
+| `user_id`        | `uuid`                 | Creator                                                 |
+| `channel_id`     | `uuid` nullable        | Which channel this entry is for                         |
+| `title`          | `text`                 |                                                         |
+| `description`    | `text` nullable        |                                                         |
+| `linked_prompts` | `uuid[]`               | Array of `prompts.id`                                   |
+| `status`         | `calendar_status` enum | 'idea' / 'scripted' / 'filmed' / 'edited' / 'published' |
+| `scheduled_for`  | `timestamptz` nullable | When to publish                                         |
+| `assignee_id`    | `uuid` nullable        | FK to `profiles.id`                                     |
+| `deleted_at`     | `timestamptz` nullable | Soft-delete                                             |
 
 ### 5.6 Enums
 
@@ -425,61 +426,61 @@ CREATE POLICY "users_delete_own_prompts" ON prompts
 
 Essential indexes for MVP:
 
-| Table | Index | Purpose |
-| --- | --- | --- |
-| `profiles` | `(role)` | Admin lookups |
-| `subscriptions` | `(user_id, is_current)` | Fetch current sub |
-| `credit_events` | `(user_id, created_at)` | Balance calculation |
-| `channels` | `(youtube_channel_id)` unique | API lookup |
-| `channels` | `(subscriber_count)` | Niche Finder sort |
-| `channels` | `(country, language)` | Niche Finder filter |
-| `videos` | `(youtube_video_id)` unique | API lookup |
-| `videos` | `(channel_id, published_at DESC)` | Latest videos per channel |
-| `videos` | `(view_count DESC)` | Top videos |
-| `tracked_channels` | `(user_id)` | User's tracking list |
-| `tracked_channels` | `(channel_id)` | Reverse lookup for polling |
-| `tracked_events` | `(channel_id, detected_at DESC)` | Activity feed |
-| `notifications` | `(user_id, read_at, created_at DESC)` | Unread + feed |
-| `prompts` | `(user_id, created_at DESC)` | User's library |
-| `prompts` | `(source_video_id)` | Videos-with-prompts lookup |
+| Table              | Index                                 | Purpose                    |
+| ------------------ | ------------------------------------- | -------------------------- |
+| `profiles`         | `(role)`                              | Admin lookups              |
+| `subscriptions`    | `(user_id, is_current)`               | Fetch current sub          |
+| `credit_events`    | `(user_id, created_at)`               | Balance calculation        |
+| `channels`         | `(youtube_channel_id)` unique         | API lookup                 |
+| `channels`         | `(subscriber_count)`                  | Niche Finder sort          |
+| `channels`         | `(country, language)`                 | Niche Finder filter        |
+| `videos`           | `(youtube_video_id)` unique           | API lookup                 |
+| `videos`           | `(channel_id, published_at DESC)`     | Latest videos per channel  |
+| `videos`           | `(view_count DESC)`                   | Top videos                 |
+| `tracked_channels` | `(user_id)`                           | User's tracking list       |
+| `tracked_channels` | `(channel_id)`                        | Reverse lookup for polling |
+| `tracked_events`   | `(channel_id, detected_at DESC)`      | Activity feed              |
+| `notifications`    | `(user_id, read_at, created_at DESC)` | Unread + feed              |
+| `prompts`          | `(user_id, created_at DESC)`          | User's library             |
+| `prompts`          | `(source_video_id)`                   | Videos-with-prompts lookup |
 
 ### 6.3 Audit tables
 
 **admin\_actions** — log every admin action for accountability.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `admin_id` | `uuid` | FK to `profiles.id` (super\_admin or staff) |
-| `action` | `text` | e.g. `impersonate_start`, `plan_change`, `credit_grant`, `refund` |
-| `target_type` | `text` nullable | e.g. `user`, `subscription` |
-| `target_id` | `uuid` nullable |  |
-| `metadata` | `jsonb` | Structured action context |
+| Column        | Type            | Notes                                                             |
+| ------------- | --------------- | ----------------------------------------------------------------- |
+| `id`          | `uuid`          |                                                                   |
+| `admin_id`    | `uuid`          | FK to `profiles.id` (super\_admin or staff)                       |
+| `action`      | `text`          | e.g. `impersonate_start`, `plan_change`, `credit_grant`, `refund` |
+| `target_type` | `text` nullable | e.g. `user`, `subscription`                                       |
+| `target_id`   | `uuid` nullable |                                                                   |
+| `metadata`    | `jsonb`         | Structured action context                                         |
 
 **auth\_events** — login attempts, password resets, session lifecycle (retained 90 days).
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `uuid` |  |
-| `user_id` | `uuid` nullable | Null on failed logins for non-existent users |
-| `event_type` | `text` | `login_success` / `login_failed` / `logout` / `password_reset_requested` / `session_expired` |
-| `ip_address` | `inet` |  |
-| `user_agent` | `text` nullable |  |
-| `metadata` | `jsonb` nullable |  |
+| Column       | Type             | Notes                                                                                        |
+| ------------ | ---------------- | -------------------------------------------------------------------------------------------- |
+| `id`         | `uuid`           |                                                                                              |
+| `user_id`    | `uuid` nullable  | Null on failed logins for non-existent users                                                 |
+| `event_type` | `text`           | `login_success` / `login_failed` / `logout` / `password_reset_requested` / `session_expired` |
+| `ip_address` | `inet`           |                                                                                              |
+| `user_agent` | `text` nullable  |                                                                                              |
+| `metadata`   | `jsonb` nullable |                                                                                              |
 
 ### 6.4 Retention policy
 
 Background job (nightly) enforces:
 
-| Data | Retention | Action after |
-| --- | --- | --- |
-| Soft-deleted user accounts | 30 days | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
-| Soft-deleted prompts / notes | 30 days | Hard-delete |
-| `auth_events` | 90 days | Delete |
-| `tracked_events` | 365 days | Delete (aggregates preserved in a monthly rollup) |
-| `notifications` (read + dismissed) | 90 days | Delete |
-| Failed webhook events | 30 days | Delete after review |
-| `video_transcripts_cache` | 180 days since last access | Delete (re-fetchable) |
+| Data                               | Retention                  | Action after                                                                                    |
+| ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
+| Soft-deleted user accounts         | 30 days                    | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
+| Soft-deleted prompts / notes       | 30 days                    | Hard-delete                                                                                     |
+| `auth_events`                      | 90 days                    | Delete                                                                                          |
+| `tracked_events`                   | 365 days                   | Delete (aggregates preserved in a monthly rollup)                                               |
+| `notifications` (read + dismissed) | 90 days                    | Delete                                                                                          |
+| Failed webhook events              | 30 days                    | Delete after review                                                                             |
+| `video_transcripts_cache`          | 180 days since last access | Delete (re-fetchable)                                                                           |
 
 **GDPR data export:** endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 

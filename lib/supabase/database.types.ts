@@ -322,6 +322,7 @@ export type Database = {
           deleted_at: string | null;
           id: string;
           name: string | null;
+          onboarding_skipped_at: string | null;
           onboarding_step: number;
           primary_goal: string | null;
           role: string;
@@ -336,6 +337,7 @@ export type Database = {
           deleted_at?: string | null;
           id: string;
           name?: string | null;
+          onboarding_skipped_at?: string | null;
           onboarding_step?: number;
           primary_goal?: string | null;
           role?: string;
@@ -350,6 +352,7 @@ export type Database = {
           deleted_at?: string | null;
           id?: string;
           name?: string | null;
+          onboarding_skipped_at?: string | null;
           onboarding_step?: number;
           primary_goal?: string | null;
           role?: string;
