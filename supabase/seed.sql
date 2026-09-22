@@ -36,21 +36,29 @@ on conflict (provider, provider_id) do nothing;
 
 -- public.profiles row is auto-created by the handle_new_user trigger above.
 
+-- Mirrors what lib/services/onboarding.ts's completeOnboarding() creates
+-- for a real new user (Monetization.md §5.1: 14-day Pro trial, no card).
+-- Was tier='free'/status='active' -- 'free' isn't a real product tier
+-- (Monetization.md §1.2: no permanent free tier) and predated Task 5.
 insert into public.subscriptions (
   user_id, tier, status, provider,
-  current_period_start, current_period_end, is_current
+  current_period_start, current_period_end, trial_ends_at, is_current
 ) values (
   '11111111-1111-1111-1111-111111111111',
-  'free', 'active', 'manual',
-  now(), now() + interval '1 month', true
+  'pro', 'trialing', 'creem',
+  now(), now() + interval '14 days', now() + interval '14 days', true
 )
 on conflict do nothing;
 
--- Default free-tier allocation (user_id null). Placeholder value per
--- Backend-Schema.md §2.4 ("Values TBD per D-012").
+-- Real per-tier monthly allocations (Monetization.md §3.2). Was
+-- tier='free'/100 credits -- a placeholder from before D-011/D-012
+-- resolved; 'free' isn't a real tier and 100 didn't match any real
+-- allocation. Team's rollover_max=500 is Monetization.md §3.3's
+-- single-cycle rollover exception; Starter/Pro get none (0).
 insert into public.credit_allocations (
   user_id, tier, credits_per_cycle, rollover_max, effective_from
-) values (
-  null, 'free', 100, 0, now()
-)
+) values
+  (null, 'starter', 200, 0, now()),
+  (null, 'pro', 1000, 0, now()),
+  (null, 'team', 3000, 500, now())
 on conflict do nothing;

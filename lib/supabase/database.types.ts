@@ -690,6 +690,42 @@ export type Database = {
           },
         ];
       };
+      webhook_events: {
+        Row: {
+          created_at: string;
+          error: string | null;
+          event_type: string;
+          id: string;
+          processed_at: string | null;
+          provider: string;
+          provider_event_id: string;
+          raw_payload: Json;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          error?: string | null;
+          event_type: string;
+          id?: string;
+          processed_at?: string | null;
+          provider: string;
+          provider_event_id: string;
+          raw_payload: Json;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          error?: string | null;
+          event_type?: string;
+          id?: string;
+          processed_at?: string | null;
+          provider?: string;
+          provider_event_id?: string;
+          raw_payload?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

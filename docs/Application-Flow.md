@@ -33,71 +33,71 @@ Next.js App Router. Routes grouped by access requirement. Dynamic segments use `
 
 ### 2.1 Public routes (no auth required)
 
-| Route | Page | Notes |
-| --- | --- | --- |
-| `/` | Landing | Marketing home |
-| `/blog` | Blog homepage | Featured + category rows |
-| `/blog/[slug]` | Blog post | MDX-rendered |
-| `/blog/categories/[slug]` | Category page | Filtered post list |
-| `/blog/authors/[slug]` | Author page | Author bio + their posts |
-| `/blog/tags/[slug]` | Tag page | Filtered post list |
-| `/blog/rss.xml` | RSS feed | Auto-generated |
-| `/``tools` | Free tools index | List of all tools |
-| `/` | Free tool | Individual tool |
-| `/tutorials` | Tutorials index | Long-form guides list |
-| `/tutorials/[slug]` | Tutorial page | Long-form guide |
-| `/vs/[competitor]` | VS page | Comparison page |
-| `/pricing` | Pricing | Full pricing tiers |
-| `/legal/terms` | Terms of service | Static |
-| `/legal/privacy` | Privacy policy | Static |
-| `/legal/cookies` | Cookie policy | Static |
+| Route                     | Page             | Notes                    |
+| ------------------------- | ---------------- | ------------------------ |
+| `/`                       | Landing          | Marketing home           |
+| `/blog`                   | Blog homepage    | Featured + category rows |
+| `/blog/[slug]`            | Blog post        | MDX-rendered             |
+| `/blog/categories/[slug]` | Category page    | Filtered post list       |
+| `/blog/authors/[slug]`    | Author page      | Author bio + their posts |
+| `/blog/tags/[slug]`       | Tag page         | Filtered post list       |
+| `/blog/rss.xml`           | RSS feed         | Auto-generated           |
+| `/``tools`                | Free tools index | List of all tools        |
+| `/`                       | Free tool        | Individual tool          |
+| `/tutorials`              | Tutorials index  | Long-form guides list    |
+| `/tutorials/[slug]`       | Tutorial page    | Long-form guide          |
+| `/vs/[competitor]`        | VS page          | Comparison page          |
+| `/pricing`                | Pricing          | Full pricing tiers       |
+| `/legal/terms`            | Terms of service | Static                   |
+| `/legal/privacy`          | Privacy policy   | Static                   |
+| `/legal/cookies`          | Cookie policy    | Static                   |
 
 ### 2.2 Auth routes (public but redirect if already logged in)
 
-| Route | Page | Notes |
-| --- | --- | --- |
-| `/signup` | Signup | Redirects to `/dashboard` if authed |
-| `/login` | Login | Redirects to `/dashboard` if authed |
-| `/forgot-password` | Forgot password | Email input |
-| `/reset-password?token=...` | Reset password | From email link |
-| `/verify?token=...` | Email verify | From email link, auto-redirects on success |
+| Route                       | Page            | Notes                                      |
+| --------------------------- | --------------- | ------------------------------------------ |
+| `/signup`                   | Signup          | Redirects to `/dashboard` if authed        |
+| `/login`                    | Login           | Redirects to `/dashboard` if authed        |
+| `/forgot-password`          | Forgot password | Email input                                |
+| `/reset-password?token=...` | Reset password  | From email link                            |
+| `/verify?token=...`         | Email verify    | From email link, auto-redirects on success |
 
 ### 2.3 Authenticated routes (require session)
 
-| Route | Page | Notes |
-| --- | --- | --- |
-| `/dashboard` | Dashboard | Default post-login landing |
-| `/onboarding` | Onboarding | Only if not yet completed; skippable |
-| `/niches` | Niche Finder | Search + results |
-| `/niches/channels/[channelId]` | Channel detail | Deep-linkable |
-| `/tracking` | Competitor Tracking overview | Activity feed |
-| `/tracking/[channelId]` | Per-channel tracking | Deep-linkable |
-| `/tracking/compare?ids=id1,id2` | Compare view | Multi-channel |
-| `/prompts` | AI Prompts | Library + generator |
-| `/prompts/[promptId]` | Prompt detail | Deep-linkable |
-| `/calendar` | Content Calendar | Phase 3, redirects to `/dashboard` in Phase 1 |
-| `/workspace` | Workspace overview | Phase 3 |
-| `/settings` | Settings redirect | → `/settings/profile` |
-| `/settings/profile` | Profile settings |  |
-| `/settings/notifications` | Notification settings |  |
-| `/settings/billing` | Billing settings |  |
-| `/settings/connections` | Connections settings |  |
-| `/settings/preferences` | Preferences |  |
-| `/settings/danger` | Danger zone |  |
+| Route                           | Page                         | Notes                                         |
+| ------------------------------- | ---------------------------- | --------------------------------------------- |
+| `/dashboard`                    | Dashboard                    | Default post-login landing                    |
+| `/onboarding`                   | Onboarding                   | Only if not yet completed; skippable          |
+| `/niches`                       | Niche Finder                 | Search + results                              |
+| `/niches/channels/[channelId]`  | Channel detail               | Deep-linkable                                 |
+| `/tracking`                     | Competitor Tracking overview | Activity feed                                 |
+| `/tracking/[channelId]`         | Per-channel tracking         | Deep-linkable                                 |
+| `/tracking/compare?ids=id1,id2` | Compare view                 | Multi-channel                                 |
+| `/prompts`                      | AI Prompts                   | Library + generator                           |
+| `/prompts/[promptId]`           | Prompt detail                | Deep-linkable                                 |
+| `/calendar`                     | Content Calendar             | Phase 3, redirects to `/dashboard` in Phase 1 |
+| `/workspace`                    | Workspace overview           | Phase 3                                       |
+| `/settings`                     | Settings redirect            | → `/settings/profile`                         |
+| `/settings/profile`             | Profile settings             |                                               |
+| `/settings/notifications`       | Notification settings        |                                               |
+| `/settings/billing`             | Billing settings             |                                               |
+| `/settings/connections`         | Connections settings         |                                               |
+| `/settings/preferences`         | Preferences                  |                                               |
+| `/settings/danger`              | Danger zone                  |                                               |
 
 ### 2.4 Admin routes (super-admin role only)
 
-| Route | Page | Notes |
-| --- | --- | --- |
-| `/admin` | Admin dashboard redirect | → `/admin/dashboard` |
-| `/admin/dashboard` | Admin dashboard | KPIs + health |
-| `/admin/users` | Users list | Search + filter |
-| `/admin/users/[userId]` | User detail | Impersonate action |
-| `/admin/blog` | Blog CMS | Post management |
-| `/admin/revenue` | Revenue | MRR + charts |
-| `/admin/api-quotas` | API Quotas | YouTube usage |
-| `/admin/tools` | Admin tools | Recompute, cache, flags |
-| `/admin/automation` | Automation Tools | Job control |
+| Route                   | Page                     | Notes                   |
+| ----------------------- | ------------------------ | ----------------------- |
+| `/admin`                | Admin dashboard redirect | → `/admin/dashboard`    |
+| `/admin/dashboard`      | Admin dashboard          | KPIs + health           |
+| `/admin/users`          | Users list               | Search + filter         |
+| `/admin/users/[userId]` | User detail              | Impersonate action      |
+| `/admin/blog`           | Blog CMS                 | Post management         |
+| `/admin/revenue`        | Revenue                  | MRR + charts            |
+| `/admin/api-quotas`     | API Quotas               | YouTube usage           |
+| `/admin/tools`          | Admin tools              | Recompute, cache, flags |
+| `/admin/automation`     | Automation Tools         | Job control             |
 
 ### 2.5 Query param conventions
 
@@ -256,6 +256,8 @@ stateDiagram-v2
 ```
 
 **Webhook handling:** payment confirmation via webhook (Stripe/Paddle) is source of truth, not the redirect. Portal redirect success + webhook not received in 60s → show "processing…" state with support link.
+
+_(Note, 2026-09-22: provider is Creem.io per D-010/Monetization.md §4, not Stripe/Paddle — the state machine and webhook-is-source-of-truth rule above hold unchanged, "Stripe/Paddle" is just stale naming.)_
 
 ## 5. Error Handling & Edge Cases
 

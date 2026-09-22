@@ -330,6 +330,8 @@ Every integration goes through a wrapper module in `lib/` so provider swaps are 
 - Webhook signature verification per provider
 - Test mode used in dev + preview environments; production uses live keys
 
+_(Note, 2026-09-22: D-010 resolved to Creem.io, not Paddle — full integration spec in Monetization.md §4. `BillingProvider` interface (Task 5) is still provider-agnostic per this section's intent; only the recommendation text above is stale.)_
+
 ### 6.4 Email (Resend)
 
 - Wrapper: `lib/email/`

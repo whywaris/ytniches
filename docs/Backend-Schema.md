@@ -73,35 +73,33 @@ One-to-one with `auth.users`, holds public-facing profile data and app-specific 
 
 One-to-one active per user; historical rows preserved for audit.
 
-| Column                     | Type                       | Notes                                                        |
-| -------------------------- | -------------------------- | ------------------------------------------------------------ |
-| `id`                       | `uuid`                     |                                                              |
-| `user_id`                  | `uuid`                     | FK to `profiles.id`                                          |
-| `tier`                     | `subscription_tier` enum   | 'free' / 'starter' / 'pro' / 'team' (final tiers per D-011)  |
-| `status`                   | `subscription_status` enum | 'active' / 'trialing' / 'past\_due' / 'cancelled' / 'paused' |
-| `provider`                 | `text`                     | 'stripe' / 'paddle' / 'manual' (per D-010)                   |
-| `provider_subscription_id` | `text` nullable            | External ID from provider                                    |
-| `current_period_start`     | `timestamptz`              |                                                              |
-| `current_period_end`       | `timestamptz`              |                                                              |
-| `trial_ends_at`            | `timestamptz` nullable     |                                                              |
-| `cancelled_at`             | `timestamptz` nullable     |                                                              |
-| `is_current`               | `boolean`                  | Only one row per user has `true`                             |
-
-> **Blocked on decisions:** Tier enum values (D-011) and provider (D-010) will be finalized once those close. Structure holds regardless.
+| Column                     | Type                                              | Notes                                                                                                                                                                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | `uuid`                                            |                                                                                                                                                                                                                                                                                                                         |
+| `user_id`                  | `uuid`                                            | FK to `profiles.id`                                                                                                                                                                                                                                                                                                     |
+| `tier`                     | `subscription_tier` enum                          | 'starter' / 'pro' / 'team' per D-011 (Monetization.md §2). Enum still carries an unused legacy 'free' value — no permanent free tier exists (Monetization.md §1.2), never assign it.                                                                                                                                    |
+| `status`                   | `subscription_status` enum                        | 'active' / 'trialing' / 'past\_due' / 'cancelled' / 'paused'. Monetization.md §5.3/§6.1's "expired\_trial"/"expired" are computed (status + `trial_ends_at`/`current_period_end` vs now()), never stored — no enum value for them.                                                                                      |
+| `provider`                 | `text`, `check (provider in ('creem', 'manual'))` | 'creem' (D-010, Task 5) / 'manual' (admin-granted or comp subscriptions). Was 'stripe'/'paddle'/'manual' before Task 5's migration (supabase/migrations/20260922100002_fix_subscriptions_provider_check.sql) caught up to D-010's resolution — the old constraint predated Creem and blocked every real webhook insert. |
+| `provider_subscription_id` | `text` nullable                                   | External ID from provider                                                                                                                                                                                                                                                                                               |
+| `current_period_start`     | `timestamptz`                                     |                                                                                                                                                                                                                                                                                                                         |
+| `current_period_end`       | `timestamptz`                                     |                                                                                                                                                                                                                                                                                                                         |
+| `trial_ends_at`            | `timestamptz` nullable                            |                                                                                                                                                                                                                                                                                                                         |
+| `cancelled_at`             | `timestamptz` nullable                            |                                                                                                                                                                                                                                                                                                                         |
+| `is_current`               | `boolean`                                         | Only one row per user has `true`                                                                                                                                                                                                                                                                                        |
 
 ### 2.4 credit\_allocations
 
 How many credits each tier grants per billing cycle. Seeded per tier; overridden per user for grants (bonuses, comps).
 
-| Column              | Type                   | Notes                                                           |
-| ------------------- | ---------------------- | --------------------------------------------------------------- |
-| `id`                | `uuid`                 |                                                                 |
-| `user_id`           | `uuid` nullable        | Null = default allocation for tier; set = per-user override     |
-| `tier`              | `subscription_tier`    |                                                                 |
-| `credits_per_cycle` | `int`                  | Values TBD per D-011                                            |
-| `rollover_max`      | `int`                  | 0 = no rollover; > 0 = max unused credits carried to next cycle |
-| `effective_from`    | `timestamptz`          |                                                                 |
-| `effective_until`   | `timestamptz` nullable |                                                                 |
+| Column              | Type                   | Notes                                                                                              |
+| ------------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `id`                | `uuid`                 |                                                                                                    |
+| `user_id`           | `uuid` nullable        | Null = default allocation for tier; set = per-user override                                        |
+| `tier`              | `subscription_tier`    | 'starter' / 'pro' / 'team' only -- trial's 50-credit one-time grant does not live here (see below) |
+| `credits_per_cycle` | `int`                  | Per D-011/Monetization.md §3.2: starter=200, pro=1000, team=3000                                   |
+| `rollover_max`      | `int`                  | 0 = no rollover; > 0 = max unused credits carried to next cycle                                    |
+| `effective_from`    | `timestamptz`          |                                                                                                    |
+| `effective_until`   | `timestamptz` nullable |                                                                                                    |
 
 ### 2.5 credit\_events
 
@@ -118,17 +116,33 @@ Append-only ledger of every credit movement. Balance is derived, not stored.
 | `related_resource` | `text` nullable          | e.g. `prompt:<uuid>`, `channel:<uuid>`                                                      |
 | `idempotency_key`  | `text` nullable          | Prevents double-charging on retries                                                         |
 
-**Balance query:** `SUM(amount) WHERE user_id = ? AND created_at >= <cycle_start>`
+**Balance query:** `SUM(amount) WHERE user_id = ? AND created_at >= <cycle_start>` — `cycle_start` is the user's current subscription's `current_period_start` (`lib/credits/index.ts`'s `getCycleStart()`), not a calendar-month boundary.
 
-> **Blocked on decisions:** Cost per action (D-012) determines the `amount` for each consumption event type. Structure is agnostic.
+Trial's 50-credit one-time grant (Monetization.md §3.2) doesn't come from `credit_allocations` — it's a hardcoded `TRIAL_CREDITS` constant, inserted directly as an `'allocation'` row by `lib/services/onboarding.ts`'s `completeOnboarding()` when the trial subscription is created. No webhook fires for trial start, and the amount (50) doesn't match Pro's real per-cycle allocation (1,000) even though a trial gets Pro-tier access — keeping it out of `credit_allocations` avoids overloading that table's per-cycle-tier semantics.
 
-### 2.6 Enums
+### 2.6 webhook\_events
+
+Raw audit trail + idempotency anchor for every billing-provider webhook (Security.md §4.8, TRD.md §6.3). Service-role only — RLS enabled, zero policies (same pattern as `video_transcripts_cache`, §3.3).
+
+| Column              | Type                   | Notes                                                                                       |
+| ------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+| `id`                | `uuid`                 |                                                                                             |
+| `provider`          | `text`                 | 'creem'                                                                                     |
+| `event_type`        | `text`                 | e.g. `checkout.completed`, `subscription.renewed`                                           |
+| `provider_event_id` | `text` unique          | Idempotency anchor — duplicate delivery hits this constraint first                          |
+| `raw_payload`       | `jsonb`                | Full webhook body, for audit + replay                                                       |
+| `processed_at`      | `timestamptz` nullable | Null until processing finishes — row is inserted as a dedup marker before processing starts |
+| `error`             | `text` nullable        | Set only if processing failed; null = succeeded                                             |
+
+### 2.7 Enums
 
 ```sql
 CREATE TYPE subscription_tier AS ENUM ('free', 'starter', 'pro', 'team');
 CREATE TYPE subscription_status AS ENUM ('active', 'trialing', 'past_due', 'cancelled', 'paused');
 CREATE TYPE credit_event_type AS ENUM ('allocation', 'consumption', 'grant', 'refund', 'expiration');
 ```
+
+`subscription_tier`'s `'free'` value is unused (no permanent free tier, Monetization.md §1.2) — left in place rather than migrated out per CLAUDE.md §4.2's enum-change caution (add/migrate/remove is a multi-step process; removing an unused value isn't worth the risk for Phase 1).
 
 ## 3. Content Tables
 
