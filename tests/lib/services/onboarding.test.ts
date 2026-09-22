@@ -5,12 +5,18 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: sessionFrom }),
 }));
 
+const serviceFrom = vi.fn();
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => ({ from: serviceFrom }),
+}));
+
 const {
   getOnboardingStep,
   getOnboardingProfile,
   updateOnboardingStep,
   updateProfile,
   skipOnboarding,
+  completeOnboarding,
   shouldShowFinishOnboardingBanner,
 } = await import("@/lib/services/onboarding");
 
@@ -26,9 +32,20 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
     eq: vi.fn(() => builder),
     update: vi.fn(() => builder),
     single: vi.fn(() => Promise.resolve(result)),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
+    insert: vi.fn(() => Promise.resolve(result)),
     then: (resolve: (value: typeof result) => void) => resolve(result),
   };
   return builder;
+}
+
+// activateTrial's happy path: no existing current subscription, then both
+// inserts succeed. Queued in the order activateTrial calls them.
+function mockActivateTrialSuccess() {
+  serviceFrom
+    .mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })) // existing-subscription check
+    .mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })) // subscription insert
+    .mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // credit_events insert
 }
 
 beforeEach(() => {
@@ -155,6 +172,7 @@ describe("skipOnboarding", () => {
   it("sets onboarding_step to 5 and stamps onboarding_skipped_at", async () => {
     const builder = makeQueryBuilder({ data: null, error: null });
     sessionFrom.mockReturnValueOnce(builder);
+    mockActivateTrialSuccess();
 
     await skipOnboarding(ctx);
 
@@ -165,12 +183,95 @@ describe("skipOnboarding", () => {
     expect(builder.eq).toHaveBeenCalledWith("id", ctx.userId);
   });
 
+  it("also starts the trial -- skipping the tour isn't skipping the trial", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
+    mockActivateTrialSuccess();
+
+    await skipOnboarding(ctx);
+
+    expect(serviceFrom).toHaveBeenCalledTimes(3);
+  });
+
   it("throws on an unexpected update error", async () => {
     sessionFrom.mockReturnValueOnce(
       makeQueryBuilder({ data: null, error: { message: "connection reset" } }),
     );
 
     await expect(skipOnboarding(ctx)).rejects.toThrow("connection reset");
+  });
+});
+
+describe("completeOnboarding", () => {
+  it("sets onboarding_step to 5 and starts the trial", async () => {
+    const profileBuilder = makeQueryBuilder({ data: null, error: null });
+    sessionFrom.mockReturnValueOnce(profileBuilder);
+    mockActivateTrialSuccess();
+
+    await completeOnboarding(ctx);
+
+    expect(profileBuilder.update).toHaveBeenCalledWith({ onboarding_step: 5 });
+  });
+
+  it("inserts a trialing pro subscription with the trial credit grant", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
+    const existingCheck = makeQueryBuilder({ data: null, error: null });
+    const subscriptionInsert = makeQueryBuilder({ data: null, error: null });
+    const creditInsert = makeQueryBuilder({ data: null, error: null });
+    serviceFrom
+      .mockReturnValueOnce(existingCheck)
+      .mockReturnValueOnce(subscriptionInsert)
+      .mockReturnValueOnce(creditInsert);
+
+    await completeOnboarding(ctx);
+
+    expect(subscriptionInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: ctx.userId,
+        tier: "pro",
+        status: "trialing",
+        provider: "creem",
+        is_current: true,
+      }),
+    );
+    expect(creditInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: ctx.userId,
+        event_type: "allocation",
+        amount: 50,
+        idempotency_key: `trial:${ctx.userId}`,
+      }),
+    );
+  });
+
+  it("is a no-op if the user already has a current subscription", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
+    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: { id: "sub-1" }, error: null }));
+
+    await completeOnboarding(ctx);
+
+    expect(serviceFrom).toHaveBeenCalledTimes(1); // only the existing-subscription check
+  });
+
+  it("treats a duplicate subscription insert as a concurrent-call race, not an error", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
+    serviceFrom
+      .mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }))
+      .mockReturnValueOnce(
+        makeQueryBuilder({ data: null, error: { message: "duplicate", code: "23505" } }),
+      );
+
+    await expect(completeOnboarding(ctx)).resolves.toBeUndefined();
+  });
+
+  it("throws on an unexpected subscription insert error", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
+    serviceFrom
+      .mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }))
+      .mockReturnValueOnce(
+        makeQueryBuilder({ data: null, error: { message: "connection reset" } }),
+      );
+
+    await expect(completeOnboarding(ctx)).rejects.toThrow("connection reset");
   });
 });
 

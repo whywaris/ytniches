@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { TRIAL_CREDITS } from "@/lib/services/billing";
 import type { RequestContext } from "@/lib/context";
 import type { PrimaryGoal, UpdateProfileInput } from "@/lib/services/onboarding.schema";
 
@@ -89,10 +91,78 @@ export async function updateProfile(ctx: RequestContext, input: UpdateProfileInp
   }
 }
 
+// Monetization.md §1.1/§5.1: every signed-up user gets the 14-day Pro
+// trial (no card), whether they walk through onboarding or skip it --
+// skipping isn't opting out of the trial, just the guided tour. Shared by
+// completeOnboarding() and skipOnboarding() below. Service role for
+// subscriptions/credit_events (no authenticated INSERT policy on either --
+// Backend-Schema.md §2.3/§2.5). Idempotent: a second call is a no-op,
+// guarded by the existing-current-subscription check and, defensively, by
+// each insert's own unique-constraint collision (23505) in case of a race.
+async function activateTrial(userId: string): Promise<void> {
+  const service = createServiceClient();
+  const { data: existing, error: existingError } = await service
+    .from("subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (existingError) {
+    throw new Error(`activateTrial subscription lookup failed: ${existingError.message}`);
+  }
+  if (existing) return;
+
+  const now = new Date();
+  const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+  const { error: insertError } = await service.from("subscriptions").insert({
+    user_id: userId,
+    tier: "pro",
+    status: "trialing",
+    provider: "creem",
+    current_period_start: now.toISOString(),
+    current_period_end: trialEndsAt.toISOString(),
+    trial_ends_at: trialEndsAt.toISOString(),
+    is_current: true,
+  });
+  if (insertError) {
+    if (insertError.code === "23505") return; // concurrent call already created it
+    throw new Error(`activateTrial subscription insert failed: ${insertError.message}`);
+  }
+
+  const { error: creditError } = await service.from("credit_events").insert({
+    user_id: userId,
+    event_type: "allocation",
+    amount: TRIAL_CREDITS,
+    reason: "14-day trial credits",
+    idempotency_key: `trial:${userId}`,
+  });
+  if (creditError) {
+    if (creditError.code === "23505") return; // already granted
+    throw new Error(`activateTrial credit grant failed: ${creditError.message}`);
+  }
+}
+
+// PRD.md §6.4 / Monetization.md §5.1: Step 5's "Save prompts and finish
+// setup" -- marks onboarding complete and starts the trial.
+export async function completeOnboarding(ctx: RequestContext): Promise<void> {
+  const supabase = await createClient();
+  const { error: stepError } = await supabase
+    .from("profiles")
+    .update({ onboarding_step: 5 })
+    .eq("id", ctx.userId);
+  if (stepError) {
+    throw new Error(`completeOnboarding step update failed: ${stepError.message}`);
+  }
+
+  await activateTrial(ctx.userId);
+}
+
 // UI-UX-Flow.md §3 "Skip behavior": jumps straight to completed (5) and
 // stamps onboarding_skipped_at (Backend-Schema.md §2.2) so the dashboard's
-// "Finish onboarding" banner can tell a skip apart from a genuine finish,
-// which sets step=5 via updateOnboardingStep without ever calling this.
+// "Finish onboarding" banner can tell a skip apart from a genuine finish.
+// Still starts the trial (see activateTrial above) -- skipping the guided
+// tour isn't skipping the trial itself.
 export async function skipOnboarding(ctx: RequestContext): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -103,4 +173,6 @@ export async function skipOnboarding(ctx: RequestContext): Promise<void> {
   if (error) {
     throw new Error(`skipOnboarding update failed: ${error.message}`);
   }
+
+  await activateTrial(ctx.userId);
 }

@@ -8,14 +8,20 @@ vi.mock("@/lib/context", () => ({
 const updateOnboardingStep = vi.fn();
 const updateProfile = vi.fn();
 const skipOnboarding = vi.fn();
+const completeOnboarding = vi.fn();
 vi.mock("@/lib/services/onboarding", () => ({
   updateOnboardingStep: (...args: unknown[]) => updateOnboardingStep(...args),
   updateProfile: (...args: unknown[]) => updateProfile(...args),
   skipOnboarding: (...args: unknown[]) => skipOnboarding(...args),
+  completeOnboarding: (...args: unknown[]) => completeOnboarding(...args),
 }));
 
-const { updateOnboardingStepAction, updateProfileAction, skipOnboardingAction } =
-  await import("@/app/(app)/onboarding/actions");
+const {
+  updateOnboardingStepAction,
+  updateProfileAction,
+  skipOnboardingAction,
+  completeOnboardingAction,
+} = await import("@/app/(app)/onboarding/actions");
 
 const ctx = { userId: "user-1" };
 
@@ -80,5 +86,14 @@ describe("skipOnboardingAction", () => {
 
     expect(getRequestContext).toHaveBeenCalledOnce();
     expect(skipOnboarding).toHaveBeenCalledWith(ctx);
+  });
+});
+
+describe("completeOnboardingAction", () => {
+  it("gets the request context and delegates to the service", async () => {
+    await completeOnboardingAction();
+
+    expect(getRequestContext).toHaveBeenCalledOnce();
+    expect(completeOnboarding).toHaveBeenCalledWith(ctx);
   });
 });

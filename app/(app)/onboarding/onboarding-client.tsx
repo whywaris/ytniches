@@ -5,6 +5,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  completeOnboardingAction,
   skipOnboardingAction,
   updateOnboardingStepAction,
   updateProfileAction,
@@ -404,7 +405,9 @@ function PromptStep({
 
   async function handleFinish() {
     setFinishing(true);
-    await updateOnboardingStepAction(5);
+    // Task 5: marks onboarding complete AND starts the 14-day Pro trial
+    // (Monetization.md §5.1) -- not just a step update anymore.
+    await completeOnboardingAction();
     setFinishing(false);
     onFinish();
   }

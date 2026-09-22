@@ -1,7 +1,12 @@
 "use server";
 
 import { getRequestContext } from "@/lib/context";
-import { skipOnboarding, updateOnboardingStep, updateProfile } from "@/lib/services/onboarding";
+import {
+  completeOnboarding,
+  skipOnboarding,
+  updateOnboardingStep,
+  updateProfile,
+} from "@/lib/services/onboarding";
 import { UpdateProfileInputSchema, OnboardingStepSchema } from "@/lib/services/onboarding.schema";
 import { err, ok, type Result } from "@/lib/result";
 
@@ -45,4 +50,11 @@ export async function updateProfileAction(
 export async function skipOnboardingAction(): Promise<void> {
   const ctx = await getRequestContext();
   await skipOnboarding(ctx);
+}
+
+// Monetization.md §5.1: Step 5's "Save prompts and finish setup" -- marks
+// onboarding complete and starts the 14-day Pro trial (Task 5).
+export async function completeOnboardingAction(): Promise<void> {
+  const ctx = await getRequestContext();
+  await completeOnboarding(ctx);
 }

@@ -9,24 +9,46 @@ let selectResult: { data: { amount: number }[] | null; error: { message: string 
 };
 let insertResult: { error: { message: string; code?: string } | null } = { error: null };
 const insertSpy = vi.fn(() => Promise.resolve(insertResult));
+const gteSpy = vi.fn(() => Promise.resolve(selectResult));
 
 let refundInsertResult: { error: { message: string; code?: string } | null } = { error: null };
 const refundInsertSpy = vi.fn(() => Promise.resolve(refundInsertResult));
 
-function makeSelectBuilder() {
+// getCycleStart's own subscriptions lookup -- a separate table from
+// credit_events, so `from` has to dispatch by table name.
+let subscriptionResult: {
+  data: { current_period_start: string } | null;
+  error: { message: string } | null;
+} = { data: null, error: null };
+const subscriptionMaybeSingleSpy = vi.fn(() => Promise.resolve(subscriptionResult));
+
+function makeCreditEventsSelectBuilder() {
   const builder = {
     eq: vi.fn(() => builder),
-    gte: vi.fn(() => Promise.resolve(selectResult)),
+    gte: gteSpy,
+  };
+  return builder;
+}
+
+function makeSubscriptionsSelectBuilder() {
+  const builder = {
+    eq: vi.fn(() => builder),
+    maybeSingle: subscriptionMaybeSingleSpy,
   };
   return builder;
 }
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => makeSelectBuilder()),
-      insert: insertSpy,
-    })),
+    from: vi.fn((table: string) => {
+      if (table === "subscriptions") {
+        return { select: vi.fn(() => makeSubscriptionsSelectBuilder()) };
+      }
+      return {
+        select: vi.fn(() => makeCreditEventsSelectBuilder()),
+        insert: insertSpy,
+      };
+    }),
   })),
 }));
 
@@ -43,8 +65,11 @@ beforeEach(() => {
   selectResult = { data: [], error: null };
   insertResult = { error: null };
   insertSpy.mockClear();
+  gteSpy.mockClear();
   refundInsertResult = { error: null };
   refundInsertSpy.mockClear();
+  subscriptionResult = { data: null, error: null };
+  subscriptionMaybeSingleSpy.mockClear();
 });
 
 describe("getBalance", () => {
@@ -60,6 +85,32 @@ describe("getBalance", () => {
 
   it("throws on a query error rather than silently returning 0", async () => {
     selectResult = { data: null, error: { message: "connection reset" } };
+    await expect(getBalance(ctx)).rejects.toThrow("connection reset");
+  });
+});
+
+describe("getCycleStart (via getBalance's gte filter)", () => {
+  it("uses the active subscription's current_period_start when one exists", async () => {
+    subscriptionResult = {
+      data: { current_period_start: "2026-09-05T00:00:00.000Z" },
+      error: null,
+    };
+    await getBalance(ctx);
+
+    expect(gteSpy).toHaveBeenCalledWith("created_at", "2026-09-05T00:00:00.000Z");
+  });
+
+  it("falls back to UTC calendar month start when no subscription row exists", async () => {
+    subscriptionResult = { data: null, error: null };
+    await getBalance(ctx);
+
+    const now = new Date();
+    const expected = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    expect(gteSpy).toHaveBeenCalledWith("created_at", expected);
+  });
+
+  it("throws if the subscription lookup itself fails", async () => {
+    subscriptionResult = { data: null, error: { message: "connection reset" } };
     await expect(getBalance(ctx)).rejects.toThrow("connection reset");
   });
 });

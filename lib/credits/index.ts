@@ -11,22 +11,39 @@ export interface InsufficientCreditsError {
   required: number;
 }
 
-// Isolated on its own so the Task 5 swap to subscriptions.current_period_start
+// Task 5: reads the user's active subscription's current_period_start
 // (Monetization.md §3.3: credits allocate on the billing anniversary, not
-// the calendar month) is a one-line change, not a rewrite. UTC month start
-// is a correct proxy in the meantime — no billing cycle exists yet.
-function getCycleStart(): Date {
+// the calendar month). Falls back to UTC month start if no subscription
+// row exists yet -- shouldn't happen once completeOnboarding() always
+// creates a trial row, but keeps this safe for any user who predates it.
+async function getCycleStart(userId: string): Promise<Date> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("current_period_start")
+    .eq("user_id", userId)
+    .eq("is_current", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`getCycleStart subscription query failed: ${error.message}`);
+  }
+  if (data?.current_period_start) {
+    return new Date(data.current_period_start);
+  }
+
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
 export async function getBalance(ctx: RequestContext): Promise<number> {
+  const cycleStart = await getCycleStart(ctx.userId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("credit_events")
     .select("amount")
     .eq("user_id", ctx.userId)
-    .gte("created_at", getCycleStart().toISOString());
+    .gte("created_at", cycleStart.toISOString());
 
   if (error) {
     throw new Error(`getBalance query failed: ${error.message}`);
