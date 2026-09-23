@@ -9,6 +9,83 @@ export type Database = {
   };
   public: {
     Tables: {
+      calendar_entries: {
+        Row: {
+          assignee_id: string | null;
+          channel_id: string | null;
+          created_at: string;
+          deleted_at: string | null;
+          description: string | null;
+          id: string;
+          linked_prompts: string[];
+          scheduled_for: string | null;
+          status: Database["public"]["Enums"]["calendar_status"];
+          title: string;
+          updated_at: string;
+          user_id: string;
+          workspace_id: string | null;
+        };
+        Insert: {
+          assignee_id?: string | null;
+          channel_id?: string | null;
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          linked_prompts?: string[];
+          scheduled_for?: string | null;
+          status?: Database["public"]["Enums"]["calendar_status"];
+          title: string;
+          updated_at?: string;
+          user_id: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          assignee_id?: string | null;
+          channel_id?: string | null;
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          linked_prompts?: string[];
+          scheduled_for?: string | null;
+          status?: Database["public"]["Enums"]["calendar_status"];
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "calendar_entries_assignee_id_fkey";
+            columns: ["assignee_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_entries_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_entries_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       channels: {
         Row: {
           avatar_url: string | null;
@@ -489,6 +566,76 @@ export type Database = {
           },
         ];
       };
+      tasks: {
+        Row: {
+          assignee_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          description: string | null;
+          due_date: string | null;
+          id: string;
+          linked_id: string | null;
+          linked_type: string | null;
+          status: Database["public"]["Enums"]["task_status"];
+          title: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          assignee_id?: string | null;
+          created_at?: string;
+          created_by: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          linked_id?: string | null;
+          linked_type?: string | null;
+          status?: Database["public"]["Enums"]["task_status"];
+          title: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          assignee_id?: string | null;
+          created_at?: string;
+          created_by?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          linked_id?: string | null;
+          linked_type?: string | null;
+          status?: Database["public"]["Enums"]["task_status"];
+          title?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_id_fkey";
+            columns: ["assignee_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tracked_channels: {
         Row: {
           channel_id: string;
@@ -915,6 +1062,10 @@ export type Database = {
         Args: { target_workspace_id: string };
         Returns: boolean;
       };
+      is_workspace_contributor: {
+        Args: { target_workspace_id: string };
+        Returns: boolean;
+      };
       is_workspace_member: {
         Args: { target_workspace_id: string };
         Returns: boolean;
@@ -929,9 +1080,11 @@ export type Database = {
       };
     };
     Enums: {
+      calendar_status: "idea" | "scripted" | "filmed" | "edited" | "published";
       credit_event_type: "allocation" | "consumption" | "grant" | "refund" | "expiration";
       subscription_status: "active" | "trialing" | "past_due" | "cancelled" | "paused";
       subscription_tier: "free" | "starter" | "pro" | "team";
+      task_status: "open" | "in_progress" | "done";
       tracked_event_type:
         "new_video" | "view_spike" | "cadence_change" | "subscriber_milestone" | "outlier_detected";
       workspace_role: "admin" | "editor" | "viewer";
@@ -1056,9 +1209,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      calendar_status: ["idea", "scripted", "filmed", "edited", "published"],
       credit_event_type: ["allocation", "consumption", "grant", "refund", "expiration"],
       subscription_status: ["active", "trialing", "past_due", "cancelled", "paused"],
       subscription_tier: ["free", "starter", "pro", "team"],
+      task_status: ["open", "in_progress", "done"],
       tracked_event_type: [
         "new_video",
         "view_spike",

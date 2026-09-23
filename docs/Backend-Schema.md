@@ -404,9 +404,15 @@ CREATE TYPE calendar_status AS ENUM ('idea', 'scripted', 'filmed', 'edited', 'pu
 
 **Note on Phase 1 impact:** Every user-scoped table (prompts, notes, tracked\_channels, etc.) includes a nullable `workspace_id` from day 1. In Phase 1 it's always null (personal). In Phase 3, workspace records populate it. RLS policies handle both cases from the start.
 
-### 5.7 Implementation status (Phase 3 Task 1)
+### 5.7 Implementation status (Phase 3)
 
-`workspaces`, `workspace_members`, and `workspace_invitations` are live (`20260923100001_create_workspace_tables.sql`, `20260923100002_add_workspace_rls_policies.sql`). `tasks` and `calendar_entries` remain spec-only until Tasks and Content Calendar are built.
+`workspaces`, `workspace_members`, `workspace_invitations` (`20260923100001_create_workspace_tables.sql`, `20260923100002_add_workspace_rls_policies.sql`), and `tasks`/`calendar_entries` (`20260923110001_create_tasks_and_calendar.sql`) are all live.
+
+`tasks.workspace_id` is `NOT NULL` — every task is workspace-scoped, no personal-task concept (matches DECISIONS.md D-045's routing rationale). `calendar_entries.workspace_id` stays nullable per the original spec ("Null = personal calendar entry"); this build's UI only exercises the workspace-scoped path, but the RLS policies below already handle both, so no later migration is needed to light up a personal calendar.
+
+**"Viewer" is read-only for tasks and the calendar, not just membership.** `is_workspace_contributor(uuid)` (role in `('admin', 'editor')`) gates every `tasks`/`calendar_entries` write; `is_workspace_member` alone (any role) still gates `SELECT`. Same `SECURITY DEFINER` + `search_path` + `authenticated`-only grant pattern as the four workspace helpers below — reused directly, no new recursion risk since these two tables' policies were never self-referential.
+
+**Soft-delete via `UPDATE`, no `DELETE` policy.** `deleteTask`/`deleteEntry` set `deleted_at`, matching §1.3's pattern — neither table has a `DELETE` RLS policy at all, since the app never issues one.
 
 **RLS via SECURITY DEFINER helpers, not raw subqueries.** A policy on `workspace_members` that subqueries `workspace_members` itself (the standard membership-table idiom) trips Postgres's RLS recursion guard (`42P17`) the moment the querying role isn't RLS-bypassing — evaluating the inner subquery re-applies the table's own policy, which subqueries itself again. Same failure for `workspaces`/`workspace_invitations` admin checks, since those also resolve through `workspace_members`. Fixed with four `SECURITY DEFINER` functions (`set search_path = public`, same hardening as `handle_new_user()`), each `REVOKE`d from `public`/`anon` and granted only to `authenticated` (required for the policy engine to evaluate them for real signed-in users; each one only reveals the calling user's own status, never another user's data, so residual direct-RPC callability by an authenticated user isn't a leak):
 
