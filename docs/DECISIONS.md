@@ -411,3 +411,80 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** Monetization.md §6.4 specs a graduated access schedule during payment failure (day 0-3 full access, day 3-7 limited/read-only, day 7+ suspended, day 21+ auto-cancelled). Task 5's webhook handler records the right `subscriptions.status` transitions (`past_due` on `payment.failed`, `active` on `payment.recovered`) but does not enforce graduated access — no feature-gating-by-status middleware exists anywhere in this codebase yet, for any dimension (tier or dunning), and building that generic layer is beyond this task's webhook-integration scope.
 - **Impacts:** Monetization.md §6.4, a future feature-gating/middleware task
 - **Final call:** —
+
+---
+
+### D-036: YouTube API quota at scale
+
+- **Status:** Open — action required before launch
+- **Requested-ID note:** requested as D-035, but that ID is already assigned to "Graduated dunning access enforcement deferred" (also logged this phase, still Open) — per §1's "IDs are stable across the project's lifetime — never renumber," this entry takes the next free ID (D-036) instead of overwriting it.
+- **Finding:** Default 10,000 units/day = ~100 searches/day system-wide. At 500 active users with realistic search behavior, quota will be exhausted daily.
+- **Actions required before launch:**
+  1. Apply for YouTube Data API quota increase (standard process, Google Cloud Console → APIs → YouTube Data API v3 → Quotas → Request increase. Typical grant: 1M units/day)
+  2. Implement TRD.md §5.3 alerting: read the `warning: true` flag from `checkAndIncrement` and log to Sentry at 70%/90% thresholds
+  3. Consider search result caching improvements (`cache:search:{hash}` already exists — ensure it's being hit before the quota check)
+- **Current mitigation:** 95% circuit breaker exists in quota.ts but admin visibility is missing.
+- **Final call:** —
+
+---
+
+### D-037: Main app shell (sidebar nav) was never wired in
+
+- **Status:** Open — needs its own task/PR
+- **Context:** UI-UX-Flow.md §4.1/§4.2 specs a Linear-style sidebar + top bar as the persistent app shell, and `components/ui/sidebar.tsx`/`sidebar-item.tsx` exist as built, tested, documented primitives — but no `app/(app)/layout.tsx` ever composed them into the actual route tree. Every `(app)` route (`/dashboard`, `/niches`, `/tracking`, `/prompts`) renders standalone, with no persistent nav. `app/(app)/dashboard/page.tsx` is still explicitly labeled "Placeholder landing page for Phase 0's auth flow... Real dashboard is Phase 1" and was never replaced. Discovered while scoping Phase 2 Task 1 (Outlier Finder), which needs a nav entry point that doesn't exist yet.
+- **Impacts:** `app/(app)/layout.tsx` (doesn't exist), `app/(app)/dashboard/page.tsx`, every `(app)` route's discoverability
+- **Interim mitigation (Phase 2 Task 1):** `/outliers` ships as a standalone route, linked directly from the dashboard placeholder and from `/tracking`, per Task 1's approved plan. Not a fix — just keeps the new feature reachable until the shell itself is built.
+- **Final call:** —
+
+---
+
+### D-038: Manual "outlier rescan" (2-credit) feature deferred
+
+- **Status:** Open
+- **Context:** Monetization.md §3 lists "Outlier scan on tracked channel (Phase 2) — 2 credits — cost of AI classification + baseline calc," which conflicts with PRD.md §7.1's "how it works," a pure statistical rolling-baseline calculation with no AI step. Per CLAUDE.md §3.2, PRD wins on product scope + feature intent. Phase 2 Task 1 ships automatic, free, background outlier detection in `workers/channel-sync.ts` (same cost model as `new_video`/`view_spike`/`cadence_change` — system-triggered, no per-user credit charge). The 2-credit line is read as referring to a separate, not-yet-scoped manual "rescan this channel now" feature, which is out of Task 1's scope.
+- **Impacts:** Monetization.md §3 (credit table), a possible future `/outliers` "Rescan now" button + `lib/services/outliers.ts` action, `lib/credits/`
+- **Final call:** Build only if user research shows people actually want to force a rescan between the channel's normal sync cadence, rather than waiting for the next automatic sync.
+
+---
+
+### D-039: Test suite intermittent flakiness
+
+- **Status:** Resolved (2026-09-22)
+- **Context:** `isolate:false` shared environment causes occasional failures in `credits/index.test.ts`, `channels.test.ts`, `generator-form.test.tsx`, `youtube/cache.test.ts`. All pass in isolation. Consistent pattern across the whole project.
+- **2026-09-22 update (Phase 2 exit gate):** severity confirmed higher than first logged. Phase 2 Task 3's session alone saw `upgrade-modal.test.tsx` join the affected-file list for the first time, and back-to-back full-suite runs during the exit gate itself: 3 runs → 2 clean, 1 with 13 failures (`credits/index.test.ts` again), consistent with roughly 1-in-3 to 1-in-2 full-suite runs hitting some flake this session — worse than the isolated single-file flakes typical of Phase 1/early Phase 2. Every occurrence across the whole project confirmed clean in isolation; the affected-file set kept growing, not shrinking. This is what triggered fixing it before Phase 3 rather than after.
+- **Diagnosis:** every affected file ran clean 10/10 in isolation (40 total isolated runs across the 4 listed files, zero failures) — ruling out anything wrong with the tests' own logic. 5 full-suite runs during diagnosis: 3 clean, 2 failing, with two distinct failure signatures, both pointing the same direction — a test's own correctly-shaped mock (e.g. `credits/index.test.ts`'s `createClient` mock, built specifically to handle a `"subscriptions"` table query) got swapped out mid-run for a differently-shaped one from an unrelated file, producing "Cannot read properties of undefined" where a chained call landed on a mock that had no matching branch (or an exhausted `mockReturnValueOnce` queue) for that call. Root cause: shared library modules (`lib/credits/index.ts`, `lib/youtube/cache.ts`, etc.) are only _evaluated_ once per worker under `isolate: false` — Vite's SSR module cache treats the first test file that `await import()`s them in a given worker as authoritative, and its internal `import { createClient } from "@/lib/supabase/server"` binds to whichever `vi.mock()` factory was registered at that moment. Every later file sharing that worker that also dynamically imports the same library module gets the _same cached instance_, already bound to the first file's mocks, not its own. Non-deterministic because which file's imports happen to "win" the first-evaluation race varies with Vitest's file scheduling/worker assignment run to run — exactly matching "only ever on full-suite runs, never in isolation," and the affected-file set drifting as new tests were added.
+- **Fix:** `vi.resetModules()` added to the top of `vitest.setup.ts` (not `afterEach` — needs to run once per test file, _before_ that file's own hoisted `vi.mock()` + dynamic `await import()` lines execute). `setupFiles` already run fresh per test file under `isolate: false` (confirmed by this same file's pre-existing `cleanup()` comment) — clearing the module registry at that point forces every file to re-evaluate its own module graph against its own just-registered mocks, instead of reusing a stale binding left by whichever file happened to import it first. Does **not** touch `isolate: false` itself (per constraint — that flag stays off; it's what prevents the OOM this project hit under `isolate: true`) and needed zero changes to any of the affected test files themselves — the leak source was the missing module-cache reset between files, not anything wrong with the tests.
+- **Verification:** 10 consecutive full-suite runs post-fix, all clean (685/685 tests, 86/86 files, every time), durations stable at ~20-28s (no regression from the pre-fix clean-run baseline). `pnpm typecheck` + `pnpm lint` clean.
+- **Final call:** Fixed. If flakiness resurfaces post-Phase-3, re-open as a new entry rather than reusing this one — the diagnosis here is specific to this mechanism and shouldn't be assumed to cover a different cause.
+
+---
+
+### D-040: Resend bounce/complaint webhook handling deferred
+
+- **Status:** Open
+- **Context:** TRD.md §6.4 specs "Bounce + complaint webhooks handled: hard bounces → mark email `undeliverable` on profile; complaints → unsubscribe from all non-critical email." No such column exists on `profiles`, no `/api/webhooks/resend` route exists, and it isn't part of Phase 2 Task 2's scope (email _sending_, not delivery-event handling).
+- **Impacts:** TRD.md §6.4, `profiles` (would need an `email_undeliverable` or similar column), a new `/api/webhooks/resend` route
+- **Final call:** —
+
+---
+
+### D-041: Thumbnail Ideas — text-only generation, not vision-based image analysis
+
+- **Status:** Resolved (2026-09-22)
+- **Context:** PRD.md §7.3's "how it works" describes literal visual analysis ("analyze thumbnail composition, color palette, text style, subject placement"), which `lib/ai/client.ts` cannot do — it has no vision/image-input capability, and the existing, already-shipped `thumbnail_concepts` category inside AI Prompts' own `PromptOutput` (same 3-5 count) is itself text-only, generated from title/description/transcript, never the actual image.
+- **Final call:** Text-only, matching that existing precedent and Phase 2 Task 3's "keep it small" scope. The system prompt (`lib/ai/thumbnail-idea-prompt.ts`) frames output honestly as "concepts informed by why this type of video/thumbnail pattern works," not a claimed description of the literal source image. If user feedback signals genuine image analysis matters, vision can be added later as a targeted, isolated upgrade to `generateStructuredOutput`'s message-content shape in `lib/ai/client.ts` — nothing in this build forecloses that.
+- **Impacts:** PRD.md §7.3 (implementation reading, not a literal build of "analyze... color palette"), `lib/ai/client.ts` (no vision support), `lib/ai/thumbnail-idea-prompt.ts`
+
+---
+
+### D-042: Phase 2 exit gate
+
+- **Status:** Conditionally passed (same pattern as Phase 0 + Phase 1 gates)
+- **Deferred items (Implementation-Plan.md §4.1, all 3 user-metric gates):**
+  1. 30-day retention above post-launch baseline — not measurable, no real users pre-launch.
+  2. Notification opt-in rate above 50% — not measurable, no real users pre-launch.
+  3. Outlier Finder used by >40% of active users — not measurable, no real users pre-launch.
+- **P0/P1 status:** No open bugs _logged_ anywhere (DECISIONS.md, commit messages, or `TODO`/`FIXME`/`XXX`/`BUG` markers — grepped clean, one pre-existing `TODO` in `channel-tabs.tsx` and it's an already-scoped deferred feature, not a bug). But the gate audit itself **found and fixed one real P1**, live, not from a log: `/outliers` (added Phase 2 Task 1) was never added to `middleware.ts`'s `APP_ROUTE_PREFIXES`, so `classifyRoute` fell through to `"public"` and skipped the auth check entirely. An unauthenticated visitor hitting `/outliers` reached the Server Component and 500'd on `getRequestContext()`'s "middleware already blocked this" assumption, instead of redirecting to `/login` like every other app route. Confirmed live in the browser (network log: `GET /outliers → 500` before the fix, `GET /outliers → 302 → /login?redirect=%2Foutliers → 200` after). Fixed by adding `/outliers` to the prefix list; added a regression test (`tests/middleware.test.ts`'s new `classifyRoute` describe block) that enumerates every real directory under `app/(app)/` so a future new route silently missing from this list fails CI instead of shipping unprotected. No test previously covered `classifyRoute` against a full route list — only the onboarding/admin gates were tested — which is why this went uncaught across two full phases.
+- **D-039 flakiness:** assessed as a **P1 risk, fixed before Phase 3 per that assessment** (not deferred) — see D-039 for the full diagnosis, fix, and 10-consecutive-clean-run verification. Reasoning that drove "now, not after": (1) the pattern was measurably worsening this session (new affected file, higher failure rate on repeated runs) rather than stable; (2) Phase 3's Workspace feature introduces genuine shared state across multiple users for the first time in this codebase — exactly the class of feature where a flaky test masking a real race condition or cross-user data leak is most costly to miss; (3) root cause turned out to be a single missing `vi.resetModules()` call, not an open-ended investigation — cheap enough that deferring it had no real cost advantage.
+- **Other checks:** all three Phase 2 features confirmed reachable (`/outliers`, `/settings/notifications`, `ThumbnailIdeasModal` via `OutlierCard` — the last two already worked; `/outliers` only after this gate's fix). 685 tests passing (610 at Phase 2 Task 1's start → 685 here, includes this gate's own 8 new middleware tests), now confirmed at 10/10 consecutive clean full-suite runs post-D-039-fix. `pnpm typecheck` + `pnpm lint` clean.
+- **Phase 3 proceeds:** Yes. D-039 is resolved, not just scheduled.
