@@ -1058,6 +1058,14 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_co_member_profiles: {
+        Args: { target_user_ids: string[] };
+        Returns: {
+          avatar_url: string;
+          id: string;
+          name: string;
+        }[];
+      };
       is_workspace_admin: {
         Args: { target_workspace_id: string };
         Returns: boolean;

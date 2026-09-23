@@ -36,6 +36,7 @@ beforeEach(() => {
 // design note).
 describe("classifyRoute", () => {
   const REAL_APP_ROUTES = [
+    "/calendar",
     "/dashboard",
     "/niches",
     "/onboarding",
@@ -43,6 +44,7 @@ describe("classifyRoute", () => {
     "/prompts",
     "/settings",
     "/tracking",
+    "/workspace",
   ];
 
   it.each(REAL_APP_ROUTES)("classifies %s as an app route", (pathname) => {
@@ -52,6 +54,12 @@ describe("classifyRoute", () => {
   it("classifies a nested path under a real app route as an app route too", () => {
     expect(classifyRoute("/tracking/chan-1")).toBe("app");
     expect(classifyRoute("/settings/notifications")).toBe("app");
+    expect(classifyRoute("/workspace/tasks")).toBe("app");
+    expect(classifyRoute("/workspace/members")).toBe("app");
+  });
+
+  it("classifies /invite as public, not app or a 500", () => {
+    expect(classifyRoute("/invite")).toBe("public");
   });
 });
 

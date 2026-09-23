@@ -73,10 +73,9 @@ async function attachAssigneeNames(rows: TaskRow[]): Promise<Task[]> {
     return rows.map((row) => toTask(row, null));
   }
   const supabase = await createClient();
-  const { data: profiles, error } = await supabase
-    .from("profiles")
-    .select("id, name")
-    .in("id", assigneeIds);
+  const { data: profiles, error } = await supabase.rpc("get_co_member_profiles", {
+    target_user_ids: assigneeIds,
+  });
   if (error) {
     throw new Error(`attachAssigneeNames query failed: ${error.message}`);
   }

@@ -85,13 +85,9 @@ async function attachMemberProfiles(
 ): Promise<WorkspaceMember[]> {
   if (memberRows.length === 0) return [];
   const supabase = await createClient();
-  const { data: profiles, error } = await supabase
-    .from("profiles")
-    .select("id, name, avatar_url")
-    .in(
-      "id",
-      memberRows.map((m) => m.user_id),
-    );
+  const { data: profiles, error } = await supabase.rpc("get_co_member_profiles", {
+    target_user_ids: memberRows.map((m) => m.user_id),
+  });
   if (error) {
     throw new Error(`attachMemberProfiles query failed: ${error.message}`);
   }

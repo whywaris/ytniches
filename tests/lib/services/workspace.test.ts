@@ -47,6 +47,7 @@ const sessionFrom = vi.fn((table: string) => {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: sessionFrom,
+    rpc: vi.fn(() => Promise.resolve(profilesResult)),
     auth: { getUser: async () => ({ data: { user: authUser } }) },
   }),
 }));
