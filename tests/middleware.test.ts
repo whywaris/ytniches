@@ -15,7 +15,7 @@ vi.mock("@supabase/ssr", () => ({
   }),
 }));
 
-const { middleware } = await import("@/middleware");
+const { middleware, classifyRoute } = await import("@/middleware");
 
 function makeRequest(pathname: string): NextRequest {
   return new NextRequest(new URL(`https://example.com${pathname}`));
@@ -23,6 +23,36 @@ function makeRequest(pathname: string): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+// Regression guard for exactly the bug the Phase 2 exit gate caught live:
+// /outliers (added Phase 2 Task 1) was never added to APP_ROUTE_PREFIXES,
+// so it fell through to "public" and skipped the auth check entirely --
+// an unauthenticated request reached the page and 500'd on
+// getRequestContext()'s "middleware already blocked this" assumption,
+// instead of cleanly redirecting to /login. One entry per real directory
+// under app/(app)/ (not calendar/workspace -- Phase 3, no page yet, but
+// already-listed per this file's own "route without a page just 404s"
+// design note).
+describe("classifyRoute", () => {
+  const REAL_APP_ROUTES = [
+    "/dashboard",
+    "/niches",
+    "/onboarding",
+    "/outliers",
+    "/prompts",
+    "/settings",
+    "/tracking",
+  ];
+
+  it.each(REAL_APP_ROUTES)("classifies %s as an app route", (pathname) => {
+    expect(classifyRoute(pathname)).toBe("app");
+  });
+
+  it("classifies a nested path under a real app route as an app route too", () => {
+    expect(classifyRoute("/tracking/chan-1")).toBe("app");
+    expect(classifyRoute("/settings/notifications")).toBe("app");
+  });
 });
 
 describe("middleware onboarding gate", () => {

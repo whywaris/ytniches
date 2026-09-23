@@ -15,6 +15,7 @@ const APP_ROUTE_PREFIXES = [
   "/niches",
   "/tracking",
   "/prompts",
+  "/outliers",
   "/calendar",
   "/workspace",
   "/settings",
