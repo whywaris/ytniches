@@ -209,20 +209,21 @@ Separate table because transcripts are large and only fetched on demand (for AI 
 
 ### 3.4 prompts
 
-User-owned. Each prompt is one generation output tied to a source video.
+User-owned. Each row is one generation output tied to a source video — either a full AI Prompt (`kind = 'prompt'`) or a standalone Thumbnail Ideas set (`kind = 'thumbnail_ideas'`, Phase 2 Task 3), disambiguated by `kind` rather than a 6th key on `output`'s prompt shape (which would force every AI Prompts generation to also produce thumbnail ideas, or store misleading empty `title_variants`/`hook_variants`/etc. on thumbnail-ideas rows). `tone` has no real meaning for a `thumbnail_ideas` row — written as `'neutral'`, a harmless placeholder, rather than relaxing the column's `NOT NULL` constraint for one row kind.
 
-| Column            | Type                   | Notes                                                                                                     |
-| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `id`              | `uuid`                 |                                                                                                           |
-| `user_id`         | `uuid`                 | FK to `profiles.id`                                                                                       |
-| `workspace_id`    | `uuid` nullable        | FK to `workspaces.id` (Phase 3)                                                                           |
-| `source_video_id` | `uuid`                 | FK to `videos.id`                                                                                         |
-| `target_audience` | `text` nullable        | User-provided context                                                                                     |
-| `tone`            | `text`                 | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite'                                     |
-| `output`          | `jsonb`                | Structured: `{ title_variants, thumbnail_concepts, hook_variants, script_outline, description_template }` |
-| `regeneration_of` | `uuid` nullable        | FK to prior `prompts.id` if this was a regenerate                                                         |
-| `feedback_tags`   | `text[]`               | e.g. `['more_casual', 'shorter']` if regenerated                                                          |
-| `deleted_at`      | `timestamptz` nullable | Soft-delete                                                                                               |
+| Column            | Type                   | Notes                                                                                                                                                                           |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `uuid`                 |                                                                                                                                                                                 |
+| `user_id`         | `uuid`                 | FK to `profiles.id`                                                                                                                                                             |
+| `workspace_id`    | `uuid` nullable        | FK to `workspaces.id` (Phase 3)                                                                                                                                                 |
+| `source_video_id` | `uuid`                 | FK to `videos.id`                                                                                                                                                               |
+| `kind`            | `text`                 | 'prompt' (default) / 'thumbnail_ideas' (Phase 2 Task 3). `listPrompts` filters to 'prompt' so thumbnail-ideas rows don't appear in the AI Prompts library.                      |
+| `target_audience` | `text` nullable        | User-provided context                                                                                                                                                           |
+| `tone`            | `text`                 | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite' -- always 'neutral' for a `thumbnail_ideas` row                                                           |
+| `output`          | `jsonb`                | `kind = 'prompt'`: `{ title_variants, thumbnail_concepts, hook_variants, script_outline, description_template }`. `kind = 'thumbnail_ideas'`: `{ ideas: string[] }` (3-5 items) |
+| `regeneration_of` | `uuid` nullable        | FK to prior `prompts.id` if this was a regenerate                                                                                                                               |
+| `feedback_tags`   | `text[]`               | e.g. `['more_casual', 'shorter']` if regenerated                                                                                                                                |
+| `deleted_at`      | `timestamptz` nullable | Soft-delete                                                                                                                                                                     |
 
 ### 3.5 notes
 
@@ -289,19 +290,20 @@ User-scoped notifications derived from tracked\_events + system events.
 
 ### 4.4 notification\_preferences
 
-Per-user, per-notification-type toggles.
+Per-user, per-notification-type toggles. `in_app_enabled`/`email_enabled` genuinely vary per `notification_type`; `digest_cadence`/`digest_day_of_week`/`quiet_hours_*` are product-level _global_ settings that happen to live on the same per-type row (no separate "global" row/table) — Phase 2 Task 2's app-layer contract keeps them identical across every one of a user's type-rows on write (one `UPDATE ... WHERE user_id = $1`), and reads them from any single row.
 
-| Column              | Type            | Notes                                              |
-| ------------------- | --------------- | -------------------------------------------------- |
-| `id`                | `uuid`          |                                                    |
-| `user_id`           | `uuid`          | FK to `profiles.id`                                |
-| `notification_type` | `text`          | Matches types in `notifications.notification_type` |
-| `in_app_enabled`    | `boolean`       | Default true                                       |
-| `email_enabled`     | `boolean`       | Default false (opt-in)                             |
-| `slack_enabled`     | `boolean`       | Phase 3, team tier                                 |
-| `digest_cadence`    | `text`          | 'off' / 'daily' / 'weekly' (email-only)            |
-| `quiet_hours_start` | `time` nullable | Local to user's `time_zone`                        |
-| `quiet_hours_end`   | `time` nullable |                                                    |
+| Column               | Type            | Notes                                                                                                                                                   |
+| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `uuid`          |                                                                                                                                                         |
+| `user_id`            | `uuid`          | FK to `profiles.id`                                                                                                                                     |
+| `notification_type`  | `text`          | Matches types in `notifications.notification_type`                                                                                                      |
+| `in_app_enabled`     | `boolean`       | Default true                                                                                                                                            |
+| `email_enabled`      | `boolean`       | Default false (opt-in). Also gated by tier — Pro/Team only (Monetization.md §2.5); Starter/trial never gets email regardless of this flag.              |
+| `slack_enabled`      | `boolean`       | Phase 3, team tier                                                                                                                                      |
+| `digest_cadence`     | `text`          | 'off' / 'daily' / 'weekly' (email-only)                                                                                                                 |
+| `digest_day_of_week` | `smallint`      | 0 (Sunday) – 6 (Saturday), default 1 (Monday). Which day a 'weekly' cadence fires on (UI-UX-Flow.md §6.4's day-of-week selector). Added Phase 2 Task 2. |
+| `quiet_hours_start`  | `time` nullable | Local to user's `time_zone`                                                                                                                             |
+| `quiet_hours_end`    | `time` nullable |                                                                                                                                                         |
 
 **Per-channel override table:** `notification_channel_overrides (user_id, channel_id, notifications_enabled)` — exists only when user overrides the default for a specific channel.
 

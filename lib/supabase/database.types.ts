@@ -219,6 +219,7 @@ export type Database = {
         Row: {
           created_at: string;
           digest_cadence: string;
+          digest_day_of_week: number;
           email_enabled: boolean;
           id: string;
           in_app_enabled: boolean;
@@ -232,6 +233,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           digest_cadence?: string;
+          digest_day_of_week?: number;
           email_enabled?: boolean;
           id?: string;
           in_app_enabled?: boolean;
@@ -245,6 +247,7 @@ export type Database = {
         Update: {
           created_at?: string;
           digest_cadence?: string;
+          digest_day_of_week?: number;
           email_enabled?: boolean;
           id?: string;
           in_app_enabled?: boolean;
@@ -369,6 +372,7 @@ export type Database = {
           deleted_at: string | null;
           feedback_tags: string[];
           id: string;
+          kind: string;
           output: Json;
           regeneration_of: string | null;
           source_video_id: string;
@@ -383,6 +387,7 @@ export type Database = {
           deleted_at?: string | null;
           feedback_tags?: string[];
           id?: string;
+          kind?: string;
           output: Json;
           regeneration_of?: string | null;
           source_video_id: string;
@@ -397,6 +402,7 @@ export type Database = {
           deleted_at?: string | null;
           feedback_tags?: string[];
           id?: string;
+          kind?: string;
           output?: Json;
           regeneration_of?: string | null;
           source_video_id?: string;
@@ -735,6 +741,13 @@ export type Database = {
         Args: never;
         Returns: {
           channel_id: string;
+        }[];
+      };
+      find_due_digest_user_ids: {
+        Args: never;
+        Returns: {
+          cadence: string;
+          user_id: string;
         }[];
       };
     };
