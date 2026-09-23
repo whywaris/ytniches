@@ -1,14 +1,4 @@
 // Generated via Supabase MCP generate_typescript_types against ytniches-dev
-// (ossrqwoorqxbgyzzoosz). Regenerate after every migration (CLAUDE.md §4.1
-// "Add a new DB table" step 5). Do not hand-edit.
-//
-// `pnpm supabase:types` needs `supabase login` / SUPABASE_ACCESS_TOKEN,
-// neither available in this environment — it fails with
-// LegacyPlatformAuthRequiredError and, because of the `>` redirect,
-// overwrites this file with that error message. Until a token is
-// configured, regenerate via the Supabase MCP's generate_typescript_types
-// tool and apply the diff by hand instead of running that script.
-
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -434,6 +424,13 @@ export type Database = {
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "prompts_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
         ];
       };
       subscriptions: {
@@ -542,6 +539,13 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tracked_channels_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];
@@ -732,6 +736,163 @@ export type Database = {
         };
         Relationships: [];
       };
+      workspace_invitations: {
+        Row: {
+          accepted_at: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          token: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          token: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          token?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_invitations_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workspace_members: {
+        Row: {
+          created_at: string;
+          id: string;
+          invited_by: string | null;
+          joined_at: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          updated_at: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          joined_at?: string;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          joined_at?: string;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workspaces: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          slug: string;
+          subscription_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          name: string;
+          owner_id: string;
+          slug: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          slug?: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspaces_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -750,6 +911,22 @@ export type Database = {
           user_id: string;
         }[];
       };
+      is_workspace_admin: {
+        Args: { target_workspace_id: string };
+        Returns: boolean;
+      };
+      is_workspace_member: {
+        Args: { target_workspace_id: string };
+        Returns: boolean;
+      };
+      is_workspace_owner: {
+        Args: { target_workspace_id: string };
+        Returns: boolean;
+      };
+      workspace_has_no_members: {
+        Args: { target_workspace_id: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       credit_event_type: "allocation" | "consumption" | "grant" | "refund" | "expiration";
@@ -757,6 +934,7 @@ export type Database = {
       subscription_tier: "free" | "starter" | "pro" | "team";
       tracked_event_type:
         "new_video" | "view_spike" | "cadence_change" | "subscriber_milestone" | "outlier_detected";
+      workspace_role: "admin" | "editor" | "viewer";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -888,6 +1066,7 @@ export const Constants = {
         "subscriber_milestone",
         "outlier_detected",
       ],
+      workspace_role: ["admin", "editor", "viewer"],
     },
   },
 } as const;

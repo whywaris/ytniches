@@ -404,6 +404,19 @@ CREATE TYPE calendar_status AS ENUM ('idea', 'scripted', 'filmed', 'edited', 'pu
 
 **Note on Phase 1 impact:** Every user-scoped table (prompts, notes, tracked\_channels, etc.) includes a nullable `workspace_id` from day 1. In Phase 1 it's always null (personal). In Phase 3, workspace records populate it. RLS policies handle both cases from the start.
 
+### 5.7 Implementation status (Phase 3 Task 1)
+
+`workspaces`, `workspace_members`, and `workspace_invitations` are live (`20260923100001_create_workspace_tables.sql`, `20260923100002_add_workspace_rls_policies.sql`). `tasks` and `calendar_entries` remain spec-only until Tasks and Content Calendar are built.
+
+**RLS via SECURITY DEFINER helpers, not raw subqueries.** A policy on `workspace_members` that subqueries `workspace_members` itself (the standard membership-table idiom) trips Postgres's RLS recursion guard (`42P17`) the moment the querying role isn't RLS-bypassing — evaluating the inner subquery re-applies the table's own policy, which subqueries itself again. Same failure for `workspaces`/`workspace_invitations` admin checks, since those also resolve through `workspace_members`. Fixed with four `SECURITY DEFINER` functions (`set search_path = public`, same hardening as `handle_new_user()`), each `REVOKE`d from `public`/`anon` and granted only to `authenticated` (required for the policy engine to evaluate them for real signed-in users; each one only reveals the calling user's own status, never another user's data, so residual direct-RPC callability by an authenticated user isn't a leak):
+
+- `is_workspace_member(uuid)`, `is_workspace_admin(uuid)`, `is_workspace_owner(uuid)` — boolean membership/role/ownership checks
+- `workspace_has_no_members(uuid)` — used only by the bootstrap INSERT policy (see below)
+
+**Bootstrap chicken-and-egg.** The one case a raw policy can't express: a workspace's owner inserting themselves as its first (admin) member. A naive `workspace_id in (select id from workspaces where owner_id = auth.uid())` check fails, because that `SELECT` is itself gated by `workspaces`' own membership-based RLS — and the brand-new workspace has no members yet. `is_workspace_owner()` bypasses this the same way, for the same reason.
+
+**Service-role only, not RLS:** `acceptInvitation` (validating a token against the invited email, then inserting the membership row and marking the invitation accepted) goes through `lib/services/workspace.ts`'s service-role client rather than a client-facing RLS policy — expressing "does a live invitation for my email exist" in a `WITH CHECK` wasn't worth it for one call site. `workspace_invitations` has no RLS policy granting non-admin read access at all; the public `/invite?token=...` preview is a separate server-only, token-authenticated lookup (same trust model as a password-reset token), never a direct PostgREST call.
+
 ## 6. RLS, Indexes, Audit & Retention
 
 ### 6.1 Row-Level Security policies
