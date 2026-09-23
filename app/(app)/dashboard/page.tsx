@@ -53,6 +53,9 @@ export default async function DashboardPage() {
         <Link href="/prompts" className="text-accent hover:underline">
           AI Prompts
         </Link>
+        <Link href="/workspace" className="text-accent hover:underline">
+          Workspace
+        </Link>
       </nav>
       <form action={signOut}>
         <Button type="submit" variant="ghost">

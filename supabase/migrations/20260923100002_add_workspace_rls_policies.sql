@@ -122,9 +122,20 @@ create policy "workspaces_insert_as_owner" on public.workspaces
   for insert
   with check (owner_id = auth.uid());
 
+-- `or owner_id = auth.uid()` isn't redundant with is_workspace_member: it
+-- covers the instant between createWorkspace's own two inserts, where the
+-- workspace row exists but its owner's admin membership row doesn't yet.
+-- PostgREST's `.insert().select()` (return=representation) re-reads the
+-- new row through this same SELECT policy immediately after the INSERT's
+-- WITH CHECK passes -- without this clause that re-read finds zero rows
+-- (no membership yet) and PostgREST reports the whole insert as an RLS
+-- violation, not just a stricter read. Caught live running the actual
+-- create-workspace flow, not by inspection: a bare INSERT with no
+-- SELECT-back succeeded fine in isolation, which is what masked this
+-- during earlier RLS verification.
 create policy "workspaces_select_member" on public.workspaces
   for select
-  using (public.is_workspace_member(id));
+  using (public.is_workspace_member(id) or owner_id = auth.uid());
 
 create policy "workspaces_update_admin" on public.workspaces
   for update
