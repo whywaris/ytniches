@@ -488,3 +488,22 @@ Decisions that still need to close before their dependent docs / features can be
 - **D-039 flakiness:** assessed as a **P1 risk, fixed before Phase 3 per that assessment** (not deferred) — see D-039 for the full diagnosis, fix, and 10-consecutive-clean-run verification. Reasoning that drove "now, not after": (1) the pattern was measurably worsening this session (new affected file, higher failure rate on repeated runs) rather than stable; (2) Phase 3's Workspace feature introduces genuine shared state across multiple users for the first time in this codebase — exactly the class of feature where a flaky test masking a real race condition or cross-user data leak is most costly to miss; (3) root cause turned out to be a single missing `vi.resetModules()` call, not an open-ended investigation — cheap enough that deferring it had no real cost advantage.
 - **Other checks:** all three Phase 2 features confirmed reachable (`/outliers`, `/settings/notifications`, `ThumbnailIdeasModal` via `OutlierCard` — the last two already worked; `/outliers` only after this gate's fix). 685 tests passing (610 at Phase 2 Task 1's start → 685 here, includes this gate's own 8 new middleware tests), now confirmed at 10/10 consecutive clean full-suite runs post-D-039-fix. `pnpm typecheck` + `pnpm lint` clean.
 - **Phase 3 proceeds:** Yes. D-039 is resolved, not just scheduled.
+
+---
+
+### D-043: Workspace route is `/workspace`, not `/settings/workspace`
+
+- **Status:** Resolved (2026-09-23)
+- **Context:** Phase 3 kickoff briefed Workspace UI at `/settings/workspace` and `/settings/workspace/members`. Application-Flow.md §2.3 already has `/workspace` as a top-level authenticated route ("Workspace overview, Phase 3") — planned in Phase 0, ahead of this feature actually being built — and `middleware.ts`'s `APP_ROUTE_PREFIXES` already includes both `/workspace` and `/calendar` for the same reason. No `/settings/workspace` entry exists anywhere in the routing spec.
+- **Final call:** Follow Application-Flow.md. Workspace overview + member management live at `/workspace` and `/workspace/members` (top-level, alongside `/tracking`, `/prompts`), not nested under `/settings/*`. Per CLAUDE.md §3.2, Application-Flow.md governs routing and predates this task's brief.
+- **Impacts:** Application-Flow.md (no change needed — already correct), the Phase 3 kickoff brief (superseded on this point)
+
+---
+
+### D-044: No UI-UX-Flow.md coverage for Workspace, Tasks, or Calendar screens
+
+- **Status:** Open (build proceeds; doc debt tracked)
+- **Context:** Phase 3 kickoff cited "UI-UX-Flow.md §8" for Workspace/Tasks/Calendar screens. UI-UX-Flow.md's actual §8 is "Settings + Admin" — there is no section anywhere in the doc covering these three features. No screen layouts, states (loading/empty/error), or interaction flows are specified for the workspace overview, member management, the invite-accept page, task views, or the calendar.
+- **Final call:** Don't block on it. Build Workspace UI composed from existing primitives (`Card`, `Table`, `Modal`, `Avatar`, `Button`) following this codebase's established list/detail patterns (mirrors `/tracking`'s overview shape) and the paid-tier gating pattern already in use (visible in nav with a badge + upgrade upsell for non-Team users, never hidden like an unbuilt feature). Same approach carries into Tasks and Calendar.
+- **Follow-up required:** UI-UX-Flow.md needs §9 (Workspace), §10 (Tasks), and §11 (Calendar) written as a dedicated post-Phase-3 doc task — before any future developer (human or AI) touches these features again expecting a spec to read first, per CLAUDE.md's golden rule. Do not let this slide past the Phase 3 gate.
+- **Impacts:** UI-UX-Flow.md (missing §9/§10/§11), CLAUDE.md §3 spec map (already lists UI-UX-Flow.md as canonical — the doc itself is just behind)
