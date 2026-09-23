@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createCheckoutAction } from "@/app/(app)/settings/billing/actions";
 import type { BillingFrequency, Tier } from "@/lib/billing";
-import { capture } from "@/lib/analytics";
+import { capture } from "@/lib/analytics/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { TierCards } from "@/components/features/billing/tier-cards";
