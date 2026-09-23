@@ -1,9 +1,18 @@
 -- Local/dev-only test user + baseline data. Never run against a project
 -- with real users. Password meets Security.md §2.1 (12+ chars, upper,
 -- lower, number).
+-- email_change/email_change_token_new/recovery_token: explicit '' rather
+-- than the column default (NULL). GoTrue's Go SQL driver scans these as
+-- non-nullable strings; a NULL here doesn't break user creation but
+-- breaks every later password sign-in with "error finding user: sql:
+-- Scan error ... converting NULL to string is unsupported" (a 500 from
+-- /auth/v1/token, not a bad-credentials error) -- found live testing the
+-- Phase 3 Workspace flow's password login, on a user seeded before this
+-- fix existed.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, confirmation_token,
+  email_change, email_change_token_new, recovery_token,
   raw_app_meta_data, raw_user_meta_data,
   created_at, updated_at
 ) values (
@@ -13,6 +22,7 @@ insert into auth.users (
   'test@ytniches.dev',
   crypt('TestPassword123!', gen_salt('bf')),
   now(), '',
+  '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test User"}'::jsonb,
   now(), now()
