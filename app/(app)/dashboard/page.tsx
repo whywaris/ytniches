@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestContext } from "@/lib/context";
@@ -35,6 +37,23 @@ export default async function DashboardPage() {
       {user?.email ? (
         <p className="text-body-sm text-text-secondary">Signed in as {user.email}</p>
       ) : null}
+      {/* D-037: no app shell/sidebar nav exists yet, so this placeholder is
+          the only discoverable entry point into the app's real pages until
+          that's built. */}
+      <nav className="flex flex-wrap items-center justify-center gap-4 text-body-sm">
+        <Link href="/niches" className="text-accent hover:underline">
+          Niche Finder
+        </Link>
+        <Link href="/tracking" className="text-accent hover:underline">
+          Tracking
+        </Link>
+        <Link href="/outliers" className="text-accent hover:underline">
+          Outliers
+        </Link>
+        <Link href="/prompts" className="text-accent hover:underline">
+          AI Prompts
+        </Link>
+      </nav>
       <form action={signOut}>
         <Button type="submit" variant="ghost">
           Log out

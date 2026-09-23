@@ -22,6 +22,7 @@ import {
   type GeneratedPrompt,
   type GenerateInput,
   type VideoPickerChannel,
+  type VideoPickerVideo,
 } from "@/components/features/prompts/generator-form";
 import { PromptCard } from "@/components/features/prompts/prompt-card";
 import type { PromptSummary } from "@/components/features/prompts/types";
@@ -29,6 +30,7 @@ import type { PromptSummary } from "@/components/features/prompts/types";
 export interface PromptsClientProps {
   initialPrompts: PromptSummary[];
   trackedChannels: VideoPickerChannel[];
+  preselect?: { channelId: string; videoId: string; videos: VideoPickerVideo[] };
 }
 
 function toGenerateErrorReason(error: {
@@ -54,7 +56,7 @@ function toGenerateErrorReason(error: {
 // UI-UX-Flow.md §7.1's two-panel landing. Server-rendered initial library
 // comes from page.tsx; everything below is the interactive layer -- search,
 // generation, and discard, all wired to real Server Actions.
-function PromptsClient({ initialPrompts, trackedChannels }: PromptsClientProps) {
+function PromptsClient({ initialPrompts, trackedChannels, preselect }: PromptsClientProps) {
   const router = useRouter();
   const [prompts, setPrompts] = React.useState(initialPrompts);
   const [search, setSearch] = React.useState("");
@@ -143,6 +145,7 @@ function PromptsClient({ initialPrompts, trackedChannels }: PromptsClientProps) 
           onGenerate={handleGenerate}
           onGenerated={handleGenerated}
           onDiscard={handleDiscard}
+          initialSelection={preselect}
         />
       </div>
     </div>

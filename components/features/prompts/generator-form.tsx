@@ -47,6 +47,11 @@ export interface GeneratorFormProps {
   onGenerate: (input: GenerateInput) => Promise<Result<GeneratedPrompt, GenerateErrorReason>>;
   onGenerated?: (promptId: string) => void;
   onDiscard?: (promptId: string) => Promise<void>;
+  /** PRD.md §7.1's "one-click extract prompts from this outlier" deep link
+   * (?channelId=&videoId= on /prompts) -- seeds the channel tab already
+   * picked, no extra round trip since the caller already fetched the video
+   * list server-side. */
+  initialSelection?: { channelId: string; videoId: string; videos: VideoPickerVideo[] };
   className?: string;
 }
 
@@ -123,12 +128,13 @@ function GeneratorForm({
   onGenerate,
   onGenerated,
   onDiscard,
+  initialSelection,
   className,
 }: GeneratorFormProps) {
   const [tab, setTab] = React.useState<"channel" | "url">("channel");
-  const [channelId, setChannelId] = React.useState("");
-  const [videos, setVideos] = React.useState<VideoPickerVideo[]>([]);
-  const [videoId, setVideoId] = React.useState("");
+  const [channelId, setChannelId] = React.useState(initialSelection?.channelId ?? "");
+  const [videos, setVideos] = React.useState<VideoPickerVideo[]>(initialSelection?.videos ?? []);
+  const [videoId, setVideoId] = React.useState(initialSelection?.videoId ?? "");
   const [loadingVideos, setLoadingVideos] = React.useState(false);
   const [url, setUrl] = React.useState("");
   const [targetAudience, setTargetAudience] = React.useState("");
@@ -245,9 +251,14 @@ function GeneratorForm({
         </p>
       ) : null}
       {state.status === "insufficient_credits" ? (
-        <p role="alert" className="mb-3 text-body-sm text-warning">
-          Not enough credits ({state.balance} of {state.required} needed).
-        </p>
+        <div className="mb-3 flex items-center justify-between rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-body-sm text-warning">
+          <span>
+            Not enough credits ({state.balance} of {state.required} needed).
+          </span>
+          <Button size="sm" variant="secondary" asChild>
+            <a href="/settings/billing">Upgrade</a>
+          </Button>
+        </div>
       ) : null}
 
       <Tabs value={tab} onValueChange={(value) => setTab(value === "url" ? "url" : "channel")}>

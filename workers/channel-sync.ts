@@ -4,14 +4,27 @@ import { getChannelById, getChannelVideos } from "@/lib/youtube";
 import { upsertChannels } from "@/lib/services/channels";
 import { createServiceClient } from "@/lib/supabase/service";
 import { inngest } from "@/lib/inngest/client";
+import {
+  computeBaseline,
+  computeRecencyWeight,
+  OUTLIER_SCORE,
+  OUTLIER_THRESHOLD_MULTIPLIER,
+  type BaselineVideo,
+} from "@/lib/outliers/scoring";
+import {
+  sendCadenceChangeEmail,
+  sendNewVideoEmail,
+  sendOutlierEmail,
+  sendViewSpikeEmail,
+} from "@/lib/email/notifications";
+import { isInQuietHours } from "@/lib/notifications/quiet-hours";
+import { isEmailEligibleTier } from "@/lib/billing";
 import type { YouTubeVideoItem } from "@/lib/youtube/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 
-// PRD.md §6.2 / Backend-Schema.md §4.2. Only these three event types have
-// detectors — subscriber_milestone and outlier_detected are enum-ready but
-// out of Phase 1 Task 2's scope (outlier_detected needs the Phase 2
-// baseline scanner; subscriber_milestone wasn't in this task's list).
-type ImplementedEventType = "new_video" | "view_spike" | "cadence_change";
+// PRD.md §6.2/§7.1 / Backend-Schema.md §4.2. subscriber_milestone is
+// enum-ready but still out of scope (wasn't in any task's list yet).
+type ImplementedEventType = "new_video" | "view_spike" | "cadence_change" | "outlier_detected";
 
 export interface DetectedEvent {
   channelId: string;
@@ -227,6 +240,72 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
     }
   }
 
+  // PRD.md §7.1's outlier detection (Phase 2 Task 1 plan). Evaluated over
+  // every video this sync fetched (up to the last 50, lib/youtube's own
+  // cap), not just this sync's new_video diff -- an older video's view
+  // count can cross the threshold well after it was published (PRD's
+  // "Trending: outliers gaining momentum right now"). computeBaseline
+  // returns null below BASELINE_MIN_VIDEOS, so a channel's early videos
+  // naturally produce no candidates yet (cold start).
+  //
+  // Fire-once dedup: an outlier_detected event should never re-fire for a
+  // video that already has one (same reasoning as highestCrossedMilestone
+  // above) -- a still-climbing video would otherwise spam a new event
+  // every sync. One batched lookup for the whole channel, not one query
+  // per candidate video.
+  if (freshVideos.length > 0) {
+    const { data: existingOutlierEvents, error: outlierEventsError } = await supabase
+      .from("tracked_events")
+      .select("payload")
+      .eq("channel_id", channelId)
+      .eq("event_type", "outlier_detected");
+    if (outlierEventsError) {
+      throw new Error(`syncChannelData outlier events query failed: ${outlierEventsError.message}`);
+    }
+    const alreadyFlaggedVideoIds = new Set(
+      (existingOutlierEvents ?? [])
+        .map((row) => (row.payload as { videoId?: unknown }).videoId)
+        .filter((id): id is string => typeof id === "string"),
+    );
+
+    for (const video of freshVideos) {
+      const internalVideoId = videoIdByYoutubeId.get(video.id) ?? video.id;
+      if (alreadyFlaggedVideoIds.has(internalVideoId)) continue;
+
+      const candidatePublishedAtMs = new Date(video.snippet.publishedAt).getTime();
+      const priorVideos: BaselineVideo[] = freshVideos
+        .filter(
+          (other) =>
+            other.id !== video.id &&
+            new Date(other.snippet.publishedAt).getTime() < candidatePublishedAtMs,
+        )
+        .map((other) => ({
+          viewCount: other.statistics?.viewCount ?? 0,
+          publishedAt: other.snippet.publishedAt,
+        }));
+
+      const baseline = computeBaseline(priorVideos);
+      if (baseline === null) continue;
+
+      const viewCount = video.statistics?.viewCount ?? 0;
+      if (viewCount < baseline * OUTLIER_THRESHOLD_MULTIPLIER) continue;
+
+      const recencyWeight = computeRecencyWeight(video.snippet.publishedAt);
+      events.push({
+        channelId,
+        channelName: channelRow.name,
+        eventType: "outlier_detected",
+        payload: {
+          videoId: internalVideoId,
+          title: video.snippet.title,
+          viewCount,
+          baseline,
+          outlierScore: OUTLIER_SCORE(viewCount, baseline, recencyWeight),
+        },
+      });
+    }
+  }
+
   if (events.length > 0) {
     const { error: insertError } = await supabase.from("tracked_events").insert(
       events.map((event) => ({
@@ -273,6 +352,12 @@ function composeNotification(event: DetectedEvent): {
         body: `Was ${Number(event.payload.previousPerWeek).toFixed(1)}/week, now ${Number(event.payload.currentPerWeek).toFixed(1)}/week`,
         relatedResource: `channel:${event.channelId}`,
       };
+    case "outlier_detected":
+      return {
+        title: `Outlier detected on ${event.channelName}`,
+        body: String(event.payload.title),
+        relatedResource: `video:${event.payload.videoId}`,
+      };
   }
 }
 
@@ -284,6 +369,23 @@ const FANOUT_BATCH_DELAY_MS = 200;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Phase 2 Task 2 gap 6: email is a second delivery channel on the same
+// notification an in-app-eligible user already gets, not an independently
+// triggered one -- dispatches by event type, same shape as
+// composeNotification above.
+function sendEmailForEvent(userId: string, event: DetectedEvent): Promise<boolean> {
+  switch (event.eventType) {
+    case "new_video":
+      return sendNewVideoEmail(userId, event);
+    case "view_spike":
+      return sendViewSpikeEmail(userId, event);
+    case "cadence_change":
+      return sendCadenceChangeEmail(userId, event);
+    case "outlier_detected":
+      return sendOutlierEmail(userId, event);
+  }
 }
 
 // Separate from syncChannelData deliberately (Flag 5): a fan-out failure
@@ -315,19 +417,29 @@ export async function fanOutNotifications(events: DetectedEvent[]): Promise<void
 
     const userIds = trackers.map((tracker) => tracker.user_id);
 
-    const [{ data: overrides, error: overridesError }, { data: prefs, error: prefsError }] =
-      await Promise.all([
-        supabase
-          .from("notification_channel_overrides")
-          .select("user_id, notifications_enabled")
-          .eq("channel_id", event.channelId)
-          .in("user_id", userIds),
-        supabase
-          .from("notification_preferences")
-          .select("user_id, in_app_enabled")
-          .eq("notification_type", event.eventType)
-          .in("user_id", userIds),
-      ]);
+    const [
+      { data: overrides, error: overridesError },
+      { data: prefs, error: prefsError },
+      { data: subscriptions, error: subscriptionsError },
+      { data: profiles, error: profilesError },
+    ] = await Promise.all([
+      supabase
+        .from("notification_channel_overrides")
+        .select("user_id, notifications_enabled")
+        .eq("channel_id", event.channelId)
+        .in("user_id", userIds),
+      supabase
+        .from("notification_preferences")
+        .select("user_id, in_app_enabled, email_enabled, quiet_hours_start, quiet_hours_end")
+        .eq("notification_type", event.eventType)
+        .in("user_id", userIds),
+      supabase
+        .from("subscriptions")
+        .select("user_id, tier")
+        .eq("is_current", true)
+        .in("user_id", userIds),
+      supabase.from("profiles").select("id, time_zone").in("id", userIds),
+    ]);
 
     if (overridesError) {
       throw new Error(`fanOutNotifications override lookup failed: ${overridesError.message}`);
@@ -335,11 +447,21 @@ export async function fanOutNotifications(events: DetectedEvent[]): Promise<void
     if (prefsError) {
       throw new Error(`fanOutNotifications preference lookup failed: ${prefsError.message}`);
     }
+    if (subscriptionsError) {
+      throw new Error(
+        `fanOutNotifications subscription lookup failed: ${subscriptionsError.message}`,
+      );
+    }
+    if (profilesError) {
+      throw new Error(`fanOutNotifications profile lookup failed: ${profilesError.message}`);
+    }
 
     const overrideByUser = new Map(
       (overrides ?? []).map((row) => [row.user_id, row.notifications_enabled]),
     );
-    const prefByUser = new Map((prefs ?? []).map((row) => [row.user_id, row.in_app_enabled]));
+    const prefByUser = new Map((prefs ?? []).map((row) => [row.user_id, row]));
+    const tierByUser = new Map((subscriptions ?? []).map((row) => [row.user_id, row.tier]));
+    const timeZoneByUser = new Map((profiles ?? []).map((row) => [row.id, row.time_zone]));
 
     // Per-channel override wins if set; otherwise the general preference;
     // otherwise default enabled (Backend-Schema.md §4.4: no row = no
@@ -347,10 +469,23 @@ export async function fanOutNotifications(events: DetectedEvent[]): Promise<void
     const eligibleUserIds = userIds.filter((userId) => {
       const override = overrideByUser.get(userId);
       if (override !== undefined) return override;
-      return prefByUser.get(userId) ?? true;
+      return prefByUser.get(userId)?.in_app_enabled ?? true;
     });
 
     if (eligibleUserIds.length === 0) continue;
+
+    // Email is a second channel on top of in-app (gap 6), gated by tier
+    // (gap 1, no subscription row = trial = not eligible), the user's own
+    // opt-in (default false), and quiet hours (gap 5).
+    const emailEligibleUserIds = new Set(
+      eligibleUserIds.filter((userId) => {
+        if (!isEmailEligibleTier(tierByUser.get(userId))) return false;
+        const pref = prefByUser.get(userId);
+        if (!pref?.email_enabled) return false;
+        const timeZone = timeZoneByUser.get(userId) ?? "UTC";
+        return !isInQuietHours(pref.quiet_hours_start, pref.quiet_hours_end, timeZone);
+      }),
+    );
 
     const { title, body, relatedResource } = composeNotification(event);
     const rows = eligibleUserIds.map((userId) => ({
@@ -365,9 +500,26 @@ export async function fanOutNotifications(events: DetectedEvent[]): Promise<void
     for (let i = 0; i < rows.length; i += FANOUT_BATCH_SIZE) {
       if (i > 0) await delay(FANOUT_BATCH_DELAY_MS);
       const batch = rows.slice(i, i + FANOUT_BATCH_SIZE);
-      const { error: insertError } = await supabase.from("notifications").insert(batch);
+      const { data: insertedRows, error: insertError } = await supabase
+        .from("notifications")
+        .insert(batch)
+        .select("id, user_id");
       if (insertError) {
         throw new Error(`fanOutNotifications insert failed: ${insertError.message}`);
+      }
+
+      // Never blocks/rolls back the in-app rows just inserted above -- a
+      // failed or skipped email is a no-op here, not a thrown error
+      // (constraint: never block in-app delivery on email).
+      for (const row of insertedRows ?? []) {
+        if (!emailEligibleUserIds.has(row.user_id)) continue;
+        const sent = await sendEmailForEvent(row.user_id, event);
+        if (sent) {
+          await supabase
+            .from("notifications")
+            .update({ delivered_channels: ["in_app", "email"] })
+            .eq("id", row.id);
+        }
       }
     }
   }

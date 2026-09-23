@@ -129,6 +129,24 @@ describe("GeneratorForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("seeds the channel/video selection from initialSelection (outlier deep link)", async () => {
+    const user = userEvent.setup();
+    const { onGenerate } = renderForm({
+      initialSelection: { channelId: "chan-1", videoId: "vid-1", videos: VIDEOS },
+    });
+
+    // Already enabled -- no need to open either Select.
+    expect(screen.getByRole("button", { name: /Generate prompts/ })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: /Generate prompts/ }));
+
+    expect(onGenerate).toHaveBeenCalledWith({
+      videoId: "vid-1",
+      targetAudience: null,
+      tone: "neutral",
+    } satisfies GenerateInput);
+  });
+
   it("'Generate another' returns to the idle form", async () => {
     const user = userEvent.setup();
     renderForm();

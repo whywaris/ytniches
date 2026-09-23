@@ -17,6 +17,17 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom }),
 }));
 
+const sendNewVideoEmail = vi.fn();
+const sendViewSpikeEmail = vi.fn();
+const sendCadenceChangeEmail = vi.fn();
+const sendOutlierEmail = vi.fn();
+vi.mock("@/lib/email/notifications", () => ({
+  sendNewVideoEmail: (...args: unknown[]) => sendNewVideoEmail(...args),
+  sendViewSpikeEmail: (...args: unknown[]) => sendViewSpikeEmail(...args),
+  sendCadenceChangeEmail: (...args: unknown[]) => sendCadenceChangeEmail(...args),
+  sendOutlierEmail: (...args: unknown[]) => sendOutlierEmail(...args),
+}));
+
 const { syncChannelData, fanOutNotifications } = await import("@/workers/channel-sync");
 
 const CHANNEL_ID = "11111111-1111-1111-1111-111111111111";
@@ -46,9 +57,29 @@ function videosUpsertTable(result: { data: unknown[]; error: unknown }) {
   };
 }
 
-function insertTable(result: { error: unknown } = { error: null }) {
+// Dual-purpose: syncChannelData's tracked_events insert just awaits
+// .insert(rows) directly, while fanOutNotifications' notifications insert
+// chains .select() after it to get inserted rows back -- the returned
+// object is both thenable itself and exposes a chainable .select().
+function insertTable(result: { error: unknown; data?: unknown[] | null } = { error: null }) {
+  const insertResult = {
+    select: vi.fn(() => Promise.resolve({ data: result.data ?? null, error: result.error })),
+    then: (resolve: (value: typeof result) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(result).then(resolve, reject),
+  };
   return {
-    insert: vi.fn<(rows: unknown[]) => Promise<typeof result>>(() => Promise.resolve(result)),
+    insert: vi.fn<(rows: unknown[]) => typeof insertResult>(() => insertResult),
+  };
+}
+
+// The outlier-detection dedup lookup: .select("payload").eq(channel_id).eq(event_type).
+function outlierEventsTable(result: { data: unknown[] | null; error: unknown }) {
+  return {
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve(result)),
+      })),
+    })),
   };
 }
 
@@ -112,6 +143,7 @@ describe("syncChannelData", () => {
         error: null,
       }),
     );
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
     const trackedEventsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(trackedEventsInsert);
 
@@ -152,6 +184,7 @@ describe("syncChannelData", () => {
         error: null,
       }),
     );
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
     serviceFrom.mockReturnValueOnce(insertTable());
 
     const events = await syncChannelData(CHANNEL_ID);
@@ -191,6 +224,7 @@ describe("syncChannelData", () => {
         error: null,
       }),
     );
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
 
     const events = await syncChannelData(CHANNEL_ID);
 
@@ -205,6 +239,7 @@ describe("syncChannelData", () => {
       value: Array.from({ length: 8 }, (_, i) => makeVideo({ id: `vid${i}` })),
     });
     serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
     serviceFrom.mockReturnValueOnce(insertTable());
 
     const events = await syncChannelData(CHANNEL_ID);
@@ -231,6 +266,7 @@ describe("syncChannelData", () => {
     );
     getChannelVideos.mockResolvedValueOnce({ ok: true, value: freshVideos });
     serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
     serviceFrom.mockReturnValueOnce(insertTable());
 
     const events = await syncChannelData(CHANNEL_ID);
@@ -264,6 +300,7 @@ describe("syncChannelData", () => {
       ],
     });
     serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
 
     const events = await syncChannelData(CHANNEL_ID);
 
@@ -280,9 +317,78 @@ describe("syncChannelData", () => {
         error: null,
       }),
     );
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
     serviceFrom.mockReturnValueOnce(insertTable({ error: { message: "db down" } }));
 
     await expect(syncChannelData(CHANNEL_ID)).rejects.toThrow("tracked_events insert failed");
+  });
+
+  function buildOutlierFixture() {
+    const now = Date.now();
+    const daysAgoIso = (days: number) => new Date(now - days * 86_400_000).toISOString();
+
+    // 5 priors at 1,000 views each -> baseline 1,000. Candidate at 5,000
+    // views (5x baseline) clears the 3x threshold.
+    const priors = Array.from({ length: 5 }, (_, i) =>
+      makeVideo({
+        id: `prior${i}`,
+        snippet: { ...makeVideo().snippet, publishedAt: daysAgoIso(10 - i) },
+        statistics: { viewCount: 1000 },
+      }),
+    );
+    const candidate = makeVideo({
+      id: "outlier1",
+      snippet: { ...makeVideo().snippet, publishedAt: daysAgoIso(1) },
+      statistics: { viewCount: 5000 },
+    });
+    const freshVideos = [...priors, candidate];
+    const upsertData = freshVideos.map((video) => ({
+      id: `internal-${video.id}`,
+      youtube_video_id: video.id,
+    }));
+
+    return { freshVideos, upsertData };
+  }
+
+  it("emits outlier_detected when a video clears 3x baseline with 5+ prior videos", async () => {
+    const { freshVideos, upsertData } = buildOutlierFixture();
+
+    serviceFrom.mockReturnValueOnce(channelsTable({ data: CHANNEL_ROW, error: null }));
+    serviceFrom.mockReturnValueOnce(videosSelectTable({ data: [], error: null }));
+    getChannelVideos.mockResolvedValueOnce({ ok: true, value: freshVideos });
+    serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: upsertData, error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(insertTable());
+
+    const events = await syncChannelData(CHANNEL_ID);
+    const outlierEvent = events.find((e) => e.eventType === "outlier_detected");
+
+    expect(outlierEvent).toBeDefined();
+    expect(outlierEvent?.payload.videoId).toBe("internal-outlier1");
+    expect(outlierEvent?.payload.viewCount).toBe(5000);
+    expect(outlierEvent?.payload.baseline).toBe(1000);
+    expect(outlierEvent?.payload.outlierScore as number).toBeCloseTo(
+      (5000 / 1000) * (1 - 1 / 90),
+      2,
+    );
+  });
+
+  it("does not re-emit outlier_detected for a video that already has one (fire-once dedup)", async () => {
+    const { freshVideos, upsertData } = buildOutlierFixture();
+
+    serviceFrom.mockReturnValueOnce(channelsTable({ data: CHANNEL_ROW, error: null }));
+    serviceFrom.mockReturnValueOnce(videosSelectTable({ data: [], error: null }));
+    getChannelVideos.mockResolvedValueOnce({ ok: true, value: freshVideos });
+    serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: upsertData, error: null }));
+    // This video already got an outlier_detected event in a prior sync.
+    serviceFrom.mockReturnValueOnce(
+      outlierEventsTable({ data: [{ payload: { videoId: "internal-outlier1" } }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(insertTable());
+
+    const events = await syncChannelData(CHANNEL_ID);
+
+    expect(events.find((e) => e.eventType === "outlier_detected")).toBeUndefined();
   });
 
   it("upserts the freshly-fetched channel via lib/services/channels", async () => {
@@ -311,6 +417,24 @@ describe("fanOutNotifications", () => {
     };
   }
 
+  // profiles' time_zone lookup: .select("id, time_zone").in("id", userIds) --
+  // one fewer .eq() than overridesOrPrefsTable's shape.
+  function selectInTable(result: { data: unknown[] | null; error: unknown }) {
+    return {
+      select: vi.fn(() => ({ in: vi.fn(() => Promise.resolve(result)) })),
+    };
+  }
+
+  // The Promise.all order in fanOutNotifications is fixed: overrides,
+  // prefs, subscriptions, profiles. subscriptions shares
+  // overridesOrPrefsTable's .select().eq().in() shape.
+  function queueDefaultPreferenceLookups() {
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // prefs
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // subscriptions
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
+  }
+
   const NEW_VIDEO_EVENT = {
     channelId: CHANNEL_ID,
     channelName: "Sleep Sounds Daily",
@@ -335,8 +459,7 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       trackedChannelsTable({ data: [{ user_id: "u1" }, { user_id: "u2" }], error: null }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    queueDefaultPreferenceLookups();
     const notificationsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(notificationsInsert);
 
@@ -358,7 +481,9 @@ describe("fanOutNotifications", () => {
         error: null,
       }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // prefs
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // subscriptions
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
     const notificationsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(notificationsInsert);
 
@@ -373,10 +498,12 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       trackedChannelsTable({ data: [{ user_id: "u1" }, { user_id: "u2" }], error: null }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
     serviceFrom.mockReturnValueOnce(
       overridesOrPrefsTable({ data: [{ user_id: "u1", in_app_enabled: false }], error: null }),
     );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // subscriptions
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
     const notificationsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(notificationsInsert);
 
@@ -400,6 +527,8 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       overridesOrPrefsTable({ data: [{ user_id: "u1", in_app_enabled: false }], error: null }),
     );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // subscriptions
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
     const notificationsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(notificationsInsert);
 
@@ -414,8 +543,7 @@ describe("fanOutNotifications", () => {
     const trackers = Array.from({ length: 600 }, (_, i) => ({ user_id: `u${i}` }));
     const trackedTable = trackedChannelsTable({ data: trackers, error: null });
     serviceFrom.mockReturnValueOnce(trackedTable);
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    queueDefaultPreferenceLookups();
     const notificationsInsert = insertTable();
     serviceFrom.mockReturnValueOnce(notificationsInsert);
     serviceFrom.mockReturnValueOnce(notificationsInsert);
@@ -431,8 +559,7 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    queueDefaultPreferenceLookups();
     const viewSpikeInsert = insertTable();
     serviceFrom.mockReturnValueOnce(viewSpikeInsert);
 
@@ -456,8 +583,7 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    queueDefaultPreferenceLookups();
     const cadenceInsert = insertTable();
     serviceFrom.mockReturnValueOnce(cadenceInsert);
 
@@ -477,6 +603,176 @@ describe("fanOutNotifications", () => {
         related_resource: `channel:${CHANNEL_ID}`,
       }),
     ]);
+
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    queueDefaultPreferenceLookups();
+    const outlierInsert = insertTable();
+    serviceFrom.mockReturnValueOnce(outlierInsert);
+
+    await fanOutNotifications([
+      {
+        channelId: CHANNEL_ID,
+        channelName: "Sleep Sounds Daily",
+        eventType: "outlier_detected",
+        payload: {
+          videoId: "v1",
+          title: "Ep 1",
+          viewCount: 5000,
+          baseline: 1000,
+          outlierScore: 4.94,
+        },
+      },
+    ]);
+
+    expect(outlierInsert.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        title: "Outlier detected on Sleep Sounds Daily",
+        body: "Ep 1",
+        related_resource: "video:v1",
+      }),
+    ]);
+  });
+
+  function updateTable(result: { error: unknown } = { error: null }) {
+    return {
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve(result)) })),
+    };
+  }
+
+  it("sends an email and marks delivered_channels for a Pro-tier, opted-in user", async () => {
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({
+        data: [
+          {
+            user_id: "u1",
+            in_app_enabled: true,
+            email_enabled: true,
+            quiet_hours_start: null,
+            quiet_hours_end: null,
+          },
+        ],
+        error: null,
+      }),
+    ); // prefs
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({ data: [{ user_id: "u1", tier: "pro" }], error: null }),
+    ); // subscriptions
+    serviceFrom.mockReturnValueOnce(
+      selectInTable({ data: [{ id: "u1", time_zone: "UTC" }], error: null }),
+    ); // profiles
+    const notificationsInsert = insertTable({
+      error: null,
+      data: [{ id: "notif-1", user_id: "u1" }],
+    });
+    serviceFrom.mockReturnValueOnce(notificationsInsert);
+    sendNewVideoEmail.mockResolvedValueOnce(true);
+    const updateResult = updateTable();
+    serviceFrom.mockReturnValueOnce(updateResult);
+
+    await fanOutNotifications([NEW_VIDEO_EVENT]);
+
+    expect(sendNewVideoEmail).toHaveBeenCalledWith(
+      "u1",
+      expect.objectContaining({ channelId: CHANNEL_ID }),
+    );
+    expect(updateResult.update).toHaveBeenCalledWith({ delivered_channels: ["in_app", "email"] });
+  });
+
+  it("does not email a Starter/trial-tier user even with email_enabled true", async () => {
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({
+        data: [{ user_id: "u1", in_app_enabled: true, email_enabled: true }],
+        error: null,
+      }),
+    ); // prefs
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // subscriptions: no row = trial
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
+    serviceFrom.mockReturnValueOnce(
+      insertTable({ error: null, data: [{ id: "notif-1", user_id: "u1" }] }),
+    );
+
+    await fanOutNotifications([NEW_VIDEO_EVENT]);
+
+    expect(sendNewVideoEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not email when email_enabled is false", async () => {
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({
+        data: [{ user_id: "u1", in_app_enabled: true, email_enabled: false }],
+        error: null,
+      }),
+    ); // prefs
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({ data: [{ user_id: "u1", tier: "pro" }], error: null }),
+    ); // subscriptions
+    serviceFrom.mockReturnValueOnce(selectInTable({ data: [], error: null })); // profiles
+    serviceFrom.mockReturnValueOnce(
+      insertTable({ error: null, data: [{ id: "notif-1", user_id: "u1" }] }),
+    );
+
+    await fanOutNotifications([NEW_VIDEO_EVENT]);
+
+    expect(sendNewVideoEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not email a Pro user currently in their quiet hours", async () => {
+    const now = new Date();
+    const nowUtcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    // A window that always contains "now" in UTC, regardless of when the
+    // test runs: [now-1h, now+1h), formatted as HH:MM:SS.
+    const toHms = (totalMinutes: number) => {
+      const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+      const h = String(Math.floor(wrapped / 60)).padStart(2, "0");
+      const m = String(wrapped % 60).padStart(2, "0");
+      return `${h}:${m}:00`;
+    };
+
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({
+        data: [
+          {
+            user_id: "u1",
+            in_app_enabled: true,
+            email_enabled: true,
+            quiet_hours_start: toHms(nowUtcMinutes - 60),
+            quiet_hours_end: toHms(nowUtcMinutes + 60),
+          },
+        ],
+        error: null,
+      }),
+    ); // prefs
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({ data: [{ user_id: "u1", tier: "pro" }], error: null }),
+    ); // subscriptions
+    serviceFrom.mockReturnValueOnce(
+      selectInTable({ data: [{ id: "u1", time_zone: "UTC" }], error: null }),
+    ); // profiles
+    serviceFrom.mockReturnValueOnce(
+      insertTable({ error: null, data: [{ id: "notif-1", user_id: "u1" }] }),
+    );
+
+    await fanOutNotifications([NEW_VIDEO_EVENT]);
+
+    expect(sendNewVideoEmail).not.toHaveBeenCalled();
   });
 
   it("throws when the tracker lookup fails", async () => {
@@ -491,8 +787,7 @@ describe("fanOutNotifications", () => {
     serviceFrom.mockReturnValueOnce(
       trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
     );
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
-    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null }));
+    queueDefaultPreferenceLookups();
     serviceFrom.mockReturnValueOnce(insertTable({ error: { message: "db down" } }));
 
     await expect(fanOutNotifications([NEW_VIDEO_EVENT])).rejects.toThrow(

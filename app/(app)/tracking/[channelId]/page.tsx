@@ -8,6 +8,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getRequestContext } from "@/lib/context";
 import { getChannelDetail, listVideosForChannel } from "@/lib/services/channels";
 import { getChannelActivity, getTrackedChannel } from "@/lib/services/tracking";
+import { listChannelOutliers } from "@/lib/services/outliers";
 import { Avatar } from "@/components/ui/avatar";
 import { Tag } from "@/components/ui/tag";
 import { ChannelTabs } from "@/app/(app)/tracking/[channelId]/channel-tabs";
@@ -53,10 +54,11 @@ export default async function TrackingChannelPage({
     redirect("/tracking");
   }
 
-  const [channelResult, activityResult, videos] = await Promise.all([
+  const [channelResult, activityResult, videos, outliersResult] = await Promise.all([
     getCachedChannelDetail(channelId),
     getChannelActivity(ctx, channelId, { limit: 30 }),
     listVideosForChannel(channelId),
+    listChannelOutliers(ctx, channelId, { limit: 30 }),
   ]);
 
   if (!channelResult.ok) {
@@ -64,6 +66,7 @@ export default async function TrackingChannelPage({
   }
   const channel = channelResult.value;
   const events = activityResult.ok ? activityResult.value.events : [];
+  const outliers = outliersResult.ok ? outliersResult.value.items : [];
 
   return (
     <div className="mx-auto max-w-[1440px] px-6 py-6 lg:px-10">
@@ -110,6 +113,7 @@ export default async function TrackingChannelPage({
         <ChannelTabs
           events={events}
           videos={videos}
+          outliers={outliers}
           metrics={{
             avgViewsLast30Days: channel.avgViewsLast30Days,
             avgViewsLifetime: channel.avgViewsLifetime,

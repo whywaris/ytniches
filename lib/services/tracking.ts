@@ -63,16 +63,20 @@ export interface ChannelPreview {
 // event ID," but a bare UUID isn't sortable by time (gen_random_uuid() is
 // v4, not ordered) -- the cursor carries the sort timestamp alongside the ID
 // so a tie at the same instant still resolves deterministically.
-interface FeedCursor {
+//
+// Exported -- lib/services/outliers.ts's Feed view (Phase 2 Task 1) reuses
+// this exact cursor shape for the same chronological-pagination pattern,
+// rather than a second implementation of the same thing.
+export interface FeedCursor {
   id: string;
   sortKey: string;
 }
 
-function encodeCursor(id: string, sortKey: string): string {
+export function encodeCursor(id: string, sortKey: string): string {
   return Buffer.from(JSON.stringify({ id, sortKey })).toString("base64url");
 }
 
-function decodeCursor(cursor: string): FeedCursor | null {
+export function decodeCursor(cursor: string): FeedCursor | null {
   try {
     const parsed: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
     if (
@@ -89,7 +93,7 @@ function decodeCursor(cursor: string): FeedCursor | null {
   }
 }
 
-function clampLimit(limit: number | undefined): number {
+export function clampLimit(limit: number | undefined): number {
   if (limit === undefined) return DEFAULT_PAGE_SIZE;
   return Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
 }

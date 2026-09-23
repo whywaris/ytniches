@@ -246,6 +246,9 @@ function TrackingClient({
               onChange={handleRangeChange}
               ariaLabel="Time range"
             />
+            <Link href="/outliers" className="text-body-sm text-accent hover:underline">
+              View outliers
+            </Link>
             <Button size="sm" onClick={() => setShowAddChannel(true)}>
               Add channel
             </Button>

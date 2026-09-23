@@ -1,4 +1,4 @@
-import { Bell, RefreshCw, TrendingUp, Video, type LucideIcon } from "lucide-react";
+import { Bell, Flame, RefreshCw, TrendingUp, Video, type LucideIcon } from "lucide-react";
 
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ const EVENT_META: Record<string, { icon: LucideIcon; label: string }> = {
   new_video: { icon: Video, label: "New video" },
   view_spike: { icon: TrendingUp, label: "View spike" },
   cadence_change: { icon: RefreshCw, label: "Upload cadence changed" },
+  outlier_detected: { icon: Flame, label: "Outlier" },
 };
 
 function formatCount(value: number): string {
@@ -34,6 +35,10 @@ export function describeTrackedEvent(event: TrackedEvent): string | null {
       return typeof payload.previousPerWeek === "number" &&
         typeof payload.currentPerWeek === "number"
         ? `Was ${payload.previousPerWeek.toFixed(1)}/week, now ${payload.currentPerWeek.toFixed(1)}/week`
+        : null;
+    case "outlier_detected":
+      return typeof payload.title === "string" && typeof payload.viewCount === "number"
+        ? `${payload.title} — ${formatCount(payload.viewCount)} views`
         : null;
     default:
       return null;

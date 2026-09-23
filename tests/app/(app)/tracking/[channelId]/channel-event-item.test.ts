@@ -36,6 +36,14 @@ describe("describeTrackedEvent", () => {
     expect(describeTrackedEvent(event)).toBe("Was 1.0/week, now 3.0/week");
   });
 
+  it("describes an outlier_detected event with title and view count", () => {
+    const event = makeEvent({
+      eventType: "outlier_detected",
+      payload: { videoId: "v1", title: "Ep 1", viewCount: 5000, baseline: 1000, outlierScore: 4.9 },
+    });
+    expect(describeTrackedEvent(event)).toBe("Ep 1 — 5.0K views");
+  });
+
   it("returns null for a malformed payload instead of throwing", () => {
     const event = makeEvent({ eventType: "view_spike", payload: {} });
     expect(describeTrackedEvent(event)).toBeNull();
