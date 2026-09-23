@@ -58,7 +58,7 @@ type UrlFlowState =
   | { status: "adding"; channel: ChannelPreview }
   | { status: "added"; channel: ChannelPreview }
   | { status: "invalid"; message: string }
-  | { status: "failed"; channel: ChannelPreview; message: string };
+  | { status: "failed"; channel: ChannelPreview; message: string; showUpgrade: boolean };
 
 function formatCount(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -115,7 +115,11 @@ function AddChannelModal({
   const [searching, setSearching] = React.useState(false);
   const [addingId, setAddingId] = React.useState<string | null>(null);
   const [addedId, setAddedId] = React.useState<string | null>(null);
-  const [rowError, setRowError] = React.useState<{ id: string; message: string } | null>(null);
+  const [rowError, setRowError] = React.useState<{
+    id: string;
+    message: string;
+    showUpgrade: boolean;
+  } | null>(null);
 
   function reset() {
     setTab("url");
@@ -153,7 +157,12 @@ function AddChannelModal({
       setUrlFlow({ status: "added", channel });
       onAdded?.(channel.channelId);
     } else {
-      setUrlFlow({ status: "failed", channel, message: addErrorMessage(result.error) });
+      setUrlFlow({
+        status: "failed",
+        channel,
+        message: addErrorMessage(result.error),
+        showUpgrade: result.error.type === "tier_limit",
+      });
     }
   }
 
@@ -176,7 +185,11 @@ function AddChannelModal({
       setAddedId(result.channelId);
       onAdded?.(result.channelId);
     } else {
-      setRowError({ id: result.channelId, message: addErrorMessage(addResult.error) });
+      setRowError({
+        id: result.channelId,
+        message: addErrorMessage(addResult.error),
+        showUpgrade: addResult.error.type === "tier_limit",
+      });
     }
   }
 
@@ -221,9 +234,17 @@ function AddChannelModal({
             <div className="flex flex-col gap-3">
               <ChannelPreviewCard channel={urlFlow.channel} />
               {urlFlow.status === "failed" ? (
-                <p role="alert" className="text-body-sm text-error">
-                  {urlFlow.message}
-                </p>
+                <div
+                  role="alert"
+                  className="flex items-center justify-between gap-2 text-body-sm text-error"
+                >
+                  <span>{urlFlow.message}</span>
+                  {urlFlow.showUpgrade ? (
+                    <Button size="sm" variant="secondary" asChild>
+                      <a href="/settings/billing">Upgrade</a>
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
               <div className="flex items-center gap-2">
                 <Button onClick={() => void handleConfirmAdd(urlFlow.channel)}>
@@ -315,9 +336,17 @@ function AddChannelModal({
             </ul>
           )}
           {rowError ? (
-            <p role="alert" className="text-body-sm text-error">
-              {rowError.message}
-            </p>
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-2 text-body-sm text-error"
+            >
+              <span>{rowError.message}</span>
+              {rowError.showUpgrade ? (
+                <Button size="sm" variant="secondary" asChild>
+                  <a href="/settings/billing">Upgrade</a>
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </TabsContent>
       </Tabs>

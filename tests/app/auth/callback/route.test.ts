@@ -10,6 +10,11 @@ vi.mock("@/lib/services/onboarding", () => ({
   getOnboardingStep: (...args: unknown[]) => getOnboardingStep(...args),
 }));
 
+const capture = vi.fn();
+vi.mock("@/lib/analytics", () => ({
+  capture: (...args: unknown[]) => capture(...args),
+}));
+
 const { GET } = await import("@/app/auth/callback/route");
 
 beforeEach(() => {

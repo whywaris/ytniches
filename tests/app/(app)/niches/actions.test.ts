@@ -12,6 +12,31 @@ vi.mock("@/lib/services/channels", () => ({
   saveChannelToTracking: (...args: unknown[]) => saveChannelToTracking(...args),
 }));
 
+const capture = vi.fn();
+vi.mock("@/lib/analytics", () => ({
+  capture: (...args: unknown[]) => capture(...args),
+}));
+
+// isFirstEver's count query: .select().eq() (and optionally a second
+// .eq() for the reason filter) all resolve to the same { count }.
+let mockCount = 0;
+interface CountQuery extends PromiseLike<{ count: number }> {
+  select: () => CountQuery;
+  eq: () => CountQuery;
+}
+function makeCountQuery(): CountQuery {
+  const builder: CountQuery = {
+    select: () => builder,
+    eq: () => builder,
+    then: (onfulfilled, onrejected) =>
+      Promise.resolve({ count: mockCount }).then(onfulfilled, onrejected),
+  };
+  return builder;
+}
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({ from: () => makeCountQuery() }),
+}));
+
 const { searchNichesAction, saveChannelAction } = await import("@/app/(app)/niches/actions");
 
 const ctx = { userId: "user-1" };
@@ -19,6 +44,7 @@ const ctx = { userId: "user-1" };
 beforeEach(() => {
   vi.clearAllMocks();
   getRequestContext.mockResolvedValue(ctx);
+  mockCount = 0;
 });
 
 describe("searchNichesAction", () => {

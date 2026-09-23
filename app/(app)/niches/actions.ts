@@ -10,6 +10,8 @@ import {
 } from "@/lib/services/channels";
 import { NicheSearchInputSchema } from "@/lib/services/channels.schema";
 import { err, type Result } from "@/lib/result";
+import { capture } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/server";
 
 export type SearchNichesActionError =
   SearchError | { type: "validation_error"; fields: Record<string, string> };
@@ -23,6 +25,28 @@ export type SearchNichesActionError =
 // the same submit reuses the same key. If it were folded into filters, a
 // retry with identical search criteria would look identical either way,
 // but keeping it separate makes that contract explicit at the call site.
+// "First ever" gate for the first_search/first_save funnel events -- a
+// simple post-hoc row count rather than a dedicated flag column. Ceiling:
+// a user whose first searches are all cache hits (no credit_events row)
+// would re-fire first_search on their first paid one; not worth a schema
+// change for an analytics nice-to-have.
+async function isFirstEver(
+  userId: string,
+  table: "credit_events" | "tracked_channels",
+  filter?: { column: string; value: string },
+): Promise<boolean> {
+  const supabase = await createClient();
+  let query = supabase
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (filter) {
+    query = query.eq(filter.column, filter.value);
+  }
+  const { count } = await query;
+  return (count ?? 0) <= 1;
+}
+
 export async function searchNichesAction(
   input: unknown,
   idempotencyKey: string,
@@ -40,12 +64,23 @@ export async function searchNichesAction(
   }
 
   const ctx = await getRequestContext();
-  return searchNiches(ctx, parsed.data, idempotencyKey);
+  const result = await searchNiches(ctx, parsed.data, idempotencyKey);
+  if (
+    result.ok &&
+    (await isFirstEver(ctx.userId, "credit_events", { column: "reason", value: "Niche search" }))
+  ) {
+    void capture("first_search", { distinctId: ctx.userId });
+  }
+  return result;
 }
 
 export async function saveChannelAction(
   channelId: string,
 ): Promise<Result<void, SaveChannelError>> {
   const ctx = await getRequestContext();
-  return saveChannelToTracking(ctx, channelId);
+  const result = await saveChannelToTracking(ctx, channelId);
+  if (result.ok && (await isFirstEver(ctx.userId, "tracked_channels"))) {
+    void capture("first_save", { distinctId: ctx.userId });
+  }
+  return result;
 }

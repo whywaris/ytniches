@@ -14,6 +14,7 @@ import {
   upsertSubscriptionFromProvider,
 } from "@/lib/services/billing";
 import { createServiceClient } from "@/lib/supabase/service";
+import { capture } from "@/lib/analytics";
 import type { Json } from "@/lib/supabase/database.types";
 
 // Security.md §4.8: reject stale events (>5 min old).
@@ -43,6 +44,7 @@ async function handleCheckoutCompleted(event: CreemWebhookEvent): Promise<void> 
   const providerSub = await getSubscription(event.checkout.subscriptionId);
   await upsertSubscriptionFromProvider(userId, tier, providerSub);
   await allocateCycleCredits(userId, tier, `${providerSub.id}:${providerSub.currentPeriodStart}`);
+  void capture("upgrade_completed", { distinctId: userId, tier });
 }
 
 async function handleSubscriptionEvent(event: CreemWebhookEvent): Promise<void> {

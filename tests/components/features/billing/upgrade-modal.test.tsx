@@ -17,6 +17,11 @@ vi.mock("@/app/(app)/settings/billing/actions", () => ({
   createCheckoutAction: (...args: unknown[]) => createCheckoutAction(...args),
 }));
 
+const capture = vi.fn();
+vi.mock("@/lib/analytics", () => ({
+  capture: (...args: unknown[]) => capture(...args),
+}));
+
 const { UpgradeModal } = await import("@/components/features/billing/upgrade-modal");
 
 function renderModal(props: Partial<ComponentProps<typeof UpgradeModal>> = {}) {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createCheckoutAction } from "@/app/(app)/settings/billing/actions";
 import type { BillingFrequency, Tier } from "@/lib/billing";
+import { capture } from "@/lib/analytics";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { TierCards } from "@/components/features/billing/tier-cards";
@@ -29,6 +30,7 @@ function UpgradeModal({ open, onOpenChange, reason }: UpgradeModalProps) {
   const [loadingTier, setLoadingTier] = React.useState<Tier | null>(null);
 
   async function handleSelectTier(tier: Tier) {
+    void capture("upgrade_clicked", { tier, billingFrequency });
     setLoadingTier(tier);
     const result = await createCheckoutAction(tier, billingFrequency);
     setLoadingTier(null);

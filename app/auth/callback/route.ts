@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSafeRedirect } from "@/lib/supabase/redirect";
 import { getOnboardingStep } from "@/lib/services/onboarding";
+import { capture } from "@/lib/analytics";
 
 // Where Google (via Supabase) redirects back to after the OAuth consent
 // screen (also the landing spot for an email-verification link -- both of
@@ -19,6 +20,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // First-ever session for this account: created_at and last_sign_in_at
+      // land within seconds of each other only on the account's first
+      // sign-in (a returning user's are days/weeks apart) -- avoids a
+      // schema change just to flag "is this a signup."
+      const createdAt = new Date(data.user.created_at).getTime();
+      const lastSignInAt = new Date(data.user.last_sign_in_at ?? data.user.created_at).getTime();
+      if (Math.abs(lastSignInAt - createdAt) < 60_000) {
+        void capture("signup", { distinctId: data.user.id });
+      }
+
       if (explicitRedirect) {
         return NextResponse.redirect(`${origin}${getSafeRedirect(explicitRedirect)}`);
       }

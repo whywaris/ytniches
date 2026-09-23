@@ -20,6 +20,8 @@ import {
   RegeneratePromptsInputSchema,
 } from "@/lib/services/prompts.schema";
 import { err, type Result } from "@/lib/result";
+import { capture } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/server";
 
 export type GeneratePromptsActionError =
   GeneratePromptsError | { type: "validation_error"; message: string };
@@ -31,6 +33,21 @@ export type GeneratePromptsActionError =
 // idempotencyKey is a separate parameter, not part of the Zod-validated
 // input -- TRD.md §3.4 says the client generates it so a genuine retry of
 // the same submit reuses the same key.
+// "First ever" gate for the first_prompt funnel event -- same simple
+// post-hoc row count approach as niches/actions.ts's isFirstEver.
+async function isFirstPromptEver(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("prompts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    // Phase 2 Task 3: exclude thumbnail-ideas rows -- generating those
+    // first shouldn't suppress the real first_prompt funnel event, and
+    // shouldn't count toward it either.
+    .eq("kind", "prompt");
+  return (count ?? 0) <= 1;
+}
+
 export async function generatePromptsAction(
   input: unknown,
   idempotencyKey: string,
@@ -45,11 +62,15 @@ export async function generatePromptsAction(
 
   const ctx = await getRequestContext();
   const { targetAudience, tone, videoId, videoUrl } = parsed.data;
-  return generatePrompts(
+  const result = await generatePrompts(
     ctx,
     videoId ? { targetAudience, tone, videoId } : { targetAudience, tone, videoUrl: videoUrl! },
     idempotencyKey,
   );
+  if (result.ok && (await isFirstPromptEver(ctx.userId))) {
+    void capture("first_prompt", { distinctId: ctx.userId });
+  }
+  return result;
 }
 
 export type RegeneratePromptsActionError =
