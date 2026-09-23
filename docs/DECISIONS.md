@@ -507,3 +507,12 @@ Decisions that still need to close before their dependent docs / features can be
 - **Final call:** Don't block on it. Build Workspace UI composed from existing primitives (`Card`, `Table`, `Modal`, `Avatar`, `Button`) following this codebase's established list/detail patterns (mirrors `/tracking`'s overview shape) and the paid-tier gating pattern already in use (visible in nav with a badge + upgrade upsell for non-Team users, never hidden like an unbuilt feature). Same approach carries into Tasks and Calendar.
 - **Follow-up required:** UI-UX-Flow.md needs §9 (Workspace), §10 (Tasks), and §11 (Calendar) written as a dedicated post-Phase-3 doc task — before any future developer (human or AI) touches these features again expecting a spec to read first, per CLAUDE.md's golden rule. Do not let this slide past the Phase 3 gate.
 - **Impacts:** UI-UX-Flow.md (missing §9/§10/§11), CLAUDE.md §3 spec map (already lists UI-UX-Flow.md as canonical — the doc itself is just behind)
+
+---
+
+### D-045: Tasks route is `/workspace/tasks`, not a top-level `/tasks`
+
+- **Status:** Resolved (2026-09-23)
+- **Context:** Same gap as D-043 — Application-Flow.md §2.3's route table has no `/tasks` entry at all (it does have `/workspace` and `/calendar`, both anticipated in Phase 0). PRD.md §8.2's four task views (My tasks, All team tasks, Tasks by status, Tasks by assignee) don't imply their own top-level route either — they're filters/groupings of one list, not separate pages.
+- **Final call:** `/workspace/tasks`, scoped under the workspace like `/workspace/members`, not top-level. Tasks are inherently workspace-scoped data (Backend-Schema.md §5.4's `tasks.workspace_id` is `NOT NULL`, unlike `calendar_entries.workspace_id` which is nullable for a future personal-calendar case) — nesting the route under `/workspace` matches the data model, and keeps the pattern consistent with D-043's reasoning. `/calendar` stays top-level per Application-Flow.md's existing entry (calendar entries _can_ be personal per the schema, even though this build's UI only exercises the Team-scoped case).
+- **Impacts:** Application-Flow.md (still missing this entry — same follow-up as D-044, folded into that §9/§10/§11 doc debt rather than a separate decision)
