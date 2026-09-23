@@ -290,4 +290,4 @@ function PromptResults({
   );
 }
 
-export { PromptResults };
+export { PromptResults, CopyButton };

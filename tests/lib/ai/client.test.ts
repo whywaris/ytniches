@@ -1,26 +1,27 @@
+import { z } from "zod";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
 
-vi.mock("@anthropic-ai/sdk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@anthropic-ai/sdk")>();
-  class MockAnthropic {
-    messages = { parse: parseMock };
+vi.mock("openai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("openai")>();
+  class MockOpenAI {
+    chat = { completions: { parse: parseMock } };
   }
   // The real error classes are static properties on the default export
-  // (Anthropic.RateLimitError, etc.) -- client.ts checks `instanceof
-  // Anthropic.RateLimitError`, so the mock needs the same real classes
+  // (OpenAI.RateLimitError, etc.) -- client.ts checks `instanceof
+  // OpenAI.RateLimitError`, so the mock needs the same real classes
   // attached, not a bare stand-in.
-  Object.assign(MockAnthropic, {
+  Object.assign(MockOpenAI, {
     APIError: actual.default.APIError,
     APIConnectionError: actual.default.APIConnectionError,
     RateLimitError: actual.default.RateLimitError,
     BadRequestError: actual.default.BadRequestError,
   });
-  return { ...actual, default: MockAnthropic };
+  return { ...actual, default: MockOpenAI };
 });
 
-const Anthropic = (await import("@anthropic-ai/sdk")).default;
+const OpenAI = (await import("openai")).default;
 const { generateStructuredOutput } = await import("@/lib/ai/client");
 
 const VALID_OUTPUT = {
@@ -31,41 +32,44 @@ const VALID_OUTPUT = {
   description_template: "Description",
 };
 
+// The mock returns canned `completion` objects directly, not something
+// actually validated against this schema -- it only needs to exist to
+// exercise generateStructuredOutput's now-generic signature.
+const TEST_SCHEMA = z.object({ title_variants: z.array(z.string()) });
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("generateStructuredOutput", () => {
   it("returns the parsed output on success", async () => {
-    parseMock.mockResolvedValueOnce({ parsed_output: VALID_OUTPUT });
+    parseMock.mockResolvedValueOnce({
+      choices: [{ message: { parsed: VALID_OUTPUT } }],
+    });
 
-    const result = await generateStructuredOutput("system prompt", "user prompt");
+    const result = await generateStructuredOutput(
+      "system prompt",
+      "user prompt",
+      TEST_SCHEMA,
+      "test_output",
+    );
 
     expect(result).toEqual({ ok: true, value: VALID_OUTPUT });
     expect(parseMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "claude-sonnet-5",
-        system: "system prompt",
-        messages: [{ role: "user", content: "user prompt" }],
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "system prompt" },
+          { role: "user", content: "user prompt" },
+        ],
       }),
     );
   });
 
-  it("never sends temperature/top_p/top_k -- claude-sonnet-5 rejects them with a 400", async () => {
-    parseMock.mockResolvedValueOnce({ parsed_output: VALID_OUTPUT });
+  it("returns invalid_response when the message has no parsed output", async () => {
+    parseMock.mockResolvedValueOnce({ choices: [{ message: { parsed: null } }] });
 
-    await generateStructuredOutput("system prompt", "user prompt");
-
-    const callArgs = parseMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(callArgs).not.toHaveProperty("temperature");
-    expect(callArgs).not.toHaveProperty("top_p");
-    expect(callArgs).not.toHaveProperty("top_k");
-  });
-
-  it("returns invalid_response when parsed_output is null", async () => {
-    parseMock.mockResolvedValueOnce({ parsed_output: null });
-
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({
       ok: false,
@@ -75,30 +79,28 @@ describe("generateStructuredOutput", () => {
 
   it("maps a RateLimitError to rate_limited", async () => {
     parseMock.mockRejectedValueOnce(
-      new Anthropic.RateLimitError(429, undefined, "slow down", new Headers()),
+      new OpenAI.RateLimitError(429, undefined, "slow down", new Headers()),
     );
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({ ok: false, error: { type: "rate_limited" } });
   });
 
-  it("maps a 529 APIError to overloaded", async () => {
-    parseMock.mockRejectedValueOnce(
-      new Anthropic.APIError(529, undefined, "overloaded", undefined),
-    );
+  it("maps a 503 APIError to overloaded", async () => {
+    parseMock.mockRejectedValueOnce(new OpenAI.APIError(503, undefined, "overloaded", undefined));
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({ ok: false, error: { type: "overloaded" } });
   });
 
   it("maps a BadRequestError to invalid_request", async () => {
     parseMock.mockRejectedValueOnce(
-      new Anthropic.BadRequestError(400, undefined, "bad schema", new Headers()),
+      new OpenAI.BadRequestError(400, undefined, "bad schema", new Headers()),
     );
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({
       ok: false,
@@ -108,10 +110,10 @@ describe("generateStructuredOutput", () => {
 
   it("maps an APIConnectionError to network_error", async () => {
     parseMock.mockRejectedValueOnce(
-      new Anthropic.APIConnectionError({ message: "connection refused" }),
+      new OpenAI.APIConnectionError({ message: "connection refused" }),
     );
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({
       ok: false,
@@ -121,10 +123,10 @@ describe("generateStructuredOutput", () => {
 
   it("maps an arbitrary 500 APIError to a generic api_error", async () => {
     parseMock.mockRejectedValueOnce(
-      new Anthropic.APIError(500, undefined, "server exploded", undefined),
+      new OpenAI.APIError(500, undefined, "server exploded", undefined),
     );
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({
       ok: false,
@@ -135,7 +137,7 @@ describe("generateStructuredOutput", () => {
   it("maps a non-SDK thrown error to network_error without crashing", async () => {
     parseMock.mockRejectedValueOnce(new Error("totally unexpected"));
 
-    const result = await generateStructuredOutput("system", "user");
+    const result = await generateStructuredOutput("system", "user", TEST_SCHEMA, "test_output");
 
     expect(result).toEqual({
       ok: false,

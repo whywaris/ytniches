@@ -16,3 +16,12 @@ export const PromptOutputSchema = z.object({
 });
 
 export type PromptOutput = z.infer<typeof PromptOutputSchema>;
+
+// PRD.md §7.3 / Phase 2 Task 3. Same 3-5 bound as PromptOutputSchema's own
+// thumbnail_concepts -- this is a deeper, standalone version of that same
+// category, not a different shape.
+export const ThumbnailIdeaOutputSchema = z.object({
+  ideas: z.array(z.string()).min(3).max(5),
+});
+
+export type ThumbnailIdeaOutput = z.infer<typeof ThumbnailIdeaOutputSchema>;

@@ -400,6 +400,9 @@ export async function listPrompts(
     .from("prompts")
     .select("*")
     .eq("user_id", ctx.userId)
+    // Phase 2 Task 3: thumbnail-ideas rows share this table (kind =
+    // 'thumbnail_ideas') but don't belong in the AI Prompts library.
+    .eq("kind", "prompt")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
