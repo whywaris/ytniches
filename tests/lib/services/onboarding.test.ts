@@ -20,7 +20,7 @@ const {
   shouldShowFinishOnboardingBanner,
 } = await import("@/lib/services/onboarding");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 // A chainable, thenable double for the Supabase query builder: every
 // filter method returns the same object, and awaiting it directly resolves

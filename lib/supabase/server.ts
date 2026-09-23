@@ -32,3 +32,16 @@ export async function createClient() {
     },
   );
 }
+
+// lib/context.ts's one non-Supabase cookie read (the workspace-id hint)
+// goes through here rather than importing next/headers itself -- a
+// second top-level `next/headers` import site is what a Turbopack panic
+// this session traced back to (a hard `node:fs` chunking error on every
+// page whose client tree reaches a "use server" action importing
+// getRequestContext, once lib/context.ts also imported next/headers
+// directly). Keeping it confined to this already-proven-safe file avoids
+// that.
+export async function getCookie(name: string): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(name)?.value ?? null;
+}

@@ -31,7 +31,7 @@ const {
   dismissNotification,
 } = await import("@/lib/services/tracking");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 const YOUTUBE_CHANNEL_ITEM = {
   id: "UC-someone",

@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const { listOutlierFeed, listTopOutliers, listChannelOutliers } =
   await import("@/lib/services/outliers");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 // Same chainable/thenable double as tests/lib/services/tracking.test.ts.
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {

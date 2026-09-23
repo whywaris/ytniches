@@ -59,7 +59,7 @@ vi.mock("@/lib/supabase/service", () => ({
 }));
 
 const { getBalance, consume, refund } = await import("@/lib/credits");
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 beforeEach(() => {
   selectResult = { data: [], error: null };

@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const { generateThumbnailIdeas, regenerateThumbnailIdeas } =
   await import("@/lib/services/thumbnail-ideas");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 // Same chainable/thenable double as tests/lib/services/prompts.test.ts.
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {

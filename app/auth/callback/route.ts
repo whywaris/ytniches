@@ -33,7 +33,11 @@ export async function GET(request: Request) {
       if (explicitRedirect) {
         return NextResponse.redirect(`${origin}${getSafeRedirect(explicitRedirect)}`);
       }
-      const step = await getOnboardingStep({ userId: data.user.id });
+      const step = await getOnboardingStep({
+        userId: data.user.id,
+        workspaceId: null,
+        tier: null,
+      });
       return NextResponse.redirect(`${origin}${step < 5 ? "/onboarding" : "/dashboard"}`);
     }
   }

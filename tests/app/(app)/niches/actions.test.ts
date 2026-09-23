@@ -39,7 +39,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const { searchNichesAction, saveChannelAction } = await import("@/app/(app)/niches/actions");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 beforeEach(() => {
   vi.clearAllMocks();

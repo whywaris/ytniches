@@ -30,7 +30,11 @@ describe("GET /auth/callback", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://example.com/onboarding");
-    expect(getOnboardingStep).toHaveBeenCalledWith({ userId: "u1" });
+    expect(getOnboardingStep).toHaveBeenCalledWith({
+      userId: "u1",
+      workspaceId: null,
+      tier: null,
+    });
   });
 
   it("redirects to /dashboard when the user's onboarding_step is 5", async () => {

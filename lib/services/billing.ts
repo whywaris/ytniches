@@ -4,6 +4,7 @@ import { getBalance } from "@/lib/credits";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
+import { invalidateTierCache } from "@/lib/billing/tier-cache";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -266,6 +267,7 @@ export async function upsertSubscriptionFromProvider(
     if (error) {
       throw new Error(`upsertSubscriptionFromProvider update failed: ${error.message}`);
     }
+    await invalidateTierCache(userId);
     return;
   }
 
@@ -290,6 +292,7 @@ export async function upsertSubscriptionFromProvider(
   if (insertError) {
     throw new Error(`upsertSubscriptionFromProvider insert failed: ${insertError.message}`);
   }
+  await invalidateTierCache(userId);
 }
 
 // Monetization.md §3.2's recurring per-cycle amounts (starter=200/
@@ -371,7 +374,7 @@ export async function handleRefund(
     throw new Error(`handleRefund allocation lookup failed: ${allocationError.message}`);
   }
 
-  const balance = await getBalance({ userId: row.user_id });
+  const balance = await getBalance({ userId: row.user_id, workspaceId: null, tier: null });
   const cycleAllocation = allocation?.credits_per_cycle ?? 0;
   const reduceBy = Math.min(balance, cycleAllocation);
   if (reduceBy <= 0) return;

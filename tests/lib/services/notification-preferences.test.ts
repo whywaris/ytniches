@@ -22,7 +22,7 @@ const {
   updateChannelNotificationOverride,
 } = await import("@/lib/services/notification-preferences");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder = {

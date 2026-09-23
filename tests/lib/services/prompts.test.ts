@@ -55,7 +55,7 @@ const {
   deletePrompt,
 } = await import("@/lib/services/prompts");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 // A chainable, thenable double covering every method prompts.ts calls on a
 // Supabase query builder -- same pattern as tracking.test.ts's

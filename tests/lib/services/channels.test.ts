@@ -45,7 +45,7 @@ vi.mock("@/lib/supabase/service", () => ({
 const { searchNiches, saveChannelToTracking, getChannelDetail, listVideosForChannel } =
   await import("@/lib/services/channels");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 function makeChannel(overrides: Partial<Record<string, unknown>> = {}) {
   return {

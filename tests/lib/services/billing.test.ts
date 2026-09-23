@@ -16,6 +16,11 @@ vi.mock("@/lib/credits", () => ({
   getBalance: (...args: unknown[]) => getBalance(...args),
 }));
 
+const invalidateTierCache = vi.fn();
+vi.mock("@/lib/billing/tier-cache", () => ({
+  invalidateTierCache: (...args: unknown[]) => invalidateTierCache(...args),
+}));
+
 const createCheckoutSession = vi.fn();
 const createCustomerPortalUrl = vi.fn();
 const getSubscription = vi.fn();
@@ -38,7 +43,7 @@ const {
   TRIAL_CREDITS,
 } = await import("@/lib/services/billing");
 
-const ctx = { userId: "user-1" };
+const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder = {
