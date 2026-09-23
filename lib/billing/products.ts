@@ -19,6 +19,19 @@ const PRODUCT_ID_ENV: Record<Tier, Record<BillingFrequency, string | undefined>>
   },
 };
 
+// Monetization.md §2.5: email notifications are Starter/trial-excluded --
+// Pro and Team only. Shared between the background fan-out job
+// (workers/channel-sync.ts) and the notification preferences service, so
+// the tier list lives in exactly one place. Takes `string`, not `Tier`:
+// callers often have the raw `subscriptions.tier` DB enum in hand (which
+// also carries a legacy, otherwise-unused "free" value outside `Tier`),
+// not the narrower app-level type.
+const EMAIL_ELIGIBLE_TIERS = new Set<string>(["pro", "team"]);
+
+export function isEmailEligibleTier(tier: string | null | undefined): boolean {
+  return tier !== null && tier !== undefined && EMAIL_ELIGIBLE_TIERS.has(tier);
+}
+
 export function getProductId(tier: Tier, frequency: BillingFrequency): string {
   const id = PRODUCT_ID_ENV[tier][frequency];
   if (!id) {

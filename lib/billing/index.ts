@@ -18,6 +18,7 @@ export {
 export {
   getProductId,
   getTierForProductId,
+  isEmailEligibleTier,
   type Tier,
   type BillingFrequency,
 } from "@/lib/billing/products";
