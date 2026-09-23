@@ -1074,6 +1074,10 @@ export type Database = {
         Args: { target_workspace_id: string };
         Returns: boolean;
       };
+      shares_workspace_with: {
+        Args: { target_user_id: string };
+        Returns: boolean;
+      };
       workspace_has_no_members: {
         Args: { target_workspace_id: string };
         Returns: boolean;
