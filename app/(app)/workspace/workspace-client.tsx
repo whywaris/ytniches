@@ -78,11 +78,17 @@ function WorkspaceClient({ isTeamTier, workspace, myRole }: WorkspaceClientProps
         <Card padding="lg" className="flex flex-col gap-3">
           <p className="text-h4 text-text-primary">{created.name}</p>
           <p className="text-body-sm text-text-secondary">/{created.slug}</p>
-          <Link href="/workspace/members">
-            <Button variant="secondary" className="self-start">
-              Manage members
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/workspace/members">
+              <Button variant="secondary">Manage members</Button>
+            </Link>
+            <Link href="/workspace/tasks">
+              <Button variant="secondary">Tasks</Button>
+            </Link>
+            <Link href="/calendar">
+              <Button variant="secondary">Calendar</Button>
+            </Link>
+          </div>
         </Card>
       ) : (
         <Card padding="lg" className="flex flex-col gap-3">
