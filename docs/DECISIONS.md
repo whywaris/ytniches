@@ -277,14 +277,14 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-020: Founder story specifics for Landing-Copy
 
-- **Status:** Open (blocks Landing-Copy.md)
+- **Status:** Resolved (2026-09-23)
 - **Impacts:** Landing-Copy.md, hero copy, About / founder section, VS pages tone
 - **Inputs needed from Mac:**
   - Which niche he tried on his own channel (specific name; can stay private if uncomfortable)
   - Which "stuck" moment mattered most (competitor spying / outlier detection / content ideas / script writing / consistency)
   - Contrarian opinion — a strong take that most faceless-creator advice gets wrong
 - **Recommendation:** Book a 20-minute founder discovery to extract these, then draft copy in Mac's voice. Cannot fake this input.
-- **Final call:** —
+- **Final call:** Founder story confirmed — World War 2 faceless channel; the stuck moment was finding topics, outliers, and prompts (which competitor videos were working, what topics were breaking out, how to turn that into scripts). Deployed in the landing page founder section; Landing-Copy.md §4.3 now holds the final copy. Contrarian opinion not provided — stays optional.
 
 ---
 
@@ -584,4 +584,4 @@ Decisions that still need to close before their dependent docs / features can be
   - **Mode toggle:** click + keyboard only, no drag.
   - **Creator-type explorer on mobile:** horizontal snap-scroll strip (Interaction-Spec `creator_type_selector`) rather than Landing-Page-Spec §4's accordion — the behavior doc wins on behavior.
   - **Cmd+K on public pages:** a navigation-only palette in the marketing layout (not in the specs; added so Cmd+K behaves the same across the site).
-- **Impacts:** `components/features/landing/content.ts` holds all shipped copy. **Landing-Copy.md needs a spec-sync PR** to reflect the calls above (§2.1, §4.1, §4.3, §4.4, §5.4) — not edited in the code PR per CLAUDE.md §1.
+- **Impacts:** `components/features/landing/content.ts` holds all shipped copy. Landing-Copy.md §2.1, §4.1, §4.3, §4.4, §5.4 synced in a separate docs-only commit (2026-09-24), per CLAUDE.md §1.

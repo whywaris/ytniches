@@ -57,7 +57,9 @@ Revolutionize, unlock, empower, seamless, cutting-edge, best-in-class, next-gen,
 ### 2.1 Navbar
 
 - Logo wordmark: `YTNiches`
-- Nav items: `P``roduct`· `Tools` · `Pricing` · `Blog`&#32;
+- Nav items: `Product` · `Tools` · `Pricing` · `Blog` (shipped, D-050)
+  - `Product` → `/#features` (on-page anchor); `Pricing` → `/pricing`
+  - `Tools` and `Blog` pages aren't built yet: shown as plain text with a `Soon` tag, not links (no 404s). Same rule for every unbuilt footer link.
 - Secondary CTA: `Log in`
 - Primary CTA: `Sign up free`
 
@@ -278,7 +280,7 @@ Revolutionize, unlock, empower, seamless, cutting-edge, best-in-class, next-gen,
 - `[STARTER DRAFT]` **Hook variants** — first 30 seconds, structured to keep the algorithm happy
 - `[STARTER DRAFT]` **Script outlines** — not full scripts (that's still you), but the structure that made the winner win
 
-**Below-callouts line:** `[STARTER DRAFT]` One credit per generation. Regenerate free if it's not quite there.
+**Below-callouts line:** 5 credits per generation. 3 to regenerate with feedback. (Shipped, D-050 — matches Monetization.md §3.1 / D-012; replaces the starter draft's "one credit / regenerate free".)
 
 ---
 
@@ -306,33 +308,29 @@ Revolutionize, unlock, empower, seamless, cutting-edge, best-in-class, next-gen,
 
 ### 4.3 Founder section
 
-**Eyebrow:** `[STARTER DRAFT]` Built by a creator who got tired
+**Status:** Final — written by Mac, shipped on the landing page (D-020, D-050).
 
-**Headline:** `[STARTER DRAFT]` I made this because I needed it.
+**Eyebrow:** Built by a creator who got tired
 
-**Body — STARTER DRAFT based on what Mac shared. Mac to rewrite in his own words:**
+**Headline:** I made this because I needed it.
 
-> `[STARTER DRAFT / NEEDS MAC INPUT]` I started a faceless YouTube channel a while back. Finding a niche was the first wall. I eventually picked one — and the moment I had it, I realized I had no idea what to do next.
+**Body:**
+
+> I started a World War 2 faceless YouTube channel. Finding the niche was the easy part.
 >
-> How do you actually spy on competitors? How do you know which of their videos are outliers versus normal? How do you turn what's working into your own scripts?
->
-> Every tool I tried helped with step 1 and stopped there. They left me at the front door of the niche and walked away.
+> Then I got stuck. I had no idea which of my competitors' videos were actually working. No way to find what topics were breaking out. No system for turning what worked into my own scripts.
 >
 > I dropped the channel.
 >
-> Then I decided: this is the product that should exist. Not another niche finder — one that keeps going, from discovery to shipping.
+> Then I decided: this tool should exist. Not another niche finder — one that keeps going, from finding the niche all the way to having something to film.
 >
-> That's what YTNiches is. It's the tool I wish I had.
+> That's YTNiches.
 
-**Signature line:** `[STARTER DRAFT]` — Mac, founder
+**Signature line:** — Mac, founder
 
-**Optional links:** `[STARTER DRAFT]` `Twitter` · `LinkedIn` (Mac to provide handles if desired)
+**Optional links:** Omitted at launch (no handles yet, D-050). Add `Twitter` · `LinkedIn` once Mac provides them.
 
-**NEEDS MAC INPUT for final version:**
-
-- Which specific niche Mac tried ("a faceless YouTube channel" is a placeholder — the real niche is more relatable, e.g. "a top-10 facts channel" or "a sleep music channel")
-- Which specific stuck moment mattered most (the current draft covers all three — pick one for emphasis)
-- Optional: a contrarian opinion at the end ("Most faceless-creator advice says X. It's wrong because Y.") — this is the Fibery-style personality moment; totally optional but strong if Mac has one
+**Contrarian opinion:** Not included. Still optional — add later if Mac has one.
 
 ---
 
@@ -347,12 +345,17 @@ Revolutionize, unlock, empower, seamless, cutting-edge, best-in-class, next-gen,
 **Entry format (per entry):**
 
 - Date: e.g. `Sep 2026`
-- Summary line: 1 sentence, past tense, active voice. Examples:
-  - `[STARTER DRAFT]` Added tri-language filter (English, Spanish, Portuguese)
-  - `[STARTER DRAFT]` Prompt regeneration now free if under 10 minutes since last generation
-  - `[STARTER DRAFT]` Outlier threshold now user-adjustable (Pro+)
+- Summary line: 1 sentence, past tense, active voice.
 
-**Bottom link:** `View full changelog →`
+**Shipped entries (D-050 — real features only, until a changelog source exists):**
+
+- `Sep 2026` — Shipped the Content Calendar, with drag-and-drop scheduling.
+- `Sep 2026` — Launched Team workspaces with shared tasks and roles.
+- `Sep 2026` — Added the Outlier Finder for spotting breakout videos.
+
+The earlier starter examples (tri-language filter, free regeneration, adjustable outlier threshold) were dropped: none of them describe shipped behavior.
+
+**Bottom link:** `View full changelog →` — shown as text with a `Soon` tag until `/changelog` exists. Per-entry "Read more" links omitted for the same reason.
 
 ## 5. Sections 13–15 + SEO + Formulas
 
@@ -420,7 +423,7 @@ Each opens the respective tool with pre-filled query: `"Tell me about YTNiches �
 
 ### 5.4 SEO metadata
 
-**Meta title (<60 chars):** `[STARTER DRAFT]` YTNiches — Niche research + content tools for faceless YouTube creators (59 chars, fits)
+**Meta title (<60 chars):** YTNiches — Niche research to content for faceless creators (58 chars, shipped, D-050). The earlier draft, "YTNiches — Niche research + content tools for faceless YouTube creators", was actually 71 chars, not the 59 it claimed.
 
 **Meta description (<155 chars):** `[STARTER DRAFT]` Find profitable faceless YouTube niches, track competitors, extract winning ideas as AI prompts, and ship 90 days of content. Free trial. (148 chars, fits)
 
