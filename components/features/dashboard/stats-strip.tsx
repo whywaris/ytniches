@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getBalance } from "@/lib/credits";
+import { pluralize } from "@/lib/utils";
 import { getPromptCount } from "@/lib/services/prompts";
 import { getTrackedChannelCount } from "@/lib/services/tracking";
 import type { RequestContext } from "@/lib/context";
@@ -14,9 +15,13 @@ async function StatsStrip({ ctx }: { ctx: RequestContext }) {
   ]);
 
   const stats = [
-    { label: "credits", value: balance, href: "/settings/billing" },
-    { label: "tracked channels", value: trackedChannelCount, href: "/tracking" },
-    { label: "prompts", value: promptCount, href: "/prompts" },
+    { label: pluralize(balance, "credit"), value: balance, href: "/settings/billing" },
+    {
+      label: pluralize(trackedChannelCount, "tracked channel"),
+      value: trackedChannelCount,
+      href: "/tracking",
+    },
+    { label: pluralize(promptCount, "prompt"), value: promptCount, href: "/prompts" },
   ];
 
   return (

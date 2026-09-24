@@ -2,6 +2,7 @@ import Image from "next/image";
 
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { listRecentUploadsByChannel } from "@/lib/services/tracking";
+import { pluralize } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { DashboardSection } from "@/components/features/dashboard/dashboard-section";
@@ -20,9 +21,9 @@ async function LatestUploads({ ctx }: { ctx: RequestContext }) {
             {groups.map((group) => (
               <li
                 key={group.channelId}
-                className="flex flex-col gap-3 p-2 sm:flex-row sm:items-center"
+                className="flex flex-col gap-3 p-2 md:flex-row md:items-center md:gap-5"
               >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3 md:w-56 md:shrink-0">
                   <Avatar
                     size="md"
                     src={group.channelAvatarUrl ?? undefined}
@@ -33,22 +34,22 @@ async function LatestUploads({ ctx }: { ctx: RequestContext }) {
                       {group.channelName}
                     </p>
                     <p className="text-body-sm text-text-secondary">
-                      posted {group.uploadCount} new video{group.uploadCount === 1 ? "" : "s"} ·{" "}
+                      posted {group.uploadCount} new {pluralize(group.uploadCount, "video")} ·{" "}
                       {formatRelativeTime(group.latestPublishedAt)}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto">
                   {group.latestUploads.map((upload) => (
                     <Image
                       key={upload.videoId}
                       src={upload.thumbnailUrl}
                       alt={upload.title}
                       title={upload.title}
-                      width={96}
-                      height={54}
+                      width={160}
+                      height={90}
                       unoptimized
-                      className="h-[54px] w-24 rounded-xs object-cover"
+                      className="h-[90px] w-40 shrink-0 rounded-sm object-cover"
                     />
                   ))}
                 </div>

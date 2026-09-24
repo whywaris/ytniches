@@ -6,6 +6,7 @@ import {
   type NextStepState,
   type RecentUpload,
 } from "@/lib/dashboard";
+import { pluralize } from "@/lib/utils";
 
 const BASE: NextStepState = {
   trackedChannelCount: 3,
@@ -24,7 +25,9 @@ describe("chooseNextStep", () => {
   });
 
   it("no tracked channels wins even if prompts exist", () => {
-    expect(chooseNextStep({ ...BASE, trackedChannelCount: 0 }).id).toBe("find_niche");
+    expect(chooseNextStep({ ...BASE, trackedChannelCount: 0, topOutlier: OUTLIER }).id).toBe(
+      "find_niche",
+    );
   });
 
   it("deep-links the top outlier into prompts when tracking but no prompts yet", () => {
@@ -34,10 +37,20 @@ describe("chooseNextStep", () => {
     expect(step.body).toContain("Why Rome fell");
   });
 
-  it("falls back to plain /prompts when there's no outlier to deep-link", () => {
+  it("suggests tracking more channels when tracking, no prompts, and no outlier in 30 days", () => {
     const step = chooseNextStep({ ...BASE, promptCount: 0, topOutlier: null });
-    expect(step.id).toBe("generate_prompt");
-    expect(step.href).toBe("/prompts");
+    expect(step.id).toBe("track_more");
+    expect(step.title).toBe("Track more channels");
+    expect(step.body).toBe(
+      "One channel rarely produces outliers. Track 3–5 in your niche to see what’s breaking out.",
+    );
+    expect(step.href).toBe("/niches");
+  });
+
+  it("suggests tracking more channels instead of an empty Outliers page", () => {
+    const step = chooseNextStep({ ...BASE, topOutlier: null });
+    expect(step.id).toBe("track_more");
+    expect(step.href).toBe("/niches");
   });
 
   it("sends a workspace user with prompts but no calendar entries to the calendar", () => {
@@ -47,14 +60,31 @@ describe("chooseNextStep", () => {
   });
 
   it("skips the calendar step for users without a workspace", () => {
-    const step = chooseNextStep({ ...BASE, hasWorkspace: false, calendarEntryCount: null });
+    const step = chooseNextStep({ ...BASE, topOutlier: OUTLIER });
     expect(step.id).toBe("see_outliers");
   });
 
-  it("defaults to outliers once everything is set up", () => {
-    const step = chooseNextStep({ ...BASE, hasWorkspace: true, calendarEntryCount: 4 });
+  it("shows 'See what’s breaking out' only when an outlier exists", () => {
+    const step = chooseNextStep({
+      ...BASE,
+      hasWorkspace: true,
+      calendarEntryCount: 4,
+      topOutlier: OUTLIER,
+    });
     expect(step.id).toBe("see_outliers");
     expect(step.href).toBe("/outliers");
+  });
+});
+
+describe("pluralize", () => {
+  it("uses the singular only for exactly 1", () => {
+    expect(pluralize(1, "prompt")).toBe("prompt");
+    expect(pluralize(0, "prompt")).toBe("prompts");
+    expect(pluralize(2, "tracked channel")).toBe("tracked channels");
+  });
+
+  it("accepts an irregular plural", () => {
+    expect(pluralize(3, "child", "children")).toBe("children");
   });
 });
 

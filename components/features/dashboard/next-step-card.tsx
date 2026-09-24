@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { RequestContext } from "@/lib/context";
 
-// Only called on the one branch that needs it: 7-day top outlier, else
-// the last 30 days (approved fallback chain).
+// 7-day top outlier, else the last 30 days. Every tracking user needs it:
+// no outlier means the card steers to "Track more channels" instead.
 async function findTopOutlier(ctx: RequestContext) {
   const [week] = await listTopOutliers(ctx, { view: "trending", limit: 1 });
   if (week) return week;
@@ -31,9 +31,8 @@ async function NextStepCard({
     getTrackedChannelCount(ctx),
     getPromptCount(ctx),
   ]);
-  const needsOutlier = trackedChannelCount > 0 && promptCount === 0;
   const [topOutlier, calendarEntryCount] = await Promise.all([
-    needsOutlier ? findTopOutlier(ctx) : null,
+    trackedChannelCount > 0 ? findTopOutlier(ctx) : null,
     workspaceId && promptCount > 0 ? getCalendarEntryCount(workspaceId) : null,
   ]);
 

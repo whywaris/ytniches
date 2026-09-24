@@ -12,12 +12,22 @@ export interface NextStepState {
 }
 
 export interface NextStep {
-  id: "find_niche" | "extract_outlier" | "generate_prompt" | "plan_video" | "see_outliers";
+  id: "find_niche" | "track_more" | "extract_outlier" | "plan_video" | "see_outliers";
   title: string;
   body: string;
   cta: string;
   href: string;
 }
+
+// Tracking but no outlier in 30 days: an outlier-pointing step would land
+// on an empty page, so suggest widening the net instead.
+const TRACK_MORE: NextStep = {
+  id: "track_more",
+  title: "Track more channels",
+  body: "One channel rarely produces outliers. Track 3–5 in your niche to see what’s breaking out.",
+  cta: "Find channels",
+  href: "/niches",
+};
 
 export function chooseNextStep(state: NextStepState): NextStep {
   if (state.trackedChannelCount === 0) {
@@ -41,13 +51,7 @@ export function chooseNextStep(state: NextStepState): NextStep {
         href: `/prompts?channelId=${encodeURIComponent(channelId)}&videoId=${encodeURIComponent(videoId)}`,
       };
     }
-    return {
-      id: "generate_prompt",
-      title: "Generate prompts from any video",
-      body: "No outliers yet from your tracked channels. Paste any video URL to get started.",
-      cta: "Generate prompts",
-      href: "/prompts",
-    };
+    return TRACK_MORE;
   }
 
   if (state.hasWorkspace && state.calendarEntryCount === 0) {
@@ -59,6 +63,8 @@ export function chooseNextStep(state: NextStepState): NextStep {
       href: "/calendar",
     };
   }
+
+  if (!state.topOutlier) return TRACK_MORE;
 
   return {
     id: "see_outliers",
