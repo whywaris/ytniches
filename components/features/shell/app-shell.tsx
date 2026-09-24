@@ -19,6 +19,7 @@ export interface AppShellProps {
   promptCount: number;
   profileName: string | null;
   profileAvatarUrl: string | null;
+  isSuperAdmin: boolean;
   notificationBell: React.ReactNode;
   creditChip: React.ReactNode;
   children: React.ReactNode;
@@ -30,6 +31,7 @@ function AppShell({
   promptCount,
   profileName,
   profileAvatarUrl,
+  isSuperAdmin,
   notificationBell,
   creditChip,
   children,
@@ -121,6 +123,7 @@ function AppShell({
         <AppTopBar
           profileName={profileName}
           profileAvatarUrl={profileAvatarUrl}
+          isSuperAdmin={isSuperAdmin}
           notificationBell={notificationBell}
           creditChip={creditChip}
           onOpenCommandPalette={() => setPaletteOpen(true)}

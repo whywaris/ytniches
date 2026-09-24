@@ -150,9 +150,84 @@ describe("getSubscription", () => {
       currentPeriodEnd: "2026-10-01T00:00:00.000Z",
       canceledAt: null,
       metadata: { userId: "user-1", tier: "pro" },
+      amountCents: null,
+      billingInterval: null,
+      lastTransaction: null,
     });
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toBe("https://test-api.creem.io/v1/subscriptions?subscription_id=sub_1");
+  });
+
+  // Shape taken from our stored subscription.paid payload (real Creem data).
+  it("reads price, interval, and last transaction from the expanded product", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        jsonResponse(200, {
+          id: "sub_1",
+          status: "active",
+          customer: "cust_1",
+          product: { id: "prod_pro_monthly", price: 4900, recurring_interval: "month" },
+          current_period_start_date: "2026-09-22T08:19:14.778Z",
+          current_period_end_date: "2026-10-22T08:19:14.778Z",
+          last_transaction: { id: "tran_1", amount: 4900, created_at: 1790065156614 },
+        }),
+      ),
+    );
+    const { getSubscription } = await import("@/lib/billing/creem");
+
+    const result = await getSubscription("sub_1");
+
+    expect(result.amountCents).toBe(4900);
+    expect(result.billingInterval).toBe("month");
+    expect(result.lastTransaction).toEqual({
+      id: "tran_1",
+      amountCents: 4900,
+      createdAt: new Date(1790065156614).toISOString(),
+    });
+  });
+
+  it("ignores an interval that isn't month/year", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        jsonResponse(200, {
+          id: "sub_1",
+          status: "active",
+          customer: "cust_1",
+          product: { id: "p", price: 100, recurring_interval: "week" },
+          current_period_start_date: "2026-09-22T00:00:00.000Z",
+          current_period_end_date: "2026-09-29T00:00:00.000Z",
+        }),
+      ),
+    );
+    const { getSubscription } = await import("@/lib/billing/creem");
+    expect((await getSubscription("sub_1")).billingInterval).toBeNull();
+  });
+});
+
+describe("refundTransaction", () => {
+  it("POSTs the transaction id to /refunds with an idempotency key", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { id: "ref_1", status: "pending" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { refundTransaction } = await import("@/lib/billing/creem");
+
+    const result = await refundTransaction("tran_1", "refund:tran_1");
+
+    expect(result).toEqual({ id: "ref_1", status: "pending" });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://test-api.creem.io/v1/refunds");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ transaction_id: "tran_1" });
+    expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe("refund:tran_1");
+  });
+
+  it("throws on a non-2xx response instead of failing silently", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse(400, { error: "bad" })));
+    const { refundTransaction } = await import("@/lib/billing/creem");
+    await expect(refundTransaction("tran_1", "refund:tran_1")).rejects.toThrow("(400)");
   });
 });
 
@@ -277,6 +352,9 @@ describe("parseWebhookEvent", () => {
       currentPeriodEnd: "2026-10-01T00:00:00.000Z",
       canceledAt: null,
       metadata: { userId: "user-1", tier: "pro" },
+      amountCents: null,
+      billingInterval: null,
+      lastTransaction: null,
     });
   });
 

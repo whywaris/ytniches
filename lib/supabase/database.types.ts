@@ -9,6 +9,50 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string;
+          admin_id: string;
+          created_at: string;
+          id: string;
+          idempotency_key: string | null;
+          metadata: Json;
+          status: string;
+          target_id: string | null;
+          target_type: string | null;
+        };
+        Insert: {
+          action: string;
+          admin_id: string;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          metadata?: Json;
+          status?: string;
+          target_id?: string | null;
+          target_type?: string | null;
+        };
+        Update: {
+          action?: string;
+          admin_id?: string;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          metadata?: Json;
+          status?: string;
+          target_id?: string | null;
+          target_type?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       calendar_entries: {
         Row: {
           assignee_id: string | null;
@@ -391,11 +435,14 @@ export type Database = {
           created_at: string;
           deleted_at: string | null;
           id: string;
+          last_active_at: string | null;
           name: string | null;
           onboarding_skipped_at: string | null;
           onboarding_step: number;
           primary_goal: string | null;
           role: string;
+          suspended_at: string | null;
+          suspended_reason: string | null;
           theme_preference: string;
           time_zone: string;
           updated_at: string;
@@ -406,11 +453,14 @@ export type Database = {
           created_at?: string;
           deleted_at?: string | null;
           id: string;
+          last_active_at?: string | null;
           name?: string | null;
           onboarding_skipped_at?: string | null;
           onboarding_step?: number;
           primary_goal?: string | null;
           role?: string;
+          suspended_at?: string | null;
+          suspended_reason?: string | null;
           theme_preference?: string;
           time_zone?: string;
           updated_at?: string;
@@ -421,11 +471,14 @@ export type Database = {
           created_at?: string;
           deleted_at?: string | null;
           id?: string;
+          last_active_at?: string | null;
           name?: string | null;
           onboarding_skipped_at?: string | null;
           onboarding_step?: number;
           primary_goal?: string | null;
           role?: string;
+          suspended_at?: string | null;
+          suspended_reason?: string | null;
           theme_preference?: string;
           time_zone?: string;
           updated_at?: string;
@@ -512,6 +565,8 @@ export type Database = {
       };
       subscriptions: {
         Row: {
+          amount_cents: number | null;
+          billing_interval: string | null;
           cancelled_at: string | null;
           created_at: string;
           current_period_end: string;
@@ -527,6 +582,8 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          amount_cents?: number | null;
+          billing_interval?: string | null;
           cancelled_at?: string | null;
           created_at?: string;
           current_period_end: string;
@@ -542,6 +599,8 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          amount_cents?: number | null;
+          billing_interval?: string | null;
           cancelled_at?: string | null;
           created_at?: string;
           current_period_end?: string;
@@ -1045,6 +1104,34 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_list_users: {
+        Args: {
+          p_from: string | null;
+          p_limit: number;
+          p_offset: number;
+          p_search: string | null;
+          p_status: string | null;
+          p_tier: string | null;
+          p_to: string | null;
+        };
+        Returns: {
+          created_at: string;
+          email: string;
+          id: string;
+          last_active_at: string | null;
+          name: string | null;
+          role: string;
+          subscription_status: string | null;
+          suspended_at: string | null;
+          tier: string | null;
+          total_count: number;
+        }[];
+      };
+      admin_revoke_sessions: {
+        Args: { target_user_id: string };
+        Returns: undefined;
+      };
+      check_request: { Args: never; Returns: undefined };
       find_due_channel_ids: {
         Args: never;
         Returns: {
@@ -1082,6 +1169,7 @@ export type Database = {
         Args: { target_workspace_id: string };
         Returns: boolean;
       };
+      touch_last_active: { Args: never; Returns: undefined };
       shares_workspace_with: {
         Args: { target_user_id: string };
         Returns: boolean;

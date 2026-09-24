@@ -3,15 +3,14 @@ import { getRedis } from "@/lib/cache/redis";
 // TRD.md §5.3: YouTube Data API v3 default daily quota. Name these as
 // constants, not inline magic numbers — if Mac gets a higher quota
 // approved, this is the one place that changes.
-const DAILY_QUOTA_LIMIT = 10_000;
-const SOFT_LIMIT = 9_500; // non-critical calls should stop above this
+export const DAILY_QUOTA_LIMIT = 10_000;
+export const SOFT_LIMIT = 9_500; // non-critical calls should stop above this
 
-// 25h, not 24h: the key is already UTC-date-scoped (rolls over naturally at
-// midnight UTC), so this TTL is only a cleanup safety net, not part of the
-// correctness path — giving it an extra hour of margin over the key's
-// natural 24h life avoids a key expiring early relative to a
-// slightly-skewed clock.
-const KEY_TTL_SECONDS = 25 * 60 * 60;
+// The key is UTC-date-scoped (rolls over naturally at midnight UTC), so the
+// TTL is only cleanup, never part of the counting. 8 days rather than 25h
+// so the admin API-quotas page can read a 7-day trend straight from these
+// keys, with a day of margin -- no separate history table.
+const KEY_TTL_SECONDS = 8 * 24 * 60 * 60;
 
 export interface QuotaCheckResult {
   allowed: boolean;
@@ -19,8 +18,32 @@ export interface QuotaCheckResult {
   warning?: boolean;
 }
 
+function quotaKeyFor(date: Date): string {
+  return `quota:youtube:${date.toISOString().slice(0, 10)}`;
+}
+
 function getQuotaKey(): string {
-  return `quota:youtube:${new Date().toISOString().slice(0, 10)}`;
+  return quotaKeyFor(new Date());
+}
+
+export interface QuotaDay {
+  date: string; // YYYY-MM-DD, UTC
+  used: number;
+}
+
+// Oldest first, today last. Days with no key (no YouTube calls, or before
+// the 8-day TTL shipped) read as 0.
+export async function getQuotaHistory(days: number, now: Date = new Date()): Promise<QuotaDay[]> {
+  const dates = Array.from({ length: days }, (_, index) => {
+    const date = new Date(now);
+    date.setUTCDate(date.getUTCDate() - (days - 1 - index));
+    return date;
+  });
+  const values = await getRedis().mget<(number | string | null)[]>(...dates.map(quotaKeyFor));
+  return dates.map((date, index) => ({
+    date: date.toISOString().slice(0, 10),
+    used: Number(values[index] ?? 0),
+  }));
 }
 
 // INCRBY is atomic in Redis — concurrent callers each get a unique,

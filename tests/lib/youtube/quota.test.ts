@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const incrby = vi.fn();
 const expire = vi.fn();
+const mget = vi.fn();
 
 vi.mock("@/lib/cache/redis", () => ({
-  getRedis: () => ({ incrby, expire }),
+  getRedis: () => ({ incrby, expire, mget }),
 }));
 
-const { checkAndIncrement } = await import("@/lib/youtube/quota");
+const { checkAndIncrement, getQuotaHistory } = await import("@/lib/youtube/quota");
 
 beforeEach(() => {
   incrby.mockReset();
@@ -71,12 +72,12 @@ describe("checkAndIncrement", () => {
     expect(result).toEqual({ allowed: true, used: 10000, warning: true });
   });
 
-  it("sets a ~25h TTL on the counter key", async () => {
+  it("keeps each day's counter for 8 days (admin 7-day trend)", async () => {
     incrby.mockResolvedValueOnce(100);
 
     await checkAndIncrement(100);
 
-    expect(expire).toHaveBeenCalledWith("quota:youtube:2026-09-21", 25 * 60 * 60);
+    expect(expire).toHaveBeenCalledWith("quota:youtube:2026-09-21", 8 * 24 * 60 * 60);
   });
 
   it("uses a different key on a different UTC date", async () => {
@@ -88,5 +89,24 @@ describe("checkAndIncrement", () => {
     incrby.mockResolvedValueOnce(50);
     await checkAndIncrement(50);
     expect(incrby).toHaveBeenLastCalledWith("quota:youtube:2026-09-22", 50);
+  });
+});
+
+describe("getQuotaHistory", () => {
+  it("reads one key per day, oldest first, missing days as 0", async () => {
+    mget.mockResolvedValueOnce([null, "120", 9600]);
+
+    const history = await getQuotaHistory(3);
+
+    expect(mget).toHaveBeenCalledWith(
+      "quota:youtube:2026-09-19",
+      "quota:youtube:2026-09-20",
+      "quota:youtube:2026-09-21",
+    );
+    expect(history).toEqual([
+      { date: "2026-09-19", used: 0 },
+      { date: "2026-09-20", used: 120 },
+      { date: "2026-09-21", used: 9600 },
+    ]);
   });
 });

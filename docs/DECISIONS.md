@@ -585,3 +585,30 @@ Decisions that still need to close before their dependent docs / features can be
   - **Creator-type explorer on mobile:** horizontal snap-scroll strip (Interaction-Spec `creator_type_selector`) rather than Landing-Page-Spec §4's accordion — the behavior doc wins on behavior.
   - **Cmd+K on public pages:** a navigation-only palette in the marketing layout (not in the specs; added so Cmd+K behaves the same across the site).
 - **Impacts:** `components/features/landing/content.ts` holds all shipped copy. Landing-Copy.md §2.1, §4.1, §4.3, §4.4, §5.4 synced in a separate docs-only commit (2026-09-24), per CLAUDE.md §1.
+
+### D-051: Pro → Team upgrade leaves the old Creem subscription billing
+
+- **Status:** Open (logged 2026-09-24)
+- **Context:** Upgrading runs `createCheckout`, which opens a _new_ Creem subscription. When its webhook lands, `upsertSubscriptionFromProvider` marks the old Pro row `is_current = false`, but nothing cancels the Pro subscription in Creem. The user keeps paying for both. The admin MRR counts both rows, because Creem still bills both.
+- **Options:**
+  - A: Upgrade in place through Creem's subscription upgrade endpoint (one subscription, prorated).
+  - B: After the new subscription's first `subscription.paid`, cancel the retired one through the Creem API.
+  - C: Block self-serve upgrades and route them through support until A or B ships.
+- **Impacts:** `lib/services/billing.ts` (checkout + upsert), Monetization.md upgrade flow, admin MRR.
+- **Needs:** A call before any paid Pro user can see the Team upgrade CTA.
+
+### D-052: Admin panel first cut — what's deferred
+
+- **Status:** Resolved (2026-09-24)
+- **Context:** PRD §9 / UI-UX-Flow §8.2 list more admin surface than the first cut needs. Built: Dashboard, Users (search, filter, detail, grant credits with a reason, suspend/unsuspend, refund last payment via Creem), Revenue, API Quotas. Super_admin only.
+- **Deferred:**
+  - Blog CMS (per D-006), Tools module, Automation module. Module 6 stays open under D-016.
+  - Impersonation, CSV export, the `staff` role.
+  - Plan changes from admin. Change the plan in the Creem dashboard; the webhook syncs it.
+  - Coupons, payment-retry actions, MRR breakdown beyond per-tier (new/expansion/churned).
+  - Per-endpoint YouTube quota breakdown and quota alerts.
+- **Known ceilings:**
+  - The MRR history uses each subscription's _current_ status. A status-history table fixes this.
+  - The quota trend only goes back to when the 8-day Redis TTL shipped.
+  - The body field for Creem's refund request (`transaction_id`) isn't in Creem's public docs. A non-2xx response raises an error the admin sees and releases the idempotency key.
+- **Impacts:** `app/(admin)/admin/*`, `lib/services/admin.ts`, migration `20260924120000_admin_panel.sql`.

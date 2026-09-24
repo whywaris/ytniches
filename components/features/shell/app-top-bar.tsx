@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { usePathname } from "next/navigation";
 
-import { LogOut, Settings, Search as SearchIcon } from "lucide-react";
+import { LogOut, Search as SearchIcon, Settings, ShieldAlert } from "lucide-react";
 
 import { labelForPathname } from "@/components/features/shell/nav-config";
 import { Avatar } from "@/components/ui/avatar";
@@ -21,6 +21,8 @@ import { signOut } from "@/app/(app)/actions";
 export interface AppTopBarProps {
   profileName: string | null;
   profileAvatarUrl: string | null;
+  /** UI-UX-Flow.md §8.2: the only entry point to /admin, super_admin only. */
+  isSuperAdmin: boolean;
   notificationBell: React.ReactNode;
   creditChip: React.ReactNode;
   onOpenCommandPalette: () => void;
@@ -44,6 +46,7 @@ function initialsFor(name: string | null): string {
 function AppTopBar({
   profileName,
   profileAvatarUrl,
+  isSuperAdmin,
   notificationBell,
   creditChip,
   onOpenCommandPalette,
@@ -86,6 +89,13 @@ function AppTopBar({
                 <Settings /> Billing
               </a>
             </DropdownMenuItem>
+            {isSuperAdmin ? (
+              <DropdownMenuItem asChild>
+                <a href="/admin/dashboard">
+                  <ShieldAlert /> Admin panel
+                </a>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem destructive onSelect={() => void signOut()}>
               <LogOut /> Log out

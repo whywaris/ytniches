@@ -251,6 +251,10 @@ export async function upsertSubscriptionFromProvider(
     current_period_start: providerSub.currentPeriodStart,
     current_period_end: providerSub.currentPeriodEnd,
     cancelled_at: providerSub.canceledAt,
+    // Real price from Creem's product data -- only written when present, so
+    // an event carrying a bare product id never blanks a stored price.
+    ...(providerSub.amountCents !== null && { amount_cents: providerSub.amountCents }),
+    ...(providerSub.billingInterval !== null && { billing_interval: providerSub.billingInterval }),
   };
 
   const { data: existing, error: findError } = await supabase

@@ -19,6 +19,11 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    // Admin suspension sets a Supabase Auth ban; sign-in then fails with
+    // the user_banned code.
+    if (error?.code === "user_banned") {
+      return NextResponse.redirect(`${origin}/suspended`);
+    }
     if (!error) {
       // First-ever session for this account: created_at and last_sign_in_at
       // land within seconds of each other only on the account's first

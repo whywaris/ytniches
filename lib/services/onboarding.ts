@@ -15,6 +15,7 @@ export interface ProfileSummary {
   name: string | null;
   avatarUrl: string | null;
   timeZone: string;
+  role: string;
 }
 
 // App shell sidebar footer + top-bar avatar (UI-UX-Flow.md §4.1/§4.2), plus
@@ -24,14 +25,19 @@ export async function getProfileSummary(ctx: RequestContext): Promise<ProfileSum
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("name, avatar_url, time_zone")
+    .select("name, avatar_url, time_zone, role")
     .eq("id", ctx.userId)
     .single();
 
   if (error) {
     throw new Error(`getProfileSummary query failed: ${error.message}`);
   }
-  return { name: data.name, avatarUrl: data.avatar_url, timeZone: data.time_zone };
+  return {
+    name: data.name,
+    avatarUrl: data.avatar_url,
+    timeZone: data.time_zone,
+    role: data.role,
+  };
 }
 
 // dashboard/page.tsx: both a skip and a genuine finish set step to 5 --

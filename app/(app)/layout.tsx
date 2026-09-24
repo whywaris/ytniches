@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         promptCount={promptCount}
         profileName={profile.name}
         profileAvatarUrl={profile.avatarUrl}
+        isSuperAdmin={profile.role === "super_admin"}
         notificationBell={<NotificationBell />}
         creditChip={<CreditChip />}
       >

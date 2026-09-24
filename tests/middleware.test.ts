@@ -7,11 +7,13 @@ const single = vi.fn();
 const eq = vi.fn(() => ({ single }));
 const select = vi.fn(() => ({ eq }));
 const from = vi.fn(() => ({ select }));
+const rpc = vi.fn(() => Promise.resolve({ data: null, error: null }));
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
     auth: { getUser },
     from,
+    rpc,
   }),
 }));
 
@@ -131,5 +133,90 @@ describe("middleware admin gate (unchanged behavior, shares the profile query)",
 
     expect(response.status).toBe(403);
     expect(from).not.toHaveBeenCalled();
+  });
+});
+
+describe("middleware suspension + activity", () => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  it("sends a suspended user to /suspended from an app route", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    single.mockResolvedValue({
+      data: {
+        role: "user",
+        onboarding_step: 5,
+        suspended_at: "2026-09-24T00:00:00Z",
+        last_active_at: null,
+      },
+      error: null,
+    });
+
+    const response = await middleware(makeRequest("/dashboard"));
+
+    expect(response.headers.get("location")).toBe("https://example.com/suspended");
+  });
+
+  it("treats the pre-request hook's account_suspended error as suspended", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    single.mockResolvedValue({ data: null, error: { code: "account_suspended" } });
+
+    const response = await middleware(makeRequest("/dashboard"));
+
+    expect(response.headers.get("location")).toBe("https://example.com/suspended");
+  });
+
+  it("blocks a suspended super_admin from /admin too", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    single.mockResolvedValue({
+      data: {
+        role: "super_admin",
+        onboarding_step: 5,
+        suspended_at: "2026-09-24T00:00:00Z",
+        last_active_at: null,
+      },
+      error: null,
+    });
+
+    const response = await middleware(makeRequest("/admin/dashboard"));
+
+    expect(response.headers.get("location")).toBe("https://example.com/suspended");
+  });
+
+  it("stamps last_active_at when it isn't today yet", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    single.mockResolvedValue({
+      data: {
+        role: "user",
+        onboarding_step: 5,
+        suspended_at: null,
+        last_active_at: "2026-01-01T09:00:00+00:00",
+      },
+      error: null,
+    });
+
+    await middleware(makeRequest("/dashboard"));
+
+    expect(rpc).toHaveBeenCalledWith("touch_last_active");
+  });
+
+  it("does not stamp again on the same UTC day", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    single.mockResolvedValue({
+      data: {
+        role: "user",
+        onboarding_step: 5,
+        suspended_at: null,
+        last_active_at: `${today}T00:01:00+00:00`,
+      },
+      error: null,
+    });
+
+    await middleware(makeRequest("/dashboard"));
+
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("leaves /suspended public (no redirect loop)", () => {
+    expect(classifyRoute("/suspended")).toBe("public");
   });
 });

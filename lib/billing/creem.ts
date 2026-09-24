@@ -113,17 +113,40 @@ export interface ProviderSubscription {
   currentPeriodEnd: string;
   canceledAt: string | null;
   metadata: Record<string, unknown>;
+  /** From the expanded product object; null when Creem sends only the product id. */
+  amountCents: number | null;
+  billingInterval: "month" | "year" | null;
+  lastTransaction: { id: string; amountCents: number; createdAt: string } | null;
 }
 
 function idOf(value: string | { id: string }): string {
   return typeof value === "string" ? value : value.id;
 }
 
+// Product arrives either as a bare id or expanded (subscription.* webhooks
+// and GET /subscriptions expand it -- verified against our stored
+// subscription.paid payloads: price in cents + recurring_interval).
+const ProductSchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string(),
+    price: z.number().int().nonnegative().optional(),
+    recurring_interval: z.string().optional(),
+  }),
+]);
+
+const LastTransactionSchema = z.object({
+  id: z.string(),
+  amount: z.number(),
+  created_at: z.number(),
+});
+
 const ProviderSubscriptionResponseSchema = z.object({
   id: z.string(),
   status: z.enum(SUBSCRIPTION_STATUSES),
   customer: z.union([z.string(), z.object({ id: z.string() })]),
-  product: z.union([z.string(), z.object({ id: z.string() })]),
+  product: ProductSchema,
+  last_transaction: LastTransactionSchema.nullable().optional(),
   current_period_start_date: z.string(),
   current_period_end_date: z.string(),
   canceled_at: z.string().nullable().optional(),
@@ -142,7 +165,53 @@ function toProviderSubscription(
     currentPeriodEnd: raw.current_period_end_date,
     canceledAt: raw.canceled_at ?? null,
     metadata: raw.metadata ?? {},
+    amountCents: typeof raw.product === "string" ? null : (raw.product.price ?? null),
+    billingInterval: toBillingInterval(raw.product),
+    lastTransaction: raw.last_transaction
+      ? {
+          id: raw.last_transaction.id,
+          amountCents: raw.last_transaction.amount,
+          createdAt: new Date(raw.last_transaction.created_at).toISOString(),
+        }
+      : null,
   };
+}
+
+function toBillingInterval(product: z.infer<typeof ProductSchema>): "month" | "year" | null {
+  if (typeof product === "string") return null;
+  return product.recurring_interval === "month" || product.recurring_interval === "year"
+    ? product.recurring_interval
+    : null;
+}
+
+export interface RefundResult {
+  id: string;
+  status: string;
+}
+
+const RefundResponseSchema = z
+  .object({ id: z.string(), status: z.string().optional() })
+  .passthrough();
+
+// Admin refunds (PRD.md §9.2). Creem documents POST /v1/refunds as a FULL
+// refund identified by transaction id; the exact body field isn't in their
+// public reference, so this sends `transaction_id` as described and any
+// non-2xx throws via creemFetch -- a wrong field fails loudly, never
+// silently. The Idempotency-Key header is best-effort (ignored if Creem
+// doesn't support it); the real double-refund guard is admin_actions'
+// unique idempotency_key, taken BEFORE this is called. Our subscription
+// records change only when the refund.created webhook arrives.
+export async function refundTransaction(
+  transactionId: string,
+  idempotencyKey: string,
+): Promise<RefundResult> {
+  const result = await creemFetch<unknown>("/refunds", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ transaction_id: transactionId }),
+  });
+  const parsed = RefundResponseSchema.parse(result);
+  return { id: parsed.id, status: parsed.status ?? "pending" };
 }
 
 export async function getSubscription(

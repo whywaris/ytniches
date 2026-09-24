@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import type { RequestContext } from "@/lib/context";
+import type { Database } from "@/lib/supabase/database.types";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Backend-Schema.md §2.5: balance is derived, never stored — SUM(amount)
 // WHERE user_id = ? AND created_at >= cycle_start.
@@ -16,8 +19,7 @@ export interface InsufficientCreditsError {
 // the calendar month). Falls back to UTC month start if no subscription
 // row exists yet -- shouldn't happen once completeOnboarding() always
 // creates a trial row, but keeps this safe for any user who predates it.
-async function getCycleStart(userId: string): Promise<Date> {
-  const supabase = await createClient();
+async function getCycleStart(supabase: SupabaseClient<Database>, userId: string): Promise<Date> {
   const { data, error } = await supabase
     .from("subscriptions")
     .select("current_period_start")
@@ -37,12 +39,20 @@ async function getCycleStart(userId: string): Promise<Date> {
 }
 
 export async function getBalance(ctx: RequestContext): Promise<number> {
-  const cycleStart = await getCycleStart(ctx.userId);
-  const supabase = await createClient();
+  return computeBalance(await createClient(), ctx.userId);
+}
+
+// Client-agnostic so the admin panel (service role, any user) and the app
+// (session client, own user) share one balance definition.
+export async function computeBalance(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<number> {
+  const cycleStart = await getCycleStart(supabase, userId);
   const { data, error } = await supabase
     .from("credit_events")
     .select("amount")
-    .eq("user_id", ctx.userId)
+    .eq("user_id", userId)
     .gte("created_at", cycleStart.toISOString());
 
   if (error) {

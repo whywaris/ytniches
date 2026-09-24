@@ -268,7 +268,41 @@ describe("upsertSubscriptionFromProvider", () => {
     currentPeriodEnd: "2026-10-01T00:00:00.000Z",
     canceledAt: null,
     metadata: {},
+    amountCents: 4900,
+    billingInterval: "month" as const,
+    lastTransaction: null,
   };
+
+  it("stores Creem's real price and interval on the subscription row", async () => {
+    const findBuilder = makeQueryBuilder({ data: { id: "row-1" }, error: null });
+    const updateBuilder = makeQueryBuilder({ data: null, error: null });
+    serviceFrom.mockReturnValueOnce(findBuilder).mockReturnValueOnce(updateBuilder);
+
+    await upsertSubscriptionFromProvider("user-1", "pro", providerSub);
+
+    expect(updateBuilder.update).toHaveBeenCalledWith(
+      expect.objectContaining({ amount_cents: 4900, billing_interval: "month" }),
+    );
+  });
+
+  it("never blanks a stored price when the event carries only a product id", async () => {
+    const findBuilder = makeQueryBuilder({ data: { id: "row-1" }, error: null });
+    const updateBuilder = makeQueryBuilder({ data: null, error: null });
+    serviceFrom.mockReturnValueOnce(findBuilder).mockReturnValueOnce(updateBuilder);
+
+    await upsertSubscriptionFromProvider("user-1", "pro", {
+      ...providerSub,
+      amountCents: null,
+      billingInterval: null,
+    });
+
+    const fields = (updateBuilder.update.mock.calls as unknown[][])[0][0] as Record<
+      string,
+      unknown
+    >;
+    expect(fields).not.toHaveProperty("amount_cents");
+    expect(fields).not.toHaveProperty("billing_interval");
+  });
 
   it("inserts a new row and retires the previous current row when the subscription is new", async () => {
     const findBuilder = makeQueryBuilder({ data: null, error: null }); // no existing row

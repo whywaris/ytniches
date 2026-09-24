@@ -7,6 +7,7 @@ export {
   createCustomerPortalUrl,
   getSubscription,
   cancelSubscription,
+  refundTransaction,
   verifyWebhook,
   parseWebhookEvent,
   type CheckoutInput,
@@ -14,6 +15,7 @@ export {
   type ProviderSubscription,
   type ProviderSubscriptionStatus,
   type CreemWebhookEvent,
+  type RefundResult,
 } from "@/lib/billing/creem";
 export {
   getProductId,

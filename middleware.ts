@@ -93,11 +93,26 @@ export async function middleware(request: NextRequest) {
   // genuine finish (Backend-Schema.md §2.2's onboarding_skipped_at is what
   // tells those two apart, not relevant here).
   if ((access === "app" || access === "admin") && user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role, onboarding_step")
+      .select("role, onboarding_step, suspended_at, last_active_at")
       .eq("id", user.id)
       .single();
+
+    // Suspended accounts: the PostgREST pre-request hook rejects every
+    // Data API call they make (code account_suspended), including this
+    // one -- so either signal sends them to the suspended page.
+    if (profileError?.code === "account_suspended" || profile?.suspended_at) {
+      return NextResponse.redirect(new URL("/suspended", request.url));
+    }
+
+    // "Active users" for the admin dashboard: stamped at most once per UTC
+    // day (the date check here avoids an RPC on every request; the
+    // function re-checks it server-side).
+    const today = new Date().toISOString().slice(0, 10);
+    if (profile && profile.last_active_at?.slice(0, 10) !== today) {
+      await supabase.rpc("touch_last_active");
+    }
 
     const onOnboardingRoute = pathname === "/onboarding" || pathname.startsWith("/onboarding/");
     if (access === "app" && profile?.onboarding_step === 0 && !onOnboardingRoute) {
