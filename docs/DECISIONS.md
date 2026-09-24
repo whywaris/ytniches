@@ -566,3 +566,22 @@ Decisions that still need to close before their dependent docs / features can be
 - **Final call:** Recent items (and the dashboard's "Continue where you left off," same underlying data) are tracked client-side only, in `localStorage`, using the same try/catch-guarded pattern already established in `components/ui/sidebar.tsx` for collapse-state persistence. Resets per-browser, not per-account — a user switching devices sees an empty Recent group until they build history on that device again.
 - **Impacts:** `components/features/shell/` (command palette wiring), `app/(app)/dashboard/` ("Continue where you left off" section)
 - **Revisit if:** user research shows cross-device recency actually matters — the real fix then is a lightweight `recent_actions` table + writes on search/save/generate, not a bigger client-side cache.
+
+---
+
+### D-050: Landing page build calls (A-lite)
+
+- **Status:** Resolved (2026-09-24)
+- **Context:** Building the 15-section landing (Landing-Page-Spec, Landing-Copy, Interaction-Spec) surfaced conflicts between the docs and between the copy and what's actually built.
+- **Final call:**
+  - **Nav items:** Landing-Copy §2.1 (Product · Tools · Pricing · Blog) over Landing-Page-Spec §1's list. Product → `/#features`.
+  - **Links to unbuilt pages** (blog, tools, changelog, roadmap, tutorials, help, about, contact, legal): plain text + "Soon" tag, never a 404. Only real routes and on-page anchors are clickable.
+  - **AI credit line:** "5 credits per generation. 3 to regenerate with feedback." — Monetization.md / D-012 win over Landing-Copy §4.1's "one credit".
+  - **Honesty about unbuilt surfaces:** only YouTube is a live integration (rest "Soon"); template modal says "Coming soon, sign up to get it first." (D-030); changelog placeholders are real shipped features (Outlier Finder, Team workspaces, Content Calendar); Insights view caption "Coming soon."
+  - **SEO title:** "YTNiches — Niche research to content for faceless creators" (58 chars; Landing-Copy §5.4's version was 71, not the 59 it claimed).
+  - **Omitted until real:** social-proof line, "Book a 15-min demo", Mac's social links.
+  - **Founder story:** Mac's final copy (World War 2 channel) supersedes Landing-Copy §4.3's starter draft.
+  - **Mode toggle:** click + keyboard only, no drag.
+  - **Creator-type explorer on mobile:** horizontal snap-scroll strip (Interaction-Spec `creator_type_selector`) rather than Landing-Page-Spec §4's accordion — the behavior doc wins on behavior.
+  - **Cmd+K on public pages:** a navigation-only palette in the marketing layout (not in the specs; added so Cmd+K behaves the same across the site).
+- **Impacts:** `components/features/landing/content.ts` holds all shipped copy. **Landing-Copy.md needs a spec-sync PR** to reflect the calls above (§2.1, §4.1, §4.3, §4.4, §5.4) — not edited in the code PR per CLAUDE.md §1.
