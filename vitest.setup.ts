@@ -59,4 +59,15 @@ if (typeof Element.prototype.hasPointerCapture === "undefined") {
 // so this always rebinds correctly.
 afterEach(() => {
   cleanup();
+  // Same isolate:false leak class as D-039, at the localStorage layer
+  // instead of the module cache: components/ui/sidebar.tsx's collapse
+  // toggle (and this session's theme-provider/recent-routes/streak
+  // additions) write real keys to jsdom's one shared localStorage per
+  // worker. A test that toggles collapse and never resets it left later
+  // tests in the same worker silently rendering a collapsed sidebar
+  // (labels/badges hidden) -- found via tests/components/features/shell/
+  // app-sidebar.test.tsx flaking only in full-suite runs. Centralized here
+  // rather than a per-file localStorage.clear(), so no future localStorage
+  // consumer has to remember this.
+  localStorage.clear();
 });

@@ -51,6 +51,7 @@ const {
   regeneratePrompts,
   getPrompt,
   listPrompts,
+  getPromptCount,
   updatePromptOutput,
   deletePrompt,
 } = await import("@/lib/services/prompts");
@@ -60,7 +61,7 @@ const ctx = { userId: "user-1", workspaceId: null, tier: null };
 // A chainable, thenable double covering every method prompts.ts calls on a
 // Supabase query builder -- same pattern as tracking.test.ts's
 // makeQueryBuilder.
-function makeQueryBuilder(result: { data: unknown; error: unknown }) {
+function makeQueryBuilder(result: { data: unknown; error: unknown; count?: number }) {
   const builder = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
@@ -495,5 +496,15 @@ describe("deletePrompt", () => {
     const result = await deletePrompt(ctx, "missing");
 
     expect(result).toEqual({ ok: false, error: { type: "not_found" } });
+  });
+});
+
+describe("getPromptCount", () => {
+  it("returns the count", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, count: 4, error: null }));
+
+    const result = await getPromptCount(ctx);
+
+    expect(result).toBe(4);
   });
 });

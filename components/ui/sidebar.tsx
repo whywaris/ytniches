@@ -28,6 +28,28 @@ function readStoredCollapsed(fallback: boolean) {
   }
 }
 
+// UI-UX-Flow.md §4.1 mobile note: icon-only under md (768px), no
+// off-canvas drawer. Guarded for jsdom/older browsers where matchMedia
+// doesn't exist -- degrades to "never narrow" rather than throwing, same
+// defensive style as readStoredCollapsed's localStorage try/catch above.
+const MOBILE_QUERY = "(max-width: 767px)";
+
+function useIsNarrowViewport(): boolean {
+  const [isNarrow, setIsNarrow] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external system (matchMedia) post-mount, same pattern as readStoredCollapsed above
+    setIsNarrow(mql.matches);
+    const listener = (event: MediaQueryListEvent) => setIsNarrow(event.matches);
+    mql.addEventListener("change", listener);
+    return () => mql.removeEventListener("change", listener);
+  }, []);
+
+  return isNarrow;
+}
+
 export interface SidebarProps extends React.ComponentProps<"nav"> {
   defaultCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -41,6 +63,8 @@ function Sidebar({
   ...props
 }: SidebarProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+  const isNarrow = useIsNarrowViewport();
+  const effectiveCollapsed = isNarrow || collapsed;
 
   // Read the persisted value post-mount only: localStorage isn't
   // available during server rendering. Reading it in a lazy useState
@@ -70,26 +94,28 @@ function Sidebar({
   }
 
   return (
-    <SidebarContext.Provider value={{ collapsed }}>
+    <SidebarContext.Provider value={{ collapsed: effectiveCollapsed }}>
       <nav
         data-slot="sidebar"
         className={cn(
           "flex h-full flex-col border-r border-border-subtle bg-bg-surface-1",
           "transition-[width] duration-default ease-out",
-          collapsed ? "w-14" : "w-60",
+          effectiveCollapsed ? "w-14" : "w-60",
           className,
         )}
         {...props}
       >
         <div className="flex-1 overflow-y-auto py-2">{children}</div>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="flex h-10 shrink-0 items-center justify-center border-t border-border-subtle text-text-tertiary hover:text-text-primary"
-        >
-          {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
-        </button>
+        {isNarrow ? null : (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="flex h-10 shrink-0 items-center justify-center border-t border-border-subtle text-text-tertiary hover:text-text-primary"
+          >
+            {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+          </button>
+        )}
       </nav>
     </SidebarContext.Provider>
   );

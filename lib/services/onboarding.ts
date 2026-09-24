@@ -11,6 +11,29 @@ export interface OnboardingProfile {
   skippedAt: string | null;
 }
 
+export interface ProfileSummary {
+  name: string | null;
+  avatarUrl: string | null;
+  timeZone: string;
+}
+
+// App shell sidebar footer + top-bar avatar (UI-UX-Flow.md §4.1/§4.2), plus
+// the dashboard's time-of-day greeting (§4.5) -- timeZone lets that greeting
+// reflect the user's own clock instead of the server's UTC.
+export async function getProfileSummary(ctx: RequestContext): Promise<ProfileSummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("name, avatar_url, time_zone")
+    .eq("id", ctx.userId)
+    .single();
+
+  if (error) {
+    throw new Error(`getProfileSummary query failed: ${error.message}`);
+  }
+  return { name: data.name, avatarUrl: data.avatar_url, timeZone: data.time_zone };
+}
+
 // dashboard/page.tsx: both a skip and a genuine finish set step to 5 --
 // skippedAt is the only signal that tells them apart (Backend-Schema.md
 // §2.2), so the "Finish onboarding" banner (UI-UX-Flow.md §3) only shows
@@ -41,7 +64,7 @@ export async function getOnboardingStep(ctx: RequestContext): Promise<number> {
   return data.onboarding_step;
 }
 
-// app/(app)/onboarding/page.tsx's initial render (Step 1's name pre-fill,
+// app/onboarding/page.tsx's initial render (Step 1's name pre-fill,
 // resuming at the right step) and the dashboard's "Finish onboarding"
 // banner (UI-UX-Flow.md §3) -- one query covers both call sites.
 export async function getOnboardingProfile(ctx: RequestContext): Promise<OnboardingProfile> {

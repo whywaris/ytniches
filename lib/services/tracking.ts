@@ -401,6 +401,22 @@ export async function markNotificationRead(
   return ok(undefined);
 }
 
+// UI-UX-Flow.md §4.2's top-bar notification bell badge. Count-only query
+// (head: true) -- the bell never needs the rows themselves, just the number.
+export async function getUnreadNotificationCount(ctx: RequestContext): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", ctx.userId)
+    .is("read_at", null);
+
+  if (error) {
+    throw new Error(`getUnreadNotificationCount query failed: ${error.message}`);
+  }
+  return count ?? 0;
+}
+
 // UI-UX-Flow.md §6.2's "Tracked since [date]" chip. `.maybeSingle()`, not
 // `.single()` (which findTrackedChannelRow above uses) -- this caller needs
 // to distinguish "not tracked" (null) from an actual query failure, since
@@ -422,6 +438,22 @@ export async function getTrackedChannel(
     throw new Error(`getTrackedChannel query failed: ${error.message}`);
   }
   return data ? toTrackedChannel(data) : null;
+}
+
+// UI-UX-Flow.md §4.5's dashboard metric card. Count-only, unlike
+// listTrackedChannelsSummary above which fetches full channel + activity
+// data for the tracking page's own panel.
+export async function getTrackedChannelCount(ctx: RequestContext): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("tracked_channels")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", ctx.userId);
+
+  if (error) {
+    throw new Error(`getTrackedChannelCount query failed: ${error.message}`);
+  }
+  return count ?? 0;
 }
 
 export interface TrackedChannelWithActivity {

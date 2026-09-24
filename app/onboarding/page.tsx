@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getRequestContext } from "@/lib/context";
 import { getOnboardingProfile } from "@/lib/services/onboarding";
-import { OnboardingClient } from "@/app/(app)/onboarding/onboarding-client";
+import { OnboardingClient } from "@/app/onboarding/onboarding-client";
 
 import type { Metadata } from "next";
 

@@ -389,6 +389,23 @@ export async function getPrompt(ctx: RequestContext, promptId: string): Promise<
   });
 }
 
+// UI-UX-Flow.md §4.5's dashboard metric card. Same kind/deleted_at
+// filtering as listPrompts, count-only.
+export async function getPromptCount(ctx: RequestContext): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("prompts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", ctx.userId)
+    .eq("kind", "prompt")
+    .is("deleted_at", null);
+
+  if (error) {
+    throw new Error(`getPromptCount query failed: ${error.message}`);
+  }
+  return count ?? 0;
+}
+
 export async function listPrompts(
   ctx: RequestContext,
   options: { limit?: number; search?: string } = {},

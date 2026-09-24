@@ -51,4 +51,17 @@ describe("Sidebar / SidebarItem", () => {
       "page",
     );
   });
+
+  it("asChild renders the wrapped link as a real anchor with the item's markup", () => {
+    render(
+      <Sidebar>
+        <SidebarItem asChild icon={<Compass />} label="Niche Finder" active>
+          <a href="/niches">Niche Finder</a>
+        </SidebarItem>
+      </Sidebar>,
+    );
+    const link = screen.getByRole("link", { name: "Niche Finder" });
+    expect(link).toHaveAttribute("href", "/niches");
+    expect(link).toHaveAttribute("aria-current", "page");
+  });
 });

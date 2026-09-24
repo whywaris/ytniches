@@ -29,6 +29,8 @@ const {
   removeChannelFromTracking,
   markNotificationRead,
   dismissNotification,
+  getUnreadNotificationCount,
+  getTrackedChannelCount,
 } = await import("@/lib/services/tracking");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
@@ -46,12 +48,13 @@ const YOUTUBE_CHANNEL_ITEM = {
 // filter/order/select method returns the same object (so any call order
 // works), and awaiting it directly resolves to `result` -- matching
 // supabase-js's own PostgrestFilterBuilder being a thenable.
-function makeQueryBuilder(result: { data: unknown; error: unknown }) {
+function makeQueryBuilder(result: { data: unknown; error: unknown; count?: number }) {
   const builder = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
     gte: vi.fn(() => builder),
     in: vi.fn(() => builder),
+    is: vi.fn(() => builder),
     maybeSingle: vi.fn(() => Promise.resolve(result)),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
@@ -513,5 +516,35 @@ describe("dismissNotification", () => {
     const result = await dismissNotification(ctx, "someone-elses-notification");
 
     expect(result).toEqual({ ok: false, error: { type: "not_found" } });
+  });
+});
+
+describe("getUnreadNotificationCount", () => {
+  it("returns the count", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, count: 3, error: null }));
+
+    const result = await getUnreadNotificationCount(ctx);
+
+    expect(result).toBe(3);
+  });
+
+  it("returns 0 when count is null", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: null, count: undefined, error: null }),
+    );
+
+    const result = await getUnreadNotificationCount(ctx);
+
+    expect(result).toBe(0);
+  });
+});
+
+describe("getTrackedChannelCount", () => {
+  it("returns the count", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, count: 7, error: null }));
+
+    const result = await getTrackedChannelCount(ctx);
+
+    expect(result).toBe(7);
   });
 });

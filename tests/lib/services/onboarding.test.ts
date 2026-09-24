@@ -13,6 +13,7 @@ vi.mock("@/lib/supabase/service", () => ({
 const {
   getOnboardingStep,
   getOnboardingProfile,
+  getProfileSummary,
   updateOnboardingStep,
   updateProfile,
   skipOnboarding,
@@ -123,6 +124,37 @@ describe("getOnboardingProfile", () => {
     );
 
     await expect(getOnboardingProfile(ctx)).rejects.toThrow("connection reset");
+  });
+});
+
+describe("getProfileSummary", () => {
+  it("maps the row to the ProfileSummary shape", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: {
+          name: "Ada",
+          avatar_url: "https://example.com/a.jpg",
+          time_zone: "America/New_York",
+        },
+        error: null,
+      }),
+    );
+
+    const result = await getProfileSummary(ctx);
+
+    expect(result).toEqual({
+      name: "Ada",
+      avatarUrl: "https://example.com/a.jpg",
+      timeZone: "America/New_York",
+    });
+  });
+
+  it("throws on an unexpected query error", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: null, error: { message: "connection reset" } }),
+    );
+
+    await expect(getProfileSummary(ctx)).rejects.toThrow("connection reset");
   });
 });
 

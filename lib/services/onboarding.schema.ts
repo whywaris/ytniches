@@ -19,6 +19,6 @@ export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>;
 
 // onboarding_step: 0 (not started) through 5 (completed) -- Backend-Schema.md
 // §2.2. Value 3 is reserved but never persisted (Steps 3+4 share one
-// screen -- see app/(app)/onboarding/page.tsx), but the schema doesn't
+// screen -- see app/onboarding/page.tsx), but the schema doesn't
 // need to know that -- it just bounds the column's valid range.
 export const OnboardingStepSchema = z.number().int().min(0).max(5);

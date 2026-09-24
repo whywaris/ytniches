@@ -21,7 +21,7 @@ const {
   updateProfileAction,
   skipOnboardingAction,
   completeOnboardingAction,
-} = await import("@/app/(app)/onboarding/actions");
+} = await import("@/app/onboarding/actions");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
 

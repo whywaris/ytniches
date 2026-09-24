@@ -321,6 +321,17 @@ Added during Competitor Tracking build (Implementation-Plan.md §3.1 Phase 1 Tas
 - **Keyboard:** arrow keys move focus and activate (roving tabindex), Home/End jump to first/last — via Radix `Tabs`, not hand-rolled
 - **Disabled tab:** supported via the underlying `disabled` prop, `opacity-50` + `pointer-events-none`
 
+---
+
+### 5.13 Dropdown menu
+
+Added during the App Shell build (D-037) for the top-bar account menu — no primitive existed yet, same gap as §5.12's Tabs.
+
+- **Trigger:** any element via `asChild` (button, avatar)
+- **Content:** `elev-2` popover, `min-w-44`, opens aligned to the trigger's end edge
+- **Item:** icon + label row, `hover`/`highlighted` background; a `destructive` variant (red text) for actions like "Log out"
+- **Keyboard/focus-trap:** native Radix `DropdownMenu` behavior, same as §5.6/§5.12's Radix-backed primitives
+
 ## 6. Data Visualization & Accessibility
 
 ### 6.1 Data visualization

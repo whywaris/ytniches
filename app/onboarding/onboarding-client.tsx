@@ -9,7 +9,7 @@ import {
   skipOnboardingAction,
   updateOnboardingStepAction,
   updateProfileAction,
-} from "@/app/(app)/onboarding/actions";
+} from "@/app/onboarding/actions";
 import { saveChannelAction, searchNichesAction } from "@/app/(app)/niches/actions";
 import { toSearchState, type SearchState } from "@/app/(app)/niches/search-state";
 import { toSearchInput } from "@/app/(app)/niches/url-filters";
