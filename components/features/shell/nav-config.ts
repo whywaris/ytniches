@@ -19,23 +19,62 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Which sidebar count badge (if any) this item shows. */
+  count?: "trackedChannels" | "prompts";
 }
 
-export const PRIMARY_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/niches", label: "Niche Finder", icon: Search },
-  { href: "/tracking", label: "Competitor Tracking", icon: Radar },
-  { href: "/prompts", label: "AI Prompts", icon: Sparkles },
-  { href: "/outliers", label: "Outliers", icon: Flame },
+export interface NavGroup {
+  title: string;
+  items: NavItem[];
+  /** Only rendered for users with a workspace membership (no greyed items). */
+  workspaceOnly?: boolean;
+}
+
+export const DASHBOARD_NAV: NavItem = { href: "/dashboard", label: "Dashboard", icon: Home };
+
+// Sidebar grouping (dashboard redesign). One nav item per page -- counts
+// live as badges on the page's own item, not as duplicate "library" links.
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Research",
+    items: [
+      { href: "/niches", label: "Niche Finder", icon: Search },
+      { href: "/outliers", label: "Outliers", icon: Flame },
+      { href: "/tracking", label: "Competitor Tracking", icon: Radar, count: "trackedChannels" },
+    ],
+  },
+  {
+    title: "Create",
+    items: [{ href: "/prompts", label: "AI Prompts", icon: Sparkles, count: "prompts" }],
+  },
+  {
+    title: "Plan",
+    workspaceOnly: true,
+    items: [
+      { href: "/calendar", label: "Calendar", icon: Calendar },
+      { href: "/workspace/tasks", label: "Tasks", icon: CheckSquare },
+      { href: "/workspace", label: "Workspace", icon: Building2 },
+    ],
+  },
 ];
 
-// Only rendered when listMyWorkspaceMemberships() returns at least one
-// membership (D-037 proposal, "no greyed items for non-Team users").
-export const TEAM_NAV: NavItem[] = [
-  { href: "/workspace", label: "Workspace", icon: Building2 },
-  { href: "/workspace/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
+// Flat views of the groups, for the command palette's Navigation group.
+export const PRIMARY_NAV: NavItem[] = [
+  DASHBOARD_NAV,
+  ...NAV_GROUPS.filter((group) => !group.workspaceOnly).flatMap((group) => group.items),
 ];
+export const TEAM_NAV: NavItem[] = NAV_GROUPS.filter((group) => group.workspaceOnly).flatMap(
+  (group) => group.items,
+);
+
+// The single nav href that owns this pathname: longest prefix wins, so
+// /workspace/tasks highlights Tasks only, not Workspace too.
+export function activeNavHref(pathname: string, items: NavItem[]): string | null {
+  const matches = items
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length);
+  return matches[0]?.href ?? null;
+}
 
 export const SETTINGS_NAV: NavItem = {
   href: "/settings/billing",

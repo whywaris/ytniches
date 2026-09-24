@@ -52,27 +52,6 @@ export async function getBalance(ctx: RequestContext): Promise<number> {
   return data.reduce((sum, row) => sum + row.amount, 0);
 }
 
-// UI-UX-Flow.md §4.5's dashboard metric card. Sum of only 'consumption'
-// events since cycle start, as a positive number -- getBalance above sums
-// every event type (allocation, consumption, refund) to get the current
-// balance, which isn't the same number.
-export async function getCreditsUsedThisMonth(ctx: RequestContext): Promise<number> {
-  const cycleStart = await getCycleStart(ctx.userId);
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("credit_events")
-    .select("amount")
-    .eq("user_id", ctx.userId)
-    .eq("event_type", "consumption")
-    .gte("created_at", cycleStart.toISOString());
-
-  if (error) {
-    throw new Error(`getCreditsUsedThisMonth query failed: ${error.message}`);
-  }
-
-  return data.reduce((sum, row) => sum - row.amount, 0);
-}
-
 // TOCTOU: balance check and insert are not atomic.
 // Small overdraft possible under concurrent requests.
 // Acceptable for trial credits; revisit when billing

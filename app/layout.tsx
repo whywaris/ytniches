@@ -26,7 +26,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+      {/* Browser extensions inject attributes onto <body> (e.g.
+          __processed_<uuid>__) before hydration. This suppresses only
+          <body>'s own attribute mismatch, not its children's. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

@@ -31,6 +31,7 @@ const {
   dismissNotification,
   getUnreadNotificationCount,
   getTrackedChannelCount,
+  listRecentUploadsByChannel,
 } = await import("@/lib/services/tracking");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
@@ -546,5 +547,57 @@ describe("getTrackedChannelCount", () => {
     const result = await getTrackedChannelCount(ctx);
 
     expect(result).toBe(7);
+  });
+});
+
+describe("listRecentUploadsByChannel", () => {
+  it("returns [] without querying videos when nothing is tracked", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: [], error: null }));
+
+    expect(await listRecentUploadsByChannel(ctx)).toEqual([]);
+    expect(sessionFrom).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads videos for tracked channels in the last 7 days and groups them", async () => {
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: [{ channel_id: "chan-1" }, { channel_id: "chan-2" }], error: null }),
+    );
+    const videosBuilder = makeQueryBuilder({
+      data: [
+        {
+          id: "v2",
+          channel_id: "chan-1",
+          title: "Two",
+          thumbnail_url: "t2",
+          published_at: "2026-09-22T00:00:00Z",
+        },
+        {
+          id: "v1",
+          channel_id: "chan-1",
+          title: "One",
+          thumbnail_url: "t1",
+          published_at: "2026-09-20T00:00:00Z",
+        },
+      ],
+      error: null,
+    });
+    sessionFrom.mockReturnValueOnce(videosBuilder);
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: [
+          { id: "chan-1", name: "Sleep Sounds Daily", avatar_url: null },
+          { id: "chan-2", name: "Quiet Channel", avatar_url: null },
+        ],
+        error: null,
+      }),
+    );
+
+    const groups = await listRecentUploadsByChannel(ctx);
+
+    expect(sessionFrom).toHaveBeenNthCalledWith(2, "videos");
+    expect(videosBuilder.in).toHaveBeenCalledWith("channel_id", ["chan-1", "chan-2"]);
+    expect(videosBuilder.gte).toHaveBeenCalledWith("published_at", expect.any(String));
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ channelName: "Sleep Sounds Daily", uploadCount: 2 });
   });
 });

@@ -58,7 +58,7 @@ vi.mock("@/lib/supabase/service", () => ({
   })),
 }));
 
-const { getBalance, getCreditsUsedThisMonth, consume, refund } = await import("@/lib/credits");
+const { getBalance, consume, refund } = await import("@/lib/credits");
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
 beforeEach(() => {
@@ -112,23 +112,6 @@ describe("getCycleStart (via getBalance's gte filter)", () => {
   it("throws if the subscription lookup itself fails", async () => {
     subscriptionResult = { data: null, error: { message: "connection reset" } };
     await expect(getBalance(ctx)).rejects.toThrow("connection reset");
-  });
-});
-
-describe("getCreditsUsedThisMonth", () => {
-  it("sums only consumption rows, as a positive number", async () => {
-    selectResult = { data: [{ amount: -5 }, { amount: -3 }], error: null };
-    expect(await getCreditsUsedThisMonth(ctx)).toBe(8);
-  });
-
-  it("returns 0 when no consumption events exist in the current cycle", async () => {
-    selectResult = { data: [], error: null };
-    expect(await getCreditsUsedThisMonth(ctx)).toBe(0);
-  });
-
-  it("throws on a query error", async () => {
-    selectResult = { data: null, error: { message: "connection reset" } };
-    await expect(getCreditsUsedThisMonth(ctx)).rejects.toThrow("connection reset");
   });
 });
 

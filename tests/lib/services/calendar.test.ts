@@ -39,7 +39,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: sessionFrom }),
 }));
 
-const { createEntry, deleteEntry, listEntries, moveEntry, updateEntry } =
+const { createEntry, deleteEntry, getCalendarEntryCount, listEntries, moveEntry, updateEntry } =
   await import("@/lib/services/calendar");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
@@ -174,5 +174,17 @@ describe("deleteEntry", () => {
     queueMembers({ data: { role: "editor" }, error: null });
     const result = await deleteEntry(ctx, "e1");
     expect(result).toEqual({ ok: true, value: undefined });
+  });
+});
+
+describe("getCalendarEntryCount", () => {
+  it("returns the count of live entries for the workspace", async () => {
+    entriesResult = { data: null, error: null, count: 5 } as typeof entriesResult;
+    expect(await getCalendarEntryCount("ws-1")).toBe(5);
+  });
+
+  it("returns 0 when count is null", async () => {
+    entriesResult = { data: null, error: null };
+    expect(await getCalendarEntryCount("ws-1")).toBe(0);
   });
 });

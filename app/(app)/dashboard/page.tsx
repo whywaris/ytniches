@@ -1,25 +1,19 @@
-import Link from "next/link";
-
-import { Radar, Sparkles, Zap } from "lucide-react";
+import { Suspense } from "react";
 
 import { getRequestContext } from "@/lib/context";
-import { getBalance, getCreditsUsedThisMonth } from "@/lib/credits";
 import {
   getOnboardingProfile,
   getProfileSummary,
   shouldShowFinishOnboardingBanner,
 } from "@/lib/services/onboarding";
-import { getActivityFeed, getTrackedChannelCount } from "@/lib/services/tracking";
-import { getPromptCount } from "@/lib/services/prompts";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { MetricCard } from "@/components/features/dashboard/metric-card";
+import { listMyWorkspaceMemberships } from "@/lib/services/workspace";
+import { ComingUp } from "@/components/features/dashboard/coming-up";
+import { SectionSkeleton } from "@/components/features/dashboard/dashboard-section";
+import { LatestUploads } from "@/components/features/dashboard/latest-uploads";
+import { NextStepCard } from "@/components/features/dashboard/next-step-card";
+import { OutliersThisWeek } from "@/components/features/dashboard/outliers-this-week";
+import { StatsStrip } from "@/components/features/dashboard/stats-strip";
 import { FinishOnboardingBanner } from "@/app/(app)/dashboard/finish-onboarding-banner";
-import {
-  ContinueWhereLeftOff,
-  StreakMetricCard,
-} from "@/app/(app)/dashboard/dashboard-client-widgets";
 
 import type { Metadata } from "next";
 
@@ -38,84 +32,50 @@ function greetingFor(timeZone: string): string {
   return "evening";
 }
 
-// UI-UX-Flow.md §4.5. D-037: replaces the placeholder that stood in for
-// this page while no app shell existed to provide navigation -- the shell
-// now owns that job, so this page can focus purely on content.
+// UI-UX-Flow.md §4.5, redesigned: greeting + one next step, then outliers,
+// uploads, what's coming up, and a compact stats line. Only the greeting
+// data is awaited here; every section streams in its own Suspense so one
+// slow query never holds up the rest. ctx is resolved once and passed down.
 export default async function DashboardPage() {
   const ctx = await getRequestContext();
-  const [profile, onboarding, trackedChannelCount, promptCount, balance, creditsUsed, activity] =
-    await Promise.all([
-      getProfileSummary(ctx),
-      getOnboardingProfile(ctx),
-      getTrackedChannelCount(ctx),
-      getPromptCount(ctx),
-      getBalance(ctx),
-      getCreditsUsedThisMonth(ctx),
-      getActivityFeed(ctx, { limit: 10 }),
-    ]);
-
-  const showFinishOnboardingBanner = shouldShowFinishOnboardingBanner(onboarding);
-  const isEmpty = trackedChannelCount === 0 && promptCount === 0;
-  const greeting = greetingFor(profile.timeZone);
+  const [profile, onboarding, memberships] = await Promise.all([
+    getProfileSummary(ctx),
+    getOnboardingProfile(ctx),
+    listMyWorkspaceMemberships(ctx),
+  ]);
+  const workspaceId = memberships[0]?.workspaceId ?? null;
   const firstName = profile.name?.split(" ")[0];
 
   return (
     <div className="pb-10">
-      {showFinishOnboardingBanner ? <FinishOnboardingBanner /> : null}
+      {shouldShowFinishOnboardingBanner(onboarding) ? <FinishOnboardingBanner /> : null}
 
       <h1 className="text-h2 font-semibold text-text-primary">
-        Good {greeting}
+        Good {greetingFor(profile.timeZone)}
         {firstName ? `, ${firstName}` : ""}
       </h1>
 
-      {isEmpty ? (
-        <Card className="mt-4">
-          <EmptyState message="Ready when you are. Try Niche Finder to discover channels." />
-          <div className="flex justify-center">
-            <Button asChild>
-              <Link href="/niches">Try Niche Finder</Link>
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <>
-          <p className="mt-1 text-body-sm text-text-secondary">
-            You have {balance} credits and {trackedChannelCount} tracked channel
-            {trackedChannelCount === 1 ? "" : "s"}.
-          </p>
+      <Suspense fallback={<SectionSkeleton />}>
+        <NextStepCard ctx={ctx} workspaceId={workspaceId} />
+      </Suspense>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <MetricCard label="Tracked channels" value={trackedChannelCount} icon={Radar} />
-            <MetricCard label="Saved prompts" value={promptCount} icon={Sparkles} />
-            <MetricCard label="Credits used this month" value={creditsUsed} icon={Zap} />
-            <StreakMetricCard />
-          </div>
+      <Suspense fallback={<SectionSkeleton rows={2} />}>
+        <OutliersThisWeek ctx={ctx} />
+      </Suspense>
 
-          <div className="mt-8">
-            <ContinueWhereLeftOff />
-          </div>
+      <Suspense fallback={<SectionSkeleton rows={3} height="h-16" />}>
+        <LatestUploads ctx={ctx} />
+      </Suspense>
 
-          <div className="mt-8">
-            <h2 className="mb-2 text-body-sm font-semibold text-text-secondary">Recent activity</h2>
-            {activity.ok && activity.value.notifications.length > 0 ? (
-              <Card padding="sm">
-                <ul className="divide-y divide-border-subtle">
-                  {activity.value.notifications.map((notification) => (
-                    <li key={notification.id} className="px-1 py-2.5 text-body-sm">
-                      <div className="text-text-primary">{notification.title}</div>
-                      {notification.body ? (
-                        <div className="text-text-tertiary">{notification.body}</div>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ) : (
-              <p className="text-body-sm text-text-tertiary">No activity yet.</p>
-            )}
-          </div>
-        </>
-      )}
+      {workspaceId ? (
+        <Suspense fallback={<SectionSkeleton rows={2} height="h-20" />}>
+          <ComingUp ctx={ctx} workspaceId={workspaceId} />
+        </Suspense>
+      ) : null}
+
+      <Suspense fallback={<SectionSkeleton height="h-6" />}>
+        <StatsStrip ctx={ctx} />
+      </Suspense>
     </div>
   );
 }

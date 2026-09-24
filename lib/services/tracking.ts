@@ -7,6 +7,7 @@ import {
   type NotFoundError,
   type SaveChannelError,
 } from "@/lib/services/channels";
+import { groupUploadsByChannel, type ChannelUploadGroup } from "@/lib/dashboard";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -454,6 +455,65 @@ export async function getTrackedChannelCount(ctx: RequestContext): Promise<numbe
     throw new Error(`getTrackedChannelCount query failed: ${error.message}`);
   }
   return count ?? 0;
+}
+
+const RECENT_UPLOADS_WINDOW_DAYS = 7;
+// ponytail: fixed cap, not per-channel -- a handful of very prolific
+// channels could crowd out quieter ones past 100 uploads/week total.
+const RECENT_UPLOADS_LIMIT = 100;
+
+// Dashboard "Latest from your channels" (UI-UX-Flow.md §4.5). Reads videos
+// directly rather than new_video notifications, so a channel with
+// notifications turned off still shows up. 3 queries max regardless of
+// channel count; grouping is lib/dashboard.ts's groupUploadsByChannel.
+export async function listRecentUploadsByChannel(
+  ctx: RequestContext,
+): Promise<ChannelUploadGroup[]> {
+  const supabase = await createClient();
+  const { data: tracked, error } = await supabase
+    .from("tracked_channels")
+    .select("channel_id")
+    .eq("user_id", ctx.userId);
+  if (error) {
+    throw new Error(`listRecentUploadsByChannel tracked query failed: ${error.message}`);
+  }
+  if (tracked.length === 0) return [];
+
+  const channelIds = tracked.map((row) => row.channel_id);
+  const since = new Date(Date.now() - RECENT_UPLOADS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  const [{ data: videos, error: videosError }, { data: channels, error: channelsError }] =
+    await Promise.all([
+      supabase
+        .from("videos")
+        .select("id, channel_id, title, thumbnail_url, published_at")
+        .in("channel_id", channelIds)
+        .gte("published_at", since.toISOString())
+        .order("published_at", { ascending: false })
+        .limit(RECENT_UPLOADS_LIMIT),
+      supabase.from("channels").select("id, name, avatar_url").in("id", channelIds),
+    ]);
+  if (videosError) {
+    throw new Error(`listRecentUploadsByChannel videos query failed: ${videosError.message}`);
+  }
+  if (channelsError) {
+    throw new Error(`listRecentUploadsByChannel channels query failed: ${channelsError.message}`);
+  }
+
+  return groupUploadsByChannel(
+    videos.map((video) => ({
+      videoId: video.id,
+      channelId: video.channel_id,
+      title: video.title,
+      thumbnailUrl: video.thumbnail_url,
+      publishedAt: video.published_at,
+    })),
+    channels.map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+      avatarUrl: channel.avatar_url,
+    })),
+  );
 }
 
 export interface TrackedChannelWithActivity {

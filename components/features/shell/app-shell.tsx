@@ -115,6 +115,7 @@ function AppShell({
         hasWorkspace={hasWorkspace}
         trackedChannelCount={trackedChannelCount}
         promptCount={promptCount}
+        onOpenSearch={() => setPaletteOpen(true)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopBar
