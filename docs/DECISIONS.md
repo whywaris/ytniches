@@ -284,7 +284,7 @@ Decisions that still need to close before their dependent docs / features can be
   - Which "stuck" moment mattered most (competitor spying / outlier detection / content ideas / script writing / consistency)
   - Contrarian opinion — a strong take that most faceless-creator advice gets wrong
 - **Recommendation:** Book a 20-minute founder discovery to extract these, then draft copy in Mac's voice. Cannot fake this input.
-- **Final call:** Founder story confirmed — World War 2 faceless channel; the stuck moment was finding topics, outliers, and prompts (which competitor videos were working, what topics were breaking out, how to turn that into scripts). Deployed in the landing page founder section; Landing-Copy.md §4.3 now holds the final copy. Contrarian opinion not provided — stays optional.
+- **Final call:** Founder story confirmed — World War 2 faceless YouTube channel. Stuck moment: no system for topics, outliers, or prompts after finding the niche. Deployed in landing page (content.ts, founder-section.tsx).
 
 ---
 
