@@ -39,11 +39,19 @@ function renderForm(overrides: Partial<ComponentProps<typeof GeneratorForm>> = {
   return { ...utils, ...props };
 }
 
+// Keyboard, not clicks: under isolate: false the jsdom document outlives
+// each test file, and an earlier file's user-event pointer state on it
+// (e.g. table.test.tsx's clicks) stops a click from opening the Select.
+// Only shows up with CI's uncached file order on one worker.
 async function pickChannelAndVideo(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("combobox", { name: "Tracked channel" }));
-  await user.click(await screen.findByRole("option", { name: "Sleep Sounds Daily" }));
-  await user.click(await screen.findByRole("combobox", { name: "Video" }));
-  await user.click(await screen.findByRole("option", { name: /8 Hours of Deep Sleep/ }));
+  screen.getByRole("combobox", { name: "Tracked channel" }).focus();
+  await user.keyboard("{Enter}");
+  await screen.findByRole("option", { name: "Sleep Sounds Daily" });
+  await user.keyboard("{Enter}");
+  (await screen.findByRole("combobox", { name: "Video" })).focus();
+  await user.keyboard("{Enter}");
+  await screen.findByRole("option", { name: /8 Hours of Deep Sleep/ });
+  await user.keyboard("{Enter}");
 }
 
 // The other state-transition tests below (results/error rendering, reset)
