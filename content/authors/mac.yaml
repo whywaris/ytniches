@@ -1,0 +1,10 @@
+# D-017 (option A): solo author at launch. Adding a writer = adding a file
+# like this one; posts point at it with `author: <slug>`.
+slug: mac
+name: Mac
+role: Founder, YTNiches
+bio: >-
+  I started a World War 2 faceless YouTube channel, got stuck after finding
+  the niche, and dropped it. YTNiches is the tool I wish I'd had.
+avatar: null
+social: {}

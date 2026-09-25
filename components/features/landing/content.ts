@@ -20,8 +20,14 @@ export const NAV_LINKS: NavLinkItem[] = [
   { label: "Product", href: "/#features" },
   { label: "Tools", href: null },
   { label: "Pricing", href: "/pricing" },
-  { label: "Blog", href: null },
+  { label: "Blog", href: "/blog" },
 ];
+
+// The blog link switches on at build time once at least one post is
+// visible (published, or any post in `next dev`); "Soon" until then.
+export function withBlogLink<T extends NavLinkItem>(items: T[], blogLive: boolean): T[] {
+  return items.map((item) => (item.href === "/blog" && !blogLive ? { ...item, href: null } : item));
+}
 
 export const HERO = {
   eyebrow: "For faceless YouTube creators",
@@ -409,7 +415,7 @@ export const FOOTER = {
     {
       heading: "Resources",
       links: [
-        { label: "Blog", href: null },
+        { label: "Blog", href: "/blog" },
         { label: "Tutorials", href: null },
         { label: "VS pages", href: "/#compare" },
         { label: "Templates", href: "/#templates" },

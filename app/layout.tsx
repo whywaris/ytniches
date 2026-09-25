@@ -1,5 +1,6 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
 
+import { SITE_URL } from "@/lib/site";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 import type { Metadata } from "next";
@@ -19,6 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "YTNiches",
   description: "Research + execution loop for YouTube creators.",
 };

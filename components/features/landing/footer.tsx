@@ -1,10 +1,10 @@
 import { Sparkles } from "lucide-react";
 
-import { FOOTER, askAiLinks } from "@/components/features/landing/content";
+import { FOOTER, askAiLinks, withBlogLink } from "@/components/features/landing/content";
 import { SoonLink } from "@/components/features/landing/soon-link";
 
 // Landing-Page-Spec §15. Social row omitted with Mac's handles (call F).
-function Footer() {
+function Footer({ blogLive = false }: { blogLive?: boolean }) {
   return (
     <footer className="border-t border-border-subtle bg-bg-base px-6 py-20 md:px-10">
       <div className="mx-auto max-w-[1440px]">
@@ -18,7 +18,7 @@ function Footer() {
             <nav key={column.heading} aria-label={column.heading}>
               <h2 className="text-body-sm font-semibold text-text-primary">{column.heading}</h2>
               <ul className="mt-4 space-y-3 text-body-sm text-text-secondary">
-                {column.links.map((link) => (
+                {withBlogLink(column.links, blogLive).map((link) => (
                   <li key={link.label}>
                     <SoonLink item={link} />
                   </li>

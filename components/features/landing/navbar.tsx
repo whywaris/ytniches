@@ -9,7 +9,7 @@ import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { NAV_LINKS } from "@/components/features/landing/content";
+import { NAV_LINKS, withBlogLink } from "@/components/features/landing/content";
 import { CtaLink } from "@/components/features/landing/cta-link";
 import { SoonLink } from "@/components/features/landing/soon-link";
 
@@ -24,7 +24,8 @@ function Wordmark() {
 // Landing-Page-Spec §1: 72px, sticky; transparent over the hero, bg-base +
 // border + blur once scrolled. Mobile: full-screen overlay (Radix Dialog
 // via ui/Modal -- focus trap, Esc, focus return for free).
-function Navbar() {
+function Navbar({ blogLive = false }: { blogLive?: boolean }) {
+  const links = withBlogLink(NAV_LINKS, blogLive);
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -50,7 +51,7 @@ function Navbar() {
       >
         <Wordmark />
         <ul className="hidden items-center gap-6 text-body-sm text-text-secondary md:flex">
-          {NAV_LINKS.map((item) => (
+          {links.map((item) => (
             <li key={item.label}>
               <SoonLink item={item} />
             </li>
@@ -84,7 +85,7 @@ function Navbar() {
 
       <Modal open={menuOpen} onOpenChange={setMenuOpen} title="Menu" size="full">
         <ul className="flex flex-col gap-5 text-h3 text-text-primary">
-          {NAV_LINKS.map((item) => (
+          {links.map((item) => (
             <li key={item.label}>
               <SoonLink item={item} onClick={() => setMenuOpen(false)} />
             </li>

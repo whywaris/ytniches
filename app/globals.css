@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 /* Design-System.md §2. Dark mode is the primary experience (§1.1
    principle 1) — these :root values ARE the dark theme, no attribute
@@ -202,5 +203,31 @@
     transition-duration: 50ms !important;
     transition-timing-function: linear !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Blog article body (D-006): Tailwind Typography mapped onto our tokens,
+   so MDX posts match the rest of the marketing site. */
+@utility prose-ytn {
+  --tw-prose-body: var(--text-secondary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-lead: var(--text-secondary);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-counters: var(--text-secondary);
+  --tw-prose-bullets: var(--border-strong);
+  --tw-prose-hr: var(--border-subtle);
+  --tw-prose-quotes: var(--text-primary);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-captions: var(--text-secondary);
+  --tw-prose-kbd: var(--text-primary);
+  --tw-prose-code: var(--text-primary);
+  --tw-prose-pre-code: var(--text-primary);
+  --tw-prose-pre-bg: var(--bg-surface-1);
+  --tw-prose-th-borders: var(--border-default);
+  --tw-prose-td-borders: var(--border-subtle);
+
+  & :is(h2, h3) {
+    scroll-margin-top: 96px;
   }
 }

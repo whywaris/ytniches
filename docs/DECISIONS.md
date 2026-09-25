@@ -238,13 +238,13 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-017: Blog author scope at launch
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-25)
 - **Impacts:** Blog schema, content workflow, launch content strategy
 - **Options:**
   - A: Solo (Mac only), multi-author schema built but only one author record
   - B: Multi-contributor from day 1 (Mac + 1–2 guest writers lined up)
 - **Recommendation:** Option A. Ship with schema ready for multi-author, add contributors when they exist. Avoids waiting on a hire.
-- **Final call:** —
+- **Final call:** Option A. Mac is the only author at launch (`content/authors/mac.yaml`). Posts reference an author by slug, and `/blog/authors/[slug]` is built for every YAML file, so adding a writer means adding one file.
 
 ---
 
@@ -619,3 +619,20 @@ Decisions that still need to close before their dependent docs / features can be
   - The quota trend only goes back to when the 8-day Redis TTL shipped.
   - The body field for Creem's refund request (`transaction_id`) isn't in Creem's public docs. A non-2xx response raises an error the admin sees and releases the idempotency key.
 - **Impacts:** `app/(admin)/admin/*`, `lib/services/admin.ts`, migration `20260924120000_admin_panel.sql`.
+
+### D-053: Blog build calls — newsletter, drafts, no ISR, no pagination
+
+- **Status:** Resolved (2026-09-25)
+- **Context:** Building the blog (PRD.md §10.2, UI-UX-Flow.md §2.2, D-005, D-006) raised calls the specs don't cover.
+- **Final call:**
+  - **Newsletter = Resend contacts.** Signups become contacts in the Resend "Newsletter" segment (`RESEND_NEWSLETTER_SEGMENT_ID`). There's no subscriber table. Sending happens later through Resend Broadcasts, which handles unsubscribe.
+    - No double opt-in at launch. The form says what people get: "New posts by email. Unsubscribe anytime."
+    - A public form means spam protection: a hidden honeypot field plus 5 signups per IP per hour (Upstash).
+    - An existing contact gets the same "you're in" reply, so the form never reveals who's subscribed.
+  - **Drafts.** `draft: true` posts show only in `next dev`, with a DRAFT banner. Production builds, the sitemap and RSS never include them. A test fails CI if a published post links to an unpublished one.
+  - **Blog nav link.** It switches on at build time once at least one post is visible, and shows "Soon" until then.
+  - **No ISR.** TRD.md §2 says revalidate every 60s, but posts live in git and every change ships with a deploy, so pages are plain static generation.
+  - **No pagination.** UI-UX-Flow.md §2.2 asks for paginated category and author pages. Add it when any list passes 12 posts.
+  - **Search.** Client-side Fuse.js over title, tags, category and excerpt. Category pills are plain links to category pages, not client-side filters (static, crawlable, no extra JS).
+  - **Share images.** Generated per post at build time (title on the brand background). A post's `coverImage` shows on the page but doesn't replace the generated share image.
+- **Impacts:** `content/`, `lib/blog/`, `app/(marketing)/blog/*`, `app/sitemap.ts`, `lib/services/newsletter.ts`, `.env.example`.
