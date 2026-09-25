@@ -12,7 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Tag } from "@/components/ui/tag";
 import { useToast } from "@/components/ui/toast-provider";
-import { TIER_INFO } from "@/components/features/billing/tier-cards";
+import { TIER_INFO } from "@/lib/billing/plans";
 import { UpgradeModal } from "@/components/features/billing/upgrade-modal";
 
 export interface BillingClientProps {

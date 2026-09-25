@@ -366,19 +366,19 @@ export const COMPETITORS = [
     id: "nexlev",
     name: "Nexlev",
     framing:
-      "Nexlev is solid for niche finding and outliers. YTNiches does that too — and keeps going into prompts, calendar, and workspace.",
+      "Nexlev is strong on niche research: a huge channel database, RPM predictions and a Chrome extension. YTNiches focuses on what comes next: scripts, a content calendar and team tasks.",
   },
   {
     id: "outlierkit",
     name: "OutlierKit",
     framing:
-      "OutlierKit nails outlier detection. If that’s all you need, use it. If you also need to know what to do with those outliers, that’s us.",
+      "OutlierKit is great at outlier and keyword research across a whole niche. If research is all you need, use it. If you want it to turn into scripts, a calendar and team tasks, that’s us.",
   },
   {
     id: "tubelab",
     name: "TubeLab",
     framing:
-      "TubeLab covers niche research well. We overlap there and add the execution layer they don’t have.",
+      "TubeLab covers niche research and scripts well. YTNiches overlaps there, then goes further into planning: a content calendar and team tasks.",
   },
 ] as const;
 

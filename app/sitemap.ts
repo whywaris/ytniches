@@ -1,12 +1,13 @@
 import { getAuthors, getPublishedPosts, getTags } from "@/lib/blog";
 import { CATEGORIES } from "@/lib/blog/categories";
+import { COMPETITOR_PAGES } from "@/content/vs";
 import { SITE_URL } from "@/lib/site";
 
 import type { MetadataRoute } from "next";
 
 // PRD.md §10.2 "sitemap auto-generated". Indexable public pages only:
-// /vs/* stubs are noindex, and blog lists appear once they have a
-// published post. Drafts never appear, whatever the environment.
+// blog lists appear once they have a published post, and drafts never
+// appear, whatever the environment.
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getPublishedPosts();
   const latest = (list: typeof posts) => list[0]?.updatedDate ?? list[0]?.publishDate;
@@ -18,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     entry("/"),
     entry("/pricing"),
+    ...COMPETITOR_PAGES.map((page) => entry(`/vs/${page.id}`, page.checkedOn)),
     ...(posts.length > 0 ? [entry("/blog", latest(posts))] : []),
     ...posts.map((post) => entry(`/blog/${post.slug}`, post.updatedDate ?? post.publishDate)),
     ...CATEGORIES.flatMap((category) => {

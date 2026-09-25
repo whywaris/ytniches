@@ -1,48 +1,33 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { COMPETITORS } from "@/components/features/landing/content";
+import { COMPETITOR_PAGES, getCompetitorPage } from "@/content/vs";
+import { VsComparison } from "@/components/features/vs/vs-comparison";
 
 import type { Metadata } from "next";
 
-// Stub so the landing VS cards don't 404 (Application-Flow §2.1
-// /vs/[competitor]). noindex until the real comparison is written --
-// thin placeholder pages shouldn't compete in search.
+// PRD.md §10.5: SEO pages for competitor-brand queries, statically built.
+// Facts live in content/vs/<id>.ts (sources + check date, guarded by
+// tests/content/vs.test.ts).
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return COMPETITORS.map((competitor) => ({ competitor: competitor.id }));
+  return COMPETITOR_PAGES.map((page) => ({ competitor: page.id }));
 }
 
 type Params = Promise<{ competitor: string }>;
 
-function find(id: string) {
-  return COMPETITORS.find((competitor) => competitor.id === id);
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const competitor = find((await params).competitor);
+  const page = getCompetitorPage((await params).competitor);
+  if (!page) return {};
   return {
-    title: competitor ? `YTNiches vs ${competitor.name}` : "Comparison",
-    robots: { index: false },
+    title: `YTNiches vs ${page.name}: an honest comparison`,
+    description: `${page.bestFor.them} ${page.bestFor.us}`,
+    alternates: { canonical: `/vs/${page.id}` },
   };
 }
 
 export default async function VsPage({ params }: { params: Params }) {
-  const competitor = find((await params).competitor);
-  if (!competitor) notFound();
-
-  return (
-    <div className="mx-auto max-w-2xl px-6 py-32 text-center">
-      <h1 className="text-h1 font-semibold text-text-primary">YTNiches vs {competitor.name}</h1>
-      <p className="mt-4 text-body-lg text-text-secondary">{competitor.framing}</p>
-      <p className="mt-8 text-body text-text-secondary">The full comparison is coming soon.</p>
-      <Link
-        href="/#compare"
-        className="mt-10 inline-block text-body-sm font-medium text-accent hover:underline"
-      >
-        ← Back to comparisons
-      </Link>
-    </div>
-  );
+  const page = getCompetitorPage((await params).competitor);
+  if (!page) notFound();
+  return <VsComparison page={page} />;
 }
