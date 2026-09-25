@@ -46,3 +46,38 @@ export function computeBaseline(priorVideos: BaselineVideo[]): number | null {
 
   return window.reduce((sum, video) => sum + video.viewCount, 0) / window.length;
 }
+
+export interface ChannelVideo extends BaselineVideo {
+  id: string;
+}
+
+export interface OutlierEvaluation {
+  views: number;
+  // null = fewer than BASELINE_MIN_VIDEOS earlier uploads (cold start).
+  baseline: number | null;
+  // views / baseline; null when there's no baseline or it's 0.
+  multiplier: number | null;
+  isOutlier: boolean;
+}
+
+// One video against its own channel: the baseline comes from the channel's
+// uploads published strictly before it. Shared by the channel-sync worker
+// and the free Outlier Checker so both judge a video the same way.
+export function evaluateAgainstChannel(
+  candidate: ChannelVideo,
+  channelVideos: ChannelVideo[],
+): OutlierEvaluation {
+  const publishedAtMs = new Date(candidate.publishedAt).getTime();
+  const priorVideos = channelVideos.filter(
+    (other) => other.id !== candidate.id && new Date(other.publishedAt).getTime() < publishedAtMs,
+  );
+  const baseline = computeBaseline(priorVideos);
+  const views = candidate.viewCount;
+  if (baseline === null) return { views, baseline, multiplier: null, isOutlier: false };
+  return {
+    views,
+    baseline,
+    multiplier: baseline > 0 ? views / baseline : null,
+    isOutlier: views >= baseline * OUTLIER_THRESHOLD_MULTIPLIER,
+  };
+}

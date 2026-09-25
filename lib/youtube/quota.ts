@@ -5,6 +5,10 @@ import { getRedis } from "@/lib/cache/redis";
 // approved, this is the one place that changes.
 export const DAILY_QUOTA_LIMIT = 10_000;
 export const SOFT_LIMIT = 9_500; // non-critical calls should stop above this
+// D-054: anonymous free tools stop at 70% (TRD.md §5.3's first alert
+// level) so the last 30% of the day's quota is kept for signed-in users.
+// Derived from the limit, so it scales when the quota increase lands.
+export const FREE_TOOLS_QUOTA_CUTOFF = Math.floor(DAILY_QUOTA_LIMIT * 0.7);
 
 // The key is UTC-date-scoped (rolls over naturally at midnight UTC), so the
 // TTL is only cleanup, never part of the counting. 8 days rather than 25h
@@ -44,6 +48,11 @@ export async function getQuotaHistory(days: number, now: Date = new Date()): Pro
     date: date.toISOString().slice(0, 10),
     used: Number(values[index] ?? 0),
   }));
+}
+
+// Read-only: today's units so far, without spending any.
+export async function getQuotaUsedToday(): Promise<number> {
+  return Number((await getRedis().get<number | string>(getQuotaKey())) ?? 0);
 }
 
 // INCRBY is atomic in Redis — concurrent callers each get a unique,

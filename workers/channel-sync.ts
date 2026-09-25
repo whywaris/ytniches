@@ -5,11 +5,10 @@ import { upsertChannels } from "@/lib/services/channels";
 import { createServiceClient } from "@/lib/supabase/service";
 import { inngest } from "@/lib/inngest/client";
 import {
-  computeBaseline,
   computeRecencyWeight,
+  evaluateAgainstChannel,
   OUTLIER_SCORE,
-  OUTLIER_THRESHOLD_MULTIPLIER,
-  type BaselineVideo,
+  type ChannelVideo,
 } from "@/lib/outliers/scoring";
 import {
   sendCadenceChangeEmail,
@@ -268,27 +267,22 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
         .filter((id): id is string => typeof id === "string"),
     );
 
-    for (const video of freshVideos) {
+    const channelVideos: ChannelVideo[] = freshVideos.map((video) => ({
+      id: video.id,
+      viewCount: video.statistics?.viewCount ?? 0,
+      publishedAt: video.snippet.publishedAt,
+    }));
+
+    for (const [index, video] of freshVideos.entries()) {
       const internalVideoId = videoIdByYoutubeId.get(video.id) ?? video.id;
       if (alreadyFlaggedVideoIds.has(internalVideoId)) continue;
 
-      const candidatePublishedAtMs = new Date(video.snippet.publishedAt).getTime();
-      const priorVideos: BaselineVideo[] = freshVideos
-        .filter(
-          (other) =>
-            other.id !== video.id &&
-            new Date(other.snippet.publishedAt).getTime() < candidatePublishedAtMs,
-        )
-        .map((other) => ({
-          viewCount: other.statistics?.viewCount ?? 0,
-          publishedAt: other.snippet.publishedAt,
-        }));
-
-      const baseline = computeBaseline(priorVideos);
-      if (baseline === null) continue;
-
-      const viewCount = video.statistics?.viewCount ?? 0;
-      if (viewCount < baseline * OUTLIER_THRESHOLD_MULTIPLIER) continue;
+      const {
+        views: viewCount,
+        baseline,
+        isOutlier,
+      } = evaluateAgainstChannel(channelVideos[index], channelVideos);
+      if (baseline === null || !isOutlier) continue;
 
       const recencyWeight = computeRecencyWeight(video.snippet.publishedAt);
       events.push({

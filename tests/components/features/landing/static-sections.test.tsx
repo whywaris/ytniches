@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
@@ -42,11 +44,29 @@ describe("Footer", () => {
     }
   });
 
+  // A real page.tsx must exist for every internal link, in app/ or any
+  // route group -- never a 404. Unbuilt pages render as "Soon" text instead.
   it("only links to routes that exist", () => {
-    render(<Footer />);
-    const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
-    const internal = hrefs.filter((href) => href.startsWith("/"));
-    expect(internal.every((href) => href === "/pricing" || href.startsWith("/#"))).toBe(true);
+    const appDir = path.join(process.cwd(), "app");
+    const roots = [
+      appDir,
+      ...readdirSync(appDir)
+        .filter((d) => d.startsWith("("))
+        .map((d) => path.join(appDir, d)),
+    ];
+    const routeExists = (href: string) => {
+      const route = href.split("#")[0].replace(/^\//, "");
+      return roots.some((root) => existsSync(path.join(root, route, "page.tsx")));
+    };
+
+    render(<Footer blogLive={false} />);
+    const internal = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => href.startsWith("/"));
+
+    expect(internal).toContain("/tools");
+    for (const href of internal) expect(routeExists(href), href).toBe(true);
   });
 });
 

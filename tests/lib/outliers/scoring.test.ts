@@ -4,6 +4,7 @@ import {
   BASELINE_MIN_VIDEOS,
   computeBaseline,
   computeRecencyWeight,
+  evaluateAgainstChannel,
   OUTLIER_SCORE,
   RECENCY_FLOOR,
 } from "@/lib/outliers/scoring";
@@ -52,5 +53,41 @@ describe("computeRecencyWeight", () => {
 describe("OUTLIER_SCORE", () => {
   it("multiplies the views/baseline ratio by the recency weight", () => {
     expect(OUTLIER_SCORE(5000, 1000, 0.5)).toBe(2.5);
+  });
+});
+
+describe("evaluateAgainstChannel", () => {
+  const at = (id: string, viewCount: number, daysAgo: number) => ({
+    id,
+    ...video(viewCount, daysAgo),
+  });
+
+  it("uses only uploads published before the video", () => {
+    const priors = Array.from({ length: 5 }, (_, i) => at(`p${i}`, 1000, 10 + i));
+    const later = at("later", 1_000_000, 1);
+    const candidate = at("c", 3000, 5);
+    expect(evaluateAgainstChannel(candidate, [...priors, candidate, later])).toEqual({
+      views: 3000,
+      baseline: 1000,
+      multiplier: 3,
+      isOutlier: true,
+    });
+  });
+
+  it("has no baseline or verdict below 5 earlier uploads", () => {
+    const priors = Array.from({ length: 4 }, (_, i) => at(`p${i}`, 1000, 10 + i));
+    const candidate = at("c", 100_000, 1);
+    expect(evaluateAgainstChannel(candidate, [...priors, candidate])).toEqual({
+      views: 100_000,
+      baseline: null,
+      multiplier: null,
+      isOutlier: false,
+    });
+  });
+
+  it("is not an outlier just under 3x", () => {
+    const priors = Array.from({ length: 5 }, (_, i) => at(`p${i}`, 1000, 10 + i));
+    const candidate = at("c", 2999, 1);
+    expect(evaluateAgainstChannel(candidate, [...priors, candidate]).isOutlier).toBe(false);
   });
 });

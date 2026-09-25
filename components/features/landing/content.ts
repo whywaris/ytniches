@@ -18,7 +18,7 @@ export interface NavLinkItem {
 
 export const NAV_LINKS: NavLinkItem[] = [
   { label: "Product", href: "/#features" },
-  { label: "Tools", href: null },
+  { label: "Tools", href: "/tools" },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
 ];
@@ -407,7 +407,7 @@ export const FOOTER = {
       links: [
         { label: "Features", href: "/#features" },
         { label: "Pricing", href: "/pricing" },
-        { label: "Free Tools", href: null },
+        { label: "Free Tools", href: "/tools" },
         { label: "Changelog", href: null },
         { label: "Roadmap", href: null },
       ],

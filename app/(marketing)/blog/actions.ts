@@ -1,9 +1,8 @@
 "use server";
 
-import { headers } from "next/headers";
-
 import { z } from "zod";
 
+import { getClientIp } from "@/lib/request-ip";
 import { subscribeToNewsletter } from "@/lib/services/newsletter";
 
 export type NewsletterState =
@@ -31,10 +30,7 @@ export async function subscribeAction(
   );
   if (!email.success) return { status: "error", message: "Enter a valid email address." };
 
-  const forwarded = (await headers()).get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
-
-  const result = await subscribeToNewsletter(email.data, ip);
+  const result = await subscribeToNewsletter(email.data, await getClientIp());
   return result.ok
     ? { status: "success" }
     : { status: "error", message: ERROR_COPY[result.error.type] };

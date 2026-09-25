@@ -110,3 +110,10 @@ describe("getQuotaHistory", () => {
     ]);
   });
 });
+
+describe("free tools cutoff", () => {
+  it("is 70% of the daily limit", async () => {
+    const { FREE_TOOLS_QUOTA_CUTOFF, DAILY_QUOTA_LIMIT } = await import("@/lib/youtube/quota");
+    expect(FREE_TOOLS_QUOTA_CUTOFF).toBe(DAILY_QUOTA_LIMIT * 0.7);
+  });
+});

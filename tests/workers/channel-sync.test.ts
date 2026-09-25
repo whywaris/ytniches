@@ -391,6 +391,64 @@ describe("syncChannelData", () => {
     expect(events.find((e) => e.eventType === "outlier_detected")).toBeUndefined();
   });
 
+  // Edges of the shared scoring rule (lib/outliers/scoring.ts
+  // evaluateAgainstChannel). These pin the worker's behaviour from before
+  // the logic moved out of this file: they pass against both versions.
+  function buildEdgeFixture(priorCount: number, priorViews: number, candidateViews: number) {
+    const now = Date.now();
+    const daysAgoIso = (days: number) => new Date(now - days * 86_400_000).toISOString();
+    const priors = Array.from({ length: priorCount }, (_, i) =>
+      makeVideo({
+        id: `prior${i}`,
+        snippet: { ...makeVideo().snippet, publishedAt: daysAgoIso(20 - i) },
+        statistics: { viewCount: priorViews },
+      }),
+    );
+    const candidate = makeVideo({
+      id: "candidate",
+      snippet: { ...makeVideo().snippet, publishedAt: daysAgoIso(1) },
+      statistics: { viewCount: candidateViews },
+    });
+    const freshVideos = [...priors, candidate];
+    return {
+      freshVideos,
+      upsertData: freshVideos.map((video) => ({
+        id: `internal-${video.id}`,
+        youtube_video_id: video.id,
+      })),
+    };
+  }
+
+  async function outlierVideoIds(priorCount: number, priorViews: number, candidateViews: number) {
+    const { freshVideos, upsertData } = buildEdgeFixture(priorCount, priorViews, candidateViews);
+    serviceFrom.mockReturnValueOnce(channelsTable({ data: CHANNEL_ROW, error: null }));
+    serviceFrom.mockReturnValueOnce(videosSelectTable({ data: [], error: null }));
+    getChannelVideos.mockResolvedValueOnce({ ok: true, value: freshVideos });
+    serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: upsertData, error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(insertTable());
+    const events = await syncChannelData(CHANNEL_ID);
+    return events
+      .filter((event) => event.eventType === "outlier_detected")
+      .map((event) => event.payload.videoId);
+  }
+
+  it("flags nothing with only 4 earlier videos (cold start), however big the video", async () => {
+    expect(await outlierVideoIds(4, 1000, 50_000)).toEqual([]);
+  });
+
+  it("does not flag a video just under 3x its baseline", async () => {
+    expect(await outlierVideoIds(5, 1000, 2999)).toEqual([]);
+  });
+
+  it("flags a video at exactly 3x its baseline", async () => {
+    expect(await outlierVideoIds(5, 1000, 3000)).toEqual(["internal-candidate"]);
+  });
+
+  it("flags any video when the earlier uploads all have 0 views (baseline 0)", async () => {
+    expect(await outlierVideoIds(5, 0, 10)).toContain("internal-candidate");
+  });
+
   it("upserts the freshly-fetched channel via lib/services/channels", async () => {
     serviceFrom.mockReturnValueOnce(channelsTable({ data: CHANNEL_ROW, error: null }));
     serviceFrom.mockReturnValueOnce(videosSelectTable({ data: [], error: null }));

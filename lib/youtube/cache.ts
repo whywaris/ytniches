@@ -9,6 +9,9 @@ const CHANNEL_TTL_SECONDS = 6 * 60 * 60;
 const CHANNEL_VIDEOS_TTL_SECONDS = 6 * 60 * 60;
 const SEARCH_TTL_SECONDS = 6 * 60 * 60;
 const VIDEO_TTL_SECONDS = 6 * 60 * 60;
+// Handle -> channel ID changes only if the owner renames the handle, so a
+// day is safe; without it every repeat @handle lookup costs a unit (D-054).
+const HANDLE_TTL_SECONDS = 24 * 60 * 60;
 
 function channelKey(youtubeChannelId: string): string {
   return `youtube:channel:${youtubeChannelId}`;
@@ -20,6 +23,18 @@ function channelVideosKey(youtubeChannelId: string): string {
 
 function videoKey(youtubeVideoId: string): string {
   return `youtube:video:${youtubeVideoId}`;
+}
+
+function handleKey(handle: string): string {
+  return `youtube:handle:${handle.toLowerCase()}`;
+}
+
+export async function getCachedHandle(handle: string): Promise<string | null> {
+  return (await getRedis().get<string>(handleKey(handle))) ?? null;
+}
+
+export async function setCachedHandle(handle: string, youtubeChannelId: string): Promise<void> {
+  await getRedis().set(handleKey(handle), youtubeChannelId, { ex: HANDLE_TTL_SECONDS });
 }
 
 function searchKey(hash: string): string {

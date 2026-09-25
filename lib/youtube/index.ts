@@ -1,10 +1,12 @@
 import {
   getCachedChannel,
   getCachedChannelVideos,
+  getCachedHandle,
   getCachedSearchResult,
   getCachedVideo,
   setCachedChannel,
   setCachedChannelVideos,
+  setCachedHandle,
   setCachedSearchResult,
   setCachedVideo,
 } from "@/lib/youtube/cache";
@@ -18,6 +20,7 @@ import {
   type YouTubeClientError,
 } from "@/lib/youtube/client";
 import { checkAndIncrement } from "@/lib/youtube/quota";
+import { parseChannelInput, parseVideoInput } from "@/lib/youtube/urls";
 import { err, ok, type Result } from "@/lib/result";
 import type { YouTubeChannelItem, YouTubeVideoItem } from "@/lib/youtube/schemas";
 
@@ -191,53 +194,37 @@ export async function getChannelVideos(
 }
 
 // PRD.md §6.2 "paste channel URL directly" / Application-Flow.md §4.2's
-// validating state. Only two URL shapes are recognized -- anything else is
-// invalid_url without spending quota. A /channel/<id> URL's ID is trusted
-// as-is (no API call, no cost); a /@handle URL requires an actual
-// channels.list?forHandle= lookup (1 unit) since the handle -> ID mapping
-// only YouTube knows.
-const CHANNEL_ID_URL_PATTERN = /^youtube\.com\/channel\/([^/]+)$/i;
-const HANDLE_URL_PATTERN = /^youtube\.com\/@([^/]+)$/i;
-
-function normalizeYoutubeUrl(url: string): string {
-  return url
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .replace(/\/+$/, "");
-}
-
+// validating state. Parsing lives in lib/youtube/urls.ts (shared with the
+// free tools). A channel ID is trusted as-is (no API call, no cost); a
+// handle needs channels.list?forHandle= (1 unit) on a handle-cache miss,
+// since the handle -> ID mapping only YouTube knows.
 export async function resolveChannelUrl(url: string): Promise<Result<string, YouTubeResolveError>> {
-  const normalized = normalizeYoutubeUrl(url);
+  const input = parseChannelInput(url);
+  if (!input) return err({ type: "invalid_url" });
+  if (input.kind === "id") return ok(input.id);
 
-  const channelIdMatch = CHANNEL_ID_URL_PATTERN.exec(normalized);
-  if (channelIdMatch) {
-    return ok(channelIdMatch[1]);
+  const cachedId = await getCachedHandle(input.handle);
+  if (cachedId) return ok(cachedId);
+
+  const quota = await checkAndIncrement(LOOKUP_COST);
+  if (!quota.allowed) {
+    return err({ type: "quota_exceeded" });
   }
 
-  const handleMatch = HANDLE_URL_PATTERN.exec(normalized);
-  if (handleMatch) {
-    const quota = await checkAndIncrement(LOOKUP_COST);
-    if (!quota.allowed) {
-      return err({ type: "quota_exceeded" });
-    }
-
-    const result = await fetchChannelByHandle(handleMatch[1]);
-    if (!result.ok) {
-      return result;
-    }
-    if (!result.value) {
-      return err({ type: "not_found" });
-    }
-
-    // Free win: we already have the full channel item, so a subsequent
-    // getChannelById(id) for this same channel hits cache instead of
-    // spending another unit.
-    await setCachedChannel(result.value.id, result.value);
-    return ok(result.value.id);
+  const result = await fetchChannelByHandle(input.handle);
+  if (!result.ok) {
+    return result;
+  }
+  if (!result.value) {
+    return err({ type: "not_found" });
   }
 
-  return err({ type: "invalid_url" });
+  // Free win: we already have the full channel item, so a subsequent
+  // getChannelById(id) for this same channel hits cache instead of
+  // spending another unit.
+  await setCachedChannel(result.value.id, result.value);
+  await setCachedHandle(input.handle, result.value.id);
+  return ok(result.value.id);
 }
 
 export async function getVideoById(
@@ -272,31 +259,9 @@ export async function getVideoById(
 }
 
 // PRD.md §6.3 "Video URL ... pasted from YouTube" (AI Prompts' "From URL"
-// entry path). Three URL shapes, ID extracted directly -- no API call, no
-// quota cost, mirroring resolveChannelUrl's /channel/<id> branch. The
-// actual video fetch (and its quota cost) happens separately via
-// getVideoById once the caller has this ID.
-const YOUTU_BE_PATTERN = /^youtu\.be\/([^/?]+)/i;
-const SHORTS_URL_PATTERN = /^youtube\.com\/shorts\/([^/?]+)/i;
-const WATCH_URL_PATTERN = /^youtube\.com\/watch\?(.*)$/i;
-
-function extractVideoId(normalized: string): string | null {
-  const shortMatch = YOUTU_BE_PATTERN.exec(normalized);
-  if (shortMatch) return shortMatch[1];
-
-  const shortsMatch = SHORTS_URL_PATTERN.exec(normalized);
-  if (shortsMatch) return shortsMatch[1];
-
-  const watchMatch = WATCH_URL_PATTERN.exec(normalized);
-  if (watchMatch) {
-    const videoId = new URLSearchParams(watchMatch[1]).get("v");
-    if (videoId) return videoId;
-  }
-
-  return null;
-}
-
+// entry path). The ID comes straight from lib/youtube/urls.ts -- no API
+// call, no quota cost. The actual fetch happens separately via getVideoById.
 export function resolveVideoUrl(url: string): Result<string, { type: "invalid_url" }> {
-  const videoId = extractVideoId(normalizeYoutubeUrl(url));
-  return videoId ? ok(videoId) : err({ type: "invalid_url" });
+  const video = parseVideoInput(url);
+  return video ? ok(video.id) : err({ type: "invalid_url" });
 }

@@ -8,6 +8,8 @@ const setCachedChannel = vi.fn();
 const setCachedChannelVideos = vi.fn();
 const setCachedSearchResult = vi.fn();
 const setCachedVideo = vi.fn();
+const getCachedHandle = vi.fn();
+const setCachedHandle = vi.fn();
 
 const searchChannels = vi.fn();
 const fetchChannelsByIds = vi.fn();
@@ -26,6 +28,8 @@ vi.mock("@/lib/youtube/cache", () => ({
   setCachedChannelVideos: (...args: unknown[]) => setCachedChannelVideos(...args),
   setCachedSearchResult: (...args: unknown[]) => setCachedSearchResult(...args),
   setCachedVideo: (...args: unknown[]) => setCachedVideo(...args),
+  getCachedHandle: (...args: unknown[]) => getCachedHandle(...args),
+  setCachedHandle: (...args: unknown[]) => setCachedHandle(...args),
 }));
 
 vi.mock("@/lib/youtube/client", () => ({
@@ -440,5 +444,41 @@ describe("resolveVideoUrl", () => {
       ok: false,
       error: { type: "invalid_url" },
     });
+  });
+});
+
+describe("resolveChannelUrl handle cache (D-054)", () => {
+  it("serves a cached handle without spending quota", async () => {
+    getCachedHandle.mockResolvedValueOnce("UC-cached");
+
+    const result = await resolveChannelUrl("@SleepSoundsDaily");
+
+    expect(result).toEqual({ ok: true, value: "UC-cached" });
+    expect(getCachedHandle).toHaveBeenCalledWith("SleepSoundsDaily");
+    expect(checkAndIncrement).not.toHaveBeenCalled();
+    expect(fetchChannelByHandle).not.toHaveBeenCalled();
+  });
+
+  it("caches the handle after a successful lookup", async () => {
+    getCachedHandle.mockResolvedValueOnce(null);
+    checkAndIncrement.mockResolvedValueOnce({ allowed: true, used: 1 });
+    fetchChannelByHandle.mockResolvedValueOnce({ ok: true, value: { id: "UC-new" } });
+
+    const result = await resolveChannelUrl("https://m.youtube.com/@NewChannel/videos");
+
+    expect(result).toEqual({ ok: true, value: "UC-new" });
+    expect(setCachedHandle).toHaveBeenCalledWith("NewChannel", "UC-new");
+  });
+
+  it("still rejects legacy /c/ and /user/ links without spending quota", async () => {
+    expect(await resolveChannelUrl("https://youtube.com/c/SomeName")).toEqual({
+      ok: false,
+      error: { type: "invalid_url" },
+    });
+    expect(await resolveChannelUrl("https://youtube.com/user/SomeName")).toEqual({
+      ok: false,
+      error: { type: "invalid_url" },
+    });
+    expect(checkAndIncrement).not.toHaveBeenCalled();
   });
 });

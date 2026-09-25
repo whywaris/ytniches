@@ -1,6 +1,7 @@
 import { getAuthors, getPublishedPosts, getTags } from "@/lib/blog";
 import { CATEGORIES } from "@/lib/blog/categories";
 import { COMPETITOR_PAGES } from "@/content/vs";
+import { TOOLS } from "@/lib/tools/registry";
 import { SITE_URL } from "@/lib/site";
 
 import type { MetadataRoute } from "next";
@@ -19,6 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     entry("/"),
     entry("/pricing"),
+    entry("/tools"),
+    ...TOOLS.map((tool) => entry(`/${tool.slug}`)),
     ...COMPETITOR_PAGES.map((page) => entry(`/vs/${page.id}`, page.checkedOn)),
     ...(posts.length > 0 ? [entry("/blog", latest(posts))] : []),
     ...posts.map((post) => entry(`/blog/${post.slug}`, post.updatedDate ?? post.publishDate)),

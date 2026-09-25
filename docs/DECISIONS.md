@@ -195,7 +195,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-014: Free tools access
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-25)
 - **Impacts:** SEO strategy, funnel conversion, marketing site build
 - **Options:**
   - A: Gated — free tools require signup (even free-tier)
@@ -203,7 +203,9 @@ Decisions that still need to close before their dependent docs / features can be
   - C: Partial — basic tool free, advanced results gated behind signup
 - **Trade-offs:** Open = better SEO (Google prefers pages that work), higher traffic, lower conversion per visitor. Gated = fewer visitors, higher signup rate per visitor.
 - **Recommendation:** Option C. Basic result open (satisfies search intent + SEO), advanced result gated (drives signups). Follows TubeBuddy / VidIQ pattern.
-- **Final call:** —
+- **Final call:** Option B, open. Every tool gives its full result without signup, and every result shows a signup CTA. Anonymous use never needs auth and never spends credits.
+  - **Final tool list** (replaces PRD.md §10.3's "not final" candidates; PRD update to follow as its own spec change): Outlier Checker, Subscribe Link Generator, RSS Feed Generator, Embed Code Generator, Thumbnail Resizer, Channel ID Finder.
+  - Quota, abuse and URL calls are in D-054.
 
 ---
 
@@ -636,3 +638,20 @@ Decisions that still need to close before their dependent docs / features can be
   - **Search.** Client-side Fuse.js over title, tags, category and excerpt. Category pills are plain links to category pages, not client-side filters (static, crawlable, no extra JS).
   - **Share images.** Generated per post at build time (title on the brand background). A post's `coverImage` shows on the page but doesn't replace the generated share image.
 - **Impacts:** `content/`, `lib/blog/`, `app/(marketing)/blog/*`, `app/sitemap.ts`, `lib/services/newsletter.ts`, `.env.example`.
+
+### D-054: Free tools — URLs, rate limits, quota guard
+
+- **Status:** Resolved (2026-09-25)
+- **Context:** Building the six open free tools (D-014) inside D-036's quota crunch, and replacing the old MVP's tool pages without losing their search rankings.
+- **Final call:**
+  - **URLs.** Tools live at the root, not `/tools/[slug]` (UI-UX-Flow.md §2.3). The old site (repo `whywaris/ytniches5`, read-only) had its tools at root URLs, so the four matching tools reuse those URLs exactly: `/youtube-subscribe-link-generator`, `/rss-feed-generator`, `/youtube-embed-code-generator`, `/thumbnail-resizer`. The two new tools follow the same pattern: `/youtube-channel-id-finder`, `/youtube-outlier-checker`. `/tools` is the index, as before.
+  - **Old tool URLs we don't rebuild** stay undecided for now, pending Mac's call per URL (redirect, rebuild or drop).
+  - **Client-side first.** Subscribe link, RSS (channel or playlist), embed code and thumbnail resizing run in the browser. A `/channel/UC…` URL or bare channel ID needs zero API calls; only `@handles` go to the server.
+  - **Rate limit.** Server-backed tool requests share one per-IP bucket: 10 per hour and 30 per day (Upstash sliding windows). Cache hits count too. Plus a hidden honeypot field.
+  - **Quota guard.** Free tools return "Busy right now" once the day's YouTube quota reaches 70% of `DAILY_QUOTA_LIMIT` (7,000 of 10,000), so the last 30% is kept for signed-in users. The check runs before the rate limit, so a busy day doesn't spend a visitor's allowance. Busy blocks cached results too (simplest; revisit if it hurts).
+  - **Handle cache.** New Redis key `youtube:handle:{handle}` → channel ID, 24h TTL. Previously every repeat `@handle` lookup cost a unit. It benefits the app's own channel inputs too. (TRD.md §5.2's key list should add it in the next TRD edit.)
+  - **Wider shared parser.** `lib/youtube/urls.ts` now accepts bare `@handle`, bare `UC…` IDs, trailing tabs (`/videos`), `m.youtube.com`, and `/live`, `/embed` and bare video IDs. It's shared by the app and the tools. Legacy `/c/` and `/user/` links are still rejected with a clear message.
+  - **One outlier rule.** The "earlier uploads" selection moved from `workers/channel-sync.ts` into `evaluateAgainstChannel` in `lib/outliers/scoring.ts`, used by both the worker and the Outlier Checker. New edge-case tests (cold start, 2,999 vs 3,000 views, zero baseline) pass against both the old and the new worker.
+  - **Outlier Checker limit.** It sees a channel's 50 most recent uploads. Older videos get "too old to check" instead of a guess.
+- **Still open elsewhere:** D-036 (quota increase). Free tools add bounded load: at most about 120 units per IP per day.
+- **Impacts:** `lib/youtube/{urls,cache,quota,index}.ts`, `lib/outliers/scoring.ts`, `workers/channel-sync.ts`, `lib/tools/`, `lib/services/free-tools.ts`, `app/(marketing)/<tool>/`, `app/sitemap.ts`.
