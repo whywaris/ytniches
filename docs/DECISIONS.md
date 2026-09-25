@@ -655,3 +655,19 @@ Decisions that still need to close before their dependent docs / features can be
   - **Outlier Checker limit.** It sees a channel's 50 most recent uploads. Older videos get "too old to check" instead of a guess.
 - **Still open elsewhere:** D-036 (quota increase). Free tools add bounded load: at most about 120 units per IP per day.
 - **Impacts:** `lib/youtube/{urls,cache,quota,index}.ts`, `lib/outliers/scoring.ts`, `workers/channel-sync.ts`, `lib/tools/`, `lib/services/free-tools.ts`, `app/(marketing)/<tool>/`, `app/sitemap.ts`.
+
+### D-055: Old-site tool URLs — rebuild six, 301 four
+
+- **Status:** Resolved (2026-09-25). Defaults; Mac may adjust after checking Search Console.
+- **Context:** The old site (`whywaris/ytniches5`) had ten tool URLs that don't map to D-054's six tools. Dropping them would 404 pages that may still bring traffic.
+- **Final call:**
+  - **Rebuilt at the exact old URL** (same template: FAQ, CTA, related tools):
+    - `/youtube-thumbnail-download`: YouTube's fixed thumbnail image URLs, no API call.
+    - `/watch-time-calculator`: calculator against the 4,000-hour goal.
+    - `/youtube-revenue-calculator`: the creator enters their **own** RPM (accepted range $0.01–$100). No "RPM by niche/country" figures anywhere.
+    - `/youtube-timestamp-generator`: manual chapter formatter checked against YouTube's rules (0:00 start, 3+ chapters, 10s each). No AI, no server call.
+    - `/tag-extractor`: 1 quota unit per uncached video, behind the D-054 guard (per-IP limit + 70% quota cutoff).
+    - `/youtube-qr-code-generator`: browser-only (`qrcode` package). YouTube links only; the code encodes the link directly, so nothing is tracked.
+  - **301 to `/tools`:** `/youtube-word-counter`, `/dislike-viewer`, `/random-comment-picker`, `/youtube-automation-tools`. Explicit `statusCode: 301`, since Next's `permanent: true` sends a 308. The list lives in `lib/tools/legacy-redirects.ts` and `next.config.ts` reads it.
+  - **Guard:** a test fails if any of the old tool URLs would 404: each must be a page or a 301 to a page, and `next.config` must actually serve the redirects.
+- **Impacts:** `lib/tools/{calculators,legacy-redirects,registry}.ts`, `lib/services/free-tools.ts`, `next.config.ts`, six new `app/(marketing)/<old-slug>/` routes.

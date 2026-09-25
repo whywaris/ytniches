@@ -10,6 +10,7 @@ const lookupChannelAction = vi.fn();
 vi.mock("@/app/(marketing)/tools/actions", () => ({
   lookupChannelAction: (...args: unknown[]) => lookupChannelAction(...args),
   checkOutlierAction: vi.fn(),
+  extractTagsAction: vi.fn(),
 }));
 
 const { SubscribeLinkTool, ChannelIdFinderTool } =
@@ -17,6 +18,12 @@ const { SubscribeLinkTool, ChannelIdFinderTool } =
 const { EmbedCodeTool } = await import("@/components/features/tools/embed-code-tool");
 const { OutlierCheckerTool } = await import("@/components/features/tools/outlier-checker-tool");
 const { ThumbnailResizerTool } = await import("@/components/features/tools/thumbnail-resizer-tool");
+const { WatchTimeTool, RevenueTool } = await import("@/components/features/tools/calculator-tools");
+const { TimestampTool } = await import("@/components/features/tools/timestamp-tool");
+const { ThumbnailDownloadTool } =
+  await import("@/components/features/tools/thumbnail-download-tool");
+const { TagExtractorTool } = await import("@/components/features/tools/tag-extractor-tool");
+const { QrCodeTool } = await import("@/components/features/tools/qr-code-tool");
 const { ToolPage } = await import("@/components/features/tools/tool-page");
 const { getTool } = await import("@/lib/tools/registry");
 
@@ -28,6 +35,12 @@ describe.each([
   ["EmbedCodeTool", EmbedCodeTool],
   ["OutlierCheckerTool", OutlierCheckerTool],
   ["ThumbnailResizerTool", ThumbnailResizerTool],
+  ["WatchTimeTool", WatchTimeTool],
+  ["RevenueTool", RevenueTool],
+  ["TimestampTool", TimestampTool],
+  ["ThumbnailDownloadTool", ThumbnailDownloadTool],
+  ["TagExtractorTool", TagExtractorTool],
+  ["QrCodeTool", QrCodeTool],
 ])("%s", (_name, Tool) => {
   it("has no axe violations", async () => {
     const { container } = render(<Tool />);
@@ -96,5 +109,21 @@ describe("ToolPage", () => {
       tool.faq.map((item) => item.question),
     );
     expect(screen.getAllByRole("link", { name: /YouTube/ }).length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("RevenueTool", () => {
+  it("shows no estimate for an out-of-range RPM", async () => {
+    const user = userEvent.setup();
+    render(<RevenueTool />);
+    await user.type(screen.getByLabelText(/^Views/), "50000");
+    await user.type(screen.getByLabelText(/Your RPM/), "500");
+
+    expect(screen.getByText(/Enter an RPM between/)).toBeInTheDocument();
+    expect(screen.queryByText(/Estimated earnings/)).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText(/Your RPM/));
+    await user.type(screen.getByLabelText(/Your RPM/), "4");
+    expect(screen.getByText("$200.00")).toBeInTheDocument();
   });
 });

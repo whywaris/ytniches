@@ -5,10 +5,12 @@ import { z } from "zod";
 import { getClientIp } from "@/lib/request-ip";
 import {
   checkOutlier,
+  extractTags,
   lookupChannel,
   type ChannelLookup,
   type FreeToolError,
   type OutlierCheck,
+  type TagExtraction,
 } from "@/lib/services/free-tools";
 
 // D-014: open tools, no auth, no credits. The honeypot field ("company")
@@ -40,4 +42,8 @@ export async function lookupChannelAction(raw: unknown): Promise<ToolActionResul
 
 export async function checkOutlierAction(raw: unknown): Promise<ToolActionResult<OutlierCheck>> {
   return run(raw, checkOutlier);
+}
+
+export async function extractTagsAction(raw: unknown): Promise<ToolActionResult<TagExtraction>> {
+  return run(raw, extractTags);
 }

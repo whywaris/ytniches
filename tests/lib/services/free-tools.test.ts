@@ -46,7 +46,8 @@ vi.mock("@/lib/outliers/scoring", async (importOriginal) => {
   };
 });
 
-const { guardFreeTool, lookupChannel, checkOutlier } = await import("@/lib/services/free-tools");
+const { guardFreeTool, lookupChannel, checkOutlier, extractTags } =
+  await import("@/lib/services/free-tools");
 
 const CHANNEL_ID = "UC_x5XG1OV2P6uZZ5FSM9Ttw";
 const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
@@ -175,6 +176,38 @@ describe("checkOutlier", () => {
   it("stops at the guard before any YouTube call", async () => {
     getQuotaUsedToday.mockResolvedValue(9_000);
     expect(await checkOutlier("https://youtu.be/target12345", "ip")).toEqual({
+      ok: false,
+      error: { type: "busy" },
+    });
+    expect(getVideoById).not.toHaveBeenCalled();
+  });
+});
+
+describe("extractTags", () => {
+  it("returns the video's tags through the guard", async () => {
+    const tagged = {
+      ...video("t", 100, 1),
+      snippet: { ...video("t", 100, 1).snippet, tags: ["a", "b"] },
+    };
+    getVideoById.mockResolvedValue({ ok: true, value: tagged });
+
+    const result = await extractTags("https://youtu.be/t1234567890", "ip");
+
+    expect(result).toMatchObject({ ok: true, value: { tags: ["a", "b"], video: { id: "t" } } });
+    expect(hourLimit).toHaveBeenCalledWith("ip");
+  });
+
+  it("returns an empty list for a video with no tags", async () => {
+    getVideoById.mockResolvedValue({ ok: true, value: video("t", 100, 1) });
+    expect(await extractTags("https://youtu.be/t1234567890", "ip")).toMatchObject({
+      ok: true,
+      value: { tags: [] },
+    });
+  });
+
+  it("is busy past the quota cutoff, without calling YouTube", async () => {
+    getQuotaUsedToday.mockResolvedValue(7_000);
+    expect(await extractTags("https://youtu.be/t1234567890", "ip")).toEqual({
       ok: false,
       error: { type: "busy" },
     });

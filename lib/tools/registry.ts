@@ -1,5 +1,5 @@
-// PRD.md §10.3 free tools (final list: D-014). Slugs for the first four
-// are the old site's exact URLs, so their rankings carry over (D-054).
+// PRD.md §10.3 free tools (D-014, D-054, D-055). Every tool the old site
+// had keeps its exact URL, so rankings carry over.
 // Copy follows Landing-Copy.md §1.2–1.5.
 
 export type ToolSlug =
@@ -8,7 +8,13 @@ export type ToolSlug =
   | "youtube-embed-code-generator"
   | "thumbnail-resizer"
   | "youtube-channel-id-finder"
-  | "youtube-outlier-checker";
+  | "youtube-outlier-checker"
+  | "youtube-thumbnail-download"
+  | "watch-time-calculator"
+  | "youtube-revenue-calculator"
+  | "youtube-timestamp-generator"
+  | "tag-extractor"
+  | "youtube-qr-code-generator";
 
 export interface Tool {
   slug: ToolSlug;
@@ -246,6 +252,211 @@ export const TOOLS: Tool[] = [
       },
     ],
     related: ["rss-feed-generator", "youtube-subscribe-link-generator", "youtube-outlier-checker"],
+  },
+  {
+    slug: "youtube-thumbnail-download",
+    name: "YouTube Thumbnail Downloader",
+    tagline: "Get any video's thumbnail in every size YouTube stores.",
+    seoTitle: "YouTube Thumbnail Downloader — Free HD Thumbnails",
+    seoDescription:
+      "Paste a video link and get its thumbnail in every size YouTube stores, up to 1280×720 HD. Free, instant, no signup.",
+    howTo: ["Paste a YouTube video link.", "Pick a size.", "Download it, or open it full size."],
+    faq: [
+      {
+        question: "Why is there no HD version for some videos?",
+        answer:
+          "YouTube only stores the 1280×720 size when the uploader gave it a big enough image. When it's missing, we say so and you can use the next size down.",
+      },
+      {
+        question: "Can I reuse someone else's thumbnail?",
+        answer:
+          "Thumbnails belong to the channel that made them. Study them for ideas, but don't upload another creator's thumbnail as your own.",
+      },
+      {
+        question: "Does this use the YouTube API?",
+        answer:
+          "No. YouTube serves thumbnails at fixed image addresses, so we build the links straight from the video ID.",
+      },
+      {
+        question: "Does it work for Shorts?",
+        answer: "Yes. Paste the Shorts link; it has a video ID like any other video.",
+      },
+    ],
+    related: ["thumbnail-resizer", "tag-extractor", "youtube-outlier-checker"],
+  },
+  {
+    slug: "watch-time-calculator",
+    name: "YouTube Watch Time Calculator",
+    tagline: "Turn views and average view duration into watch hours.",
+    seoTitle: "YouTube Watch Time Calculator — Track Your 4,000 Hours",
+    seoDescription:
+      "Work out your watch hours from views and average view duration, and how close you are to the 4,000 hours YouTube's Partner Program asks for.",
+    howTo: [
+      "Enter your views.",
+      "Enter your average view duration from YouTube Studio.",
+      "See your watch hours and how far you are from 4,000.",
+    ],
+    faq: [
+      {
+        question: "How many watch hours do I need to monetize?",
+        answer:
+          "YouTube's Partner Program asks for 4,000 valid public watch hours in the last 12 months, plus 1,000 subscribers. There's also a Shorts route based on Shorts views.",
+      },
+      {
+        question: "Do Shorts views count toward the 4,000 hours?",
+        answer: "No. Only watch time on long-form videos counts toward the 4,000 hours.",
+      },
+      {
+        question: "Is this my exact number?",
+        answer:
+          "No, it's an estimate from the two numbers you enter. YouTube Studio shows your real, counted watch hours.",
+      },
+      {
+        question: "Where do I find my average view duration?",
+        answer: "In YouTube Studio, under Analytics, on the Overview or Engagement tab.",
+      },
+    ],
+    related: [
+      "youtube-revenue-calculator",
+      "youtube-outlier-checker",
+      "youtube-timestamp-generator",
+    ],
+  },
+  {
+    slug: "youtube-revenue-calculator",
+    name: "YouTube Revenue Calculator",
+    tagline: "Estimate your earnings from your views and your own RPM.",
+    seoTitle: "YouTube Revenue Calculator — Estimate Earnings From Your RPM",
+    seoDescription:
+      "Estimate YouTube earnings from your views and your own RPM from YouTube Studio. No made-up niche averages. Free, no signup.",
+    howTo: [
+      "Enter your views (for example, last month's).",
+      "Enter your RPM from YouTube Studio.",
+      "See your estimated earnings for those views, plus a yearly figure at the same pace.",
+    ],
+    faq: [
+      {
+        question: "Why do I have to enter my own RPM?",
+        answer:
+          'RPM varies hugely by audience, country, topic and time of year. Published "RPM by niche" lists are mostly guesses, so we don\'t show any. Your own RPM is the only number worth using.',
+      },
+      {
+        question: "What's the difference between RPM and CPM?",
+        answer:
+          "CPM is what advertisers pay per 1,000 ad impressions. RPM is what you actually earn per 1,000 views, after YouTube's share and counting views with no ads. RPM is the one that predicts your income.",
+      },
+      {
+        question: "Where do I find my RPM?",
+        answer:
+          "In YouTube Studio, under Analytics, then the Revenue tab. It only appears once you're monetized.",
+      },
+      {
+        question: "Why is my real payout different?",
+        answer:
+          "RPM changes month to month, and some revenue (memberships, Super Thanks, Premium) moves with it. Treat this as an estimate, not a promise.",
+      },
+    ],
+    related: ["watch-time-calculator", "youtube-outlier-checker", "tag-extractor"],
+  },
+  {
+    slug: "youtube-timestamp-generator",
+    name: "YouTube Timestamp Generator",
+    tagline: "Turn your notes into chapters YouTube will actually show.",
+    seoTitle: "YouTube Timestamp Generator — Chapters That Work",
+    seoDescription:
+      "Format video chapters for your YouTube description and check them against YouTube's rules: starts at 0:00, 3+ chapters, 10 seconds each. Free.",
+    howTo: [
+      "Write one chapter per line with its time, like 1:30 Setup.",
+      "Fix anything we flag: YouTube skips chapters that break its rules.",
+      "Copy the list into your video description.",
+    ],
+    faq: [
+      {
+        question: "Why aren't my chapters showing on YouTube?",
+        answer:
+          "YouTube only shows chapters when the first one starts at 0:00, there are at least 3, and each is at least 10 seconds long. This tool checks all three.",
+      },
+      {
+        question: "Where do the timestamps go?",
+        answer: "In the video description, one per line, in order.",
+      },
+      {
+        question: "Does this generate chapters with AI?",
+        answer:
+          "No. You write the chapter names and times; we format and check them. Nothing leaves your browser.",
+      },
+      {
+        question: "What time formats work?",
+        answer:
+          "1:30, 01:30 or 1:02:03 for videos over an hour. Put the time at the start or the end of the line.",
+      },
+    ],
+    related: ["youtube-embed-code-generator", "watch-time-calculator", "tag-extractor"],
+  },
+  {
+    slug: "tag-extractor",
+    name: "YouTube Tag Extractor",
+    tagline: "See the tags on any public YouTube video.",
+    seoTitle: "YouTube Tag Extractor — See Any Video's Tags Free",
+    seoDescription:
+      "Paste a video link and see the tags the uploader added. Copy them in one click. Free, no signup.",
+    howTo: ["Paste a YouTube video link.", "Press Extract.", "Copy the tags you want."],
+    faq: [
+      {
+        question: "Do tags help a video rank?",
+        answer:
+          "Not much. YouTube says tags play a minimal role in discovery and mainly help with commonly misspelled searches. Titles, thumbnails and the video itself matter far more.",
+      },
+      {
+        question: "Why does this video have no tags?",
+        answer: "Many uploaders don't add any. When there are none, we say so.",
+      },
+      {
+        question: "Where do the tags come from?",
+        answer:
+          "From YouTube's own data for that video. We cache results for a few hours to stay within YouTube's limits.",
+      },
+      {
+        question: "Is there a limit?",
+        answer:
+          "Yes, a fair-use limit per visitor each hour and day, so the tool stays free for everyone.",
+      },
+    ],
+    related: ["youtube-outlier-checker", "youtube-thumbnail-download", "youtube-channel-id-finder"],
+  },
+  {
+    slug: "youtube-qr-code-generator",
+    name: "YouTube QR Code Generator",
+    tagline: "A QR code for any YouTube video, Short, channel or playlist.",
+    seoTitle: "YouTube QR Code Generator — Free PNG & SVG",
+    seoDescription:
+      "Make a QR code for any YouTube video, channel or playlist link. Download it as PNG or SVG. Free, no signup, nothing tracked.",
+    howTo: ["Paste a YouTube link.", "Pick a size.", "Download it as PNG or SVG."],
+    faq: [
+      {
+        question: "Does the QR code expire?",
+        answer:
+          "No. The link is stored in the code itself, so it works for as long as the YouTube link works.",
+      },
+      {
+        question: "Do you track scans?",
+        answer:
+          "No. The code points straight at YouTube, with no redirect through us, so there's nothing to track.",
+      },
+      {
+        question: "PNG or SVG?",
+        answer: "PNG for screens and quick use. SVG for print: it stays sharp at any size.",
+      },
+      {
+        question: "What happens when someone scans it on a phone?",
+        answer: "It opens the link, usually in the YouTube app if it's installed.",
+      },
+    ],
+    related: [
+      "youtube-subscribe-link-generator",
+      "youtube-embed-code-generator",
+      "thumbnail-resizer",
+    ],
   },
 ];
 

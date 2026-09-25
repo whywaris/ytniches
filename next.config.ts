@@ -1,5 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 
+import { LEGACY_TOOL_REDIRECTS } from "./lib/tools/legacy-redirects";
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,6 +9,10 @@ const nextConfig: NextConfig = {
   // Next's auto-generated agent-rules block would otherwise get appended to
   // it (or create a competing AGENTS.md) on every `next dev`/`next build`.
   agentRules: false,
+  // D-055: old-site tool URLs we don't rebuild -> /tools with a 301.
+  async redirects() {
+    return LEGACY_TOOL_REDIRECTS;
+  },
 };
 
 // Minimal options for now: no org/project/authToken, so no source-map

@@ -146,3 +146,36 @@ export async function checkOutlier(
     threshold: OUTLIER_THRESHOLD_MULTIPLIER,
   });
 }
+
+export interface TagExtraction {
+  video: { id: string; title: string; channelTitle?: string };
+  tags: string[];
+}
+
+// Tag Extractor (D-055): 1 quota unit per uncached video, behind the same
+// guard as the other server-backed tools.
+export async function extractTags(
+  input: string,
+  ip: string,
+): Promise<Result<TagExtraction, FreeToolError>> {
+  const parsed = parseVideoInput(input);
+  if (!parsed) return err({ type: "invalid_input" });
+
+  const guard = await guardFreeTool(ip);
+  if (!guard.ok) return guard;
+
+  const video = await getVideoById(parsed.id);
+  if (!video.ok) {
+    return err(
+      video.error.type === "api_error" ? { type: "not_found" } : fromYouTubeError(video.error),
+    );
+  }
+  return ok({
+    video: {
+      id: video.value.id,
+      title: video.value.snippet.title,
+      channelTitle: video.value.snippet.channelTitle,
+    },
+    tags: video.value.snippet.tags ?? [],
+  });
+}
