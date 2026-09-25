@@ -1,5 +1,7 @@
 # YTNiches
 
+[![CI](https://github.com/whywaris/ytniches/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/whywaris/ytniches/actions/workflows/ci.yml)
+
 Research + execution loop for YouTube creators. See [`CLAUDE.md`](./CLAUDE.md) for the doc-first workflow and [`docs/`](./docs/) for the full spec set before making any change.
 
 ## Setup

@@ -308,10 +308,17 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-024: Phase 0 CI gate — deferred
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-25)
 - **Impacts:** Implementation-Plan.md §2.2, §2.6 item 2
 - **Context:** Implementation-Plan.md §2.6 item 2 requires "CI passes on a sample PR (lint + typecheck + test all green)." The `.github/workflows/ci.yml` stub exists but contains only a placeholder echo command. §2.2 (real GitHub Actions pipeline) was not completed because no GitHub remote exists yet — local git only.
 - **Final call:** Phase 0 declared conditionally complete. §2.2 is the first task after a GitHub remote is configured. Phase 1 proceeds without a CI gate, with the explicit understanding that §2.2 must be done before any real feature PRs are reviewed. Deferred, not skipped — Mac to configure the GitHub remote when ready, then §2.2 immediately.
+- **Resolution (2026-09-25):**
+  - Repo pushed to `github.com/whywaris/ytniches`. The old MVP repo was renamed first, so its history is untouched.
+  - `.github/workflows/ci.yml` runs on every PR and every push to `main`: frozen pnpm install (store cached), typecheck, lint, test, `next build`.
+  - Node comes from `.nvmrc`; pnpm comes from `packageManager` via Corepack.
+  - No secrets in CI. Tests are fully mocked (env vars only via `vi.stubEnv` with fake values), and `next build` succeeds with no env vars set (verified on a clean clone).
+  - `pnpm typecheck` is now `next typegen && tsc --noEmit`. Plain `tsc` failed on any fresh checkout, because `LayoutProps` is a Next-generated global that only existed locally after a dev server had run.
+  - Still open from §2.2: Vercel preview deploys and the dev/preview/production Supabase split. Those are outside D-024.
 
 ---
 

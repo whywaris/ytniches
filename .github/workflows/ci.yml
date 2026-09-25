@@ -1,6 +1,6 @@
-# TODO §2.2: Replace this stub with real pipeline.
-# Blocked on: GitHub remote not yet configured.
-# See DECISIONS.md D-024.
+# Implementation-Plan.md §2.2, DECISIONS.md D-024.
+# No secrets: the test suite is fully mocked and `next build` succeeds with
+# no env vars set (verified on a clean clone), so nothing real is needed here.
 name: CI
 
 on:
@@ -8,8 +8,43 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  placeholder:
+  ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
     steps:
-      - run: echo "CI to be configured in Implementation-Plan.md §2.2"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # pnpm version comes from package.json#packageManager.
+      - run: corepack enable
+
+      - name: Locate pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      # Catches what tsc can't: server/client boundary errors, prerender failures.
+      - run: pnpm build
