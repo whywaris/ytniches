@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { TRIAL } from "@/lib/billing/plans";
 import { TRIAL_CREDITS } from "@/lib/services/billing";
 import type { RequestContext } from "@/lib/context";
 import type { PrimaryGoal, UpdateProfileInput } from "@/lib/services/onboarding.schema";
@@ -142,11 +143,11 @@ async function activateTrial(userId: string): Promise<void> {
   if (existing) return;
 
   const now = new Date();
-  const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const trialEndsAt = new Date(now.getTime() + TRIAL.days * 24 * 60 * 60 * 1000);
 
   const { error: insertError } = await service.from("subscriptions").insert({
     user_id: userId,
-    tier: "pro",
+    tier: TRIAL.tier,
     status: "trialing",
     provider: "creem",
     current_period_start: now.toISOString(),

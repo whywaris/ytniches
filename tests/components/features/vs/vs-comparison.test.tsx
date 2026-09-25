@@ -49,3 +49,58 @@ describe("VsComparison", () => {
     expect(within(calendarRow).getByText("Not listed on their site")).toBeInTheDocument();
   });
 });
+
+const { COMPETITOR_PAGES } = await import("@/content/vs");
+const { YTNICHES, FEATURE_LABELS } = await import("@/content/vs/ytniches");
+const { TRIAL, trialSummary } = await import("@/lib/billing/plans");
+
+const STATUS_TEXT = {
+  yes: "Yes",
+  partial: "Partly",
+  no: "No",
+  "not-listed": "Not listed on their site",
+};
+
+// Rows by their header text, cells as [YTNiches, competitor]. Status is
+// the first span, compared exactly ("No" is a substring of "Not listed").
+function renderedRows(container: HTMLElement) {
+  return new Map(
+    [...container.querySelectorAll("tbody tr")].map((tr) => {
+      const [ours, theirs] = [...tr.querySelectorAll("td")].map((td) => ({
+        status: td.querySelector("span")?.textContent,
+        text: td.textContent,
+      }));
+      return [tr.querySelector("th")?.textContent, { ours, theirs }];
+    }),
+  );
+}
+
+describe.each(COMPETITOR_PAGES)("/vs/$id", (page) => {
+  it("shows YTNiches' free trial as Yes, from the plans file", () => {
+    const { container } = render(<VsComparison page={page} />);
+    const trial = renderedRows(container).get("Free trial");
+
+    expect(trial, `${page.id} has no Free trial row`).toBeDefined();
+    expect(trial!.ours.status).toBe("Yes");
+    expect(trial!.ours.text).toContain(trialSummary());
+    expect(trialSummary()).toBe(`${TRIAL.days} days of Pro, no card`);
+  });
+
+  // Guards against a column swap: each rendered cell must match the side
+  // it belongs to, for every row on every page.
+  it("renders every row in the right column", () => {
+    const { container } = render(<VsComparison page={page} />);
+    const rows = renderedRows(container);
+
+    for (const row of page.rows) {
+      const rendered = rows.get(FEATURE_LABELS[row.key]);
+      expect(rendered, `${page.id}: row "${row.key}" not rendered`).toBeDefined();
+      expect(rendered!.ours.status, `${page.id} ${row.key}: YTNiches column`).toBe(
+        STATUS_TEXT[YTNICHES[row.key].status],
+      );
+      expect(rendered!.theirs.status, `${page.id} ${row.key}: ${page.name} column`).toBe(
+        STATUS_TEXT[row.them.status],
+      );
+    }
+  });
+});

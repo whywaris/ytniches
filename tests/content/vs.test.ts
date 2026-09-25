@@ -50,3 +50,24 @@ describe.each(COMPETITOR_PAGES)("content/vs/$id.ts", (page) => {
     expect(COMPETITORS.map((competitor) => competitor.id)).toContain(page.id);
   });
 });
+
+describe("YTNiches' own trial cell", () => {
+  it("is always Yes and comes from the plans file", async () => {
+    const { trialSummary } = await import("@/lib/billing/plans");
+    expect(YTNICHES.freeTrial).toEqual({ status: "yes", note: trialSummary() });
+  });
+});
+
+// Pinned to the research (TubeLab FAQ, checked 2026-09-25: "No, there's
+// not a free trial for the Niche Finder"). If TubeLab adds a trial, update
+// content/vs/tubelab.ts and this test together.
+describe("TubeLab's trial cell", () => {
+  it("is No, citing their pricing FAQ", async () => {
+    const { TUBELAB } = await import("@/content/vs/tubelab");
+    const trial = TUBELAB.rows.find((row) => row.key === "freeTrial");
+    expect(trial).toMatchObject({
+      them: { status: "no" },
+      source: "https://tubelab.net/pricing",
+    });
+  });
+});

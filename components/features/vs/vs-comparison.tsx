@@ -1,6 +1,6 @@
 import { Check, Minus, X } from "lucide-react";
 
-import { TIER_INFO, TIERS } from "@/lib/billing/plans";
+import { TIER_INFO, TIERS, trialSummary } from "@/lib/billing/plans";
 import { FEATURE_LABELS, YTNICHES } from "@/content/vs/ytniches";
 import type { Cell, CompetitorPage } from "@/content/vs/types";
 import { CtaLink } from "@/components/features/landing/cta-link";
@@ -164,7 +164,7 @@ function VsComparison({ page }: { page: CompetitorPage }) {
               })}
             </ul>
             <p className="mt-4 text-caption text-text-secondary">
-              Team includes 3 seats. Free trial: 14 days of Pro, no card.
+              Team includes 3 seats. Free trial: {trialSummary()}.
             </p>
           </div>
 

@@ -44,3 +44,12 @@ export const TIERS: Tier[] = ["starter", "pro", "team"];
 
 // Shared by the pricing cards, /settings/billing and the /vs/* pages, so a
 // price change lands everywhere at once.
+
+// Monetization.md §1: every new account gets one trial of Pro. It's
+// granted at onboarding (lib/services/onboarding.ts activateTrial) with no
+// billing step, which is what makes "no card" true.
+export const TRIAL = { days: 14, tier: "pro" } as const satisfies { days: number; tier: Tier };
+
+export function trialSummary(): string {
+  return `${TRIAL.days} days of ${TIER_INFO[TRIAL.tier].label}, no card`;
+}

@@ -1,3 +1,4 @@
+import { trialSummary } from "@/lib/billing/plans";
 import type { Cell, FeatureKey } from "@/content/vs/types";
 
 // Our side of every comparison, from what's actually shipped (not the
@@ -40,5 +41,6 @@ export const YTNICHES: Record<FeatureKey, Cell> = {
   rankTracker: { status: "no" },
   course: { status: "no" },
   lifetimePlan: { status: "no" },
-  freeTrial: { status: "yes", note: "14 days of Pro, no card" },
+  // From the same constant onboarding uses to grant the trial.
+  freeTrial: { status: "yes", note: trialSummary() },
 };
