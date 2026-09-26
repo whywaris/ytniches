@@ -1,5 +1,5 @@
 import { COMPETITORS, VS } from "@/components/features/landing/content";
-import { LIFT } from "@/components/features/landing/cta-link";
+import { LIFT } from "@/components/features/landing/lift";
 import { Section, SectionHeading } from "@/components/features/landing/section-heading";
 import { TrackedLink } from "@/components/features/landing/tracked-link";
 

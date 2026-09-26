@@ -8,7 +8,7 @@ import { capture } from "@/lib/analytics/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { LIFT } from "@/components/features/landing/cta-link";
+import { LIFT } from "@/components/features/landing/lift";
 
 // hero_video_modal. No video yet (Landing-Page-Spec §2 constraint): both
 // the poster and the "Watch 2-min demo" CTA open the same modal, which
