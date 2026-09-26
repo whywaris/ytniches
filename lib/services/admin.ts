@@ -14,7 +14,23 @@ import { computeBalance } from "@/lib/credits";
 import { err, ok, type Result } from "@/lib/result";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { DAILY_QUOTA_LIMIT, SOFT_LIMIT, getQuotaHistory, type QuotaDay } from "@/lib/youtube/quota";
+import {
+  DAILY_QUOTA_LIMIT,
+  SOFT_LIMIT,
+  getJobDailyBudget,
+  getQuotaBySource,
+  getQuotaHistory,
+  type QuotaDay,
+} from "@/lib/youtube/quota";
+import { MANUAL_EVENTS, type ManualJob } from "@/lib/discovery/events";
+import { inngest } from "@/lib/inngest/client";
+import {
+  addManualSeed,
+  deleteSeed,
+  listSeeds,
+  normalizeKeyword,
+  type DiscoverySeed,
+} from "@/lib/services/discovery/seeds";
 import type { Json } from "@/lib/supabase/database.types";
 
 // Security.md §3.3: the ONLY place admin data access happens, via the
@@ -47,8 +63,8 @@ export async function requireSuperAdmin(): Promise<Result<{ adminId: string }, F
 async function logAdminAction(entry: {
   adminId: string;
   action: string;
-  targetType: string;
-  targetId: string;
+  targetType: string | null;
+  targetId: string | null;
   metadata: Record<string, unknown>;
 }): Promise<void> {
   const { error } = await createServiceClient()
@@ -619,11 +635,126 @@ export async function getRevenueReport(now: Date = new Date()): Promise<RevenueR
 // ---------- API quotas ----------
 
 export async function getQuotaReport(now: Date = new Date()) {
-  const history = await getQuotaHistory(7, now);
+  const [history, bySource] = await Promise.all([getQuotaHistory(7, now), getQuotaBySource(now)]);
   return {
     history,
     today: history[history.length - 1],
     limit: DAILY_QUOTA_LIMIT,
     softLimit: SOFT_LIMIT,
+    // Niche-Discovery-Engine.md §4: jobs log usage per source (D-069).
+    bySource,
+    jobBudget: getJobDailyBudget(),
   };
+}
+
+// ---------- Discovery Engine (D-069) ----------
+
+export interface DiscoveryAdminReport {
+  seeds: DiscoverySeed[];
+  channelsDiscovered: number;
+  channelsEnriched: number;
+  channelsClassified: number;
+  niches: number;
+  latestSnapshotDate: string | null;
+  outliers: number;
+}
+
+async function countRows(table: "niches" | "outliers_feed"): Promise<number> {
+  const { count, error } = await createServiceClient()
+    .from(table)
+    .select("*", { count: "exact", head: true });
+  if (error) throw new Error(`countRows ${table} failed: ${error.message}`);
+  return count ?? 0;
+}
+
+export async function getDiscoveryAdminReport(): Promise<DiscoveryAdminReport> {
+  const supabase = createServiceClient();
+  const countWhere = async (column: "discovered_at" | "enriched_at" | "classified_at") => {
+    const { count, error } = await supabase
+      .from("channels")
+      .select("id", { count: "exact", head: true })
+      .not(column, "is", null);
+    if (error) throw new Error(`getDiscoveryAdminReport ${column} failed: ${error.message}`);
+    return count ?? 0;
+  };
+  const [seeds, discovered, enriched, classified, niches, outliers, latest] = await Promise.all([
+    listSeeds(),
+    countWhere("discovered_at"),
+    countWhere("enriched_at"),
+    countWhere("classified_at"),
+    countRows("niches"),
+    countRows("outliers_feed"),
+    supabase
+      .from("niche_snapshots")
+      .select("snapshot_date")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (latest.error)
+    throw new Error(`getDiscoveryAdminReport snapshot failed: ${latest.error.message}`);
+  return {
+    seeds,
+    channelsDiscovered: discovered,
+    channelsEnriched: enriched,
+    channelsClassified: classified,
+    niches,
+    latestSnapshotDate: latest.data?.snapshot_date ?? null,
+    outliers,
+  };
+}
+
+export type SeedError = ForbiddenError | { type: "invalid_keyword" } | { type: "duplicate" };
+
+export async function addDiscoverySeed(
+  keyword: string,
+  priority: number,
+): Promise<Result<void, SeedError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const normalized = normalizeKeyword(keyword);
+  if (!normalized) return err({ type: "invalid_keyword" });
+
+  const added = await addManualSeed(normalized, priority);
+  if (!added) return err({ type: "duplicate" });
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_seed_add",
+    targetType: "discovery_seed",
+    targetId: null,
+    metadata: { keyword: normalized, priority },
+  });
+  return ok(undefined);
+}
+
+export async function removeDiscoverySeed(seedId: string): Promise<Result<void, ForbiddenError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  await deleteSeed(seedId);
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_seed_remove",
+    targetType: "discovery_seed",
+    targetId: seedId,
+    metadata: {},
+  });
+  return ok(undefined);
+}
+
+// TRD.md §4.4: manual triggers carry `admin: true` for the audit trail.
+export async function triggerDiscoveryJob(job: ManualJob): Promise<Result<void, ForbiddenError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  await inngest.send({
+    name: MANUAL_EVENTS[job],
+    data: { admin: true, adminId: admin.value.adminId },
+  });
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_job_trigger",
+    targetType: "job",
+    targetId: null,
+    metadata: { job },
+  });
+  return ok(undefined);
 }

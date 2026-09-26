@@ -380,6 +380,41 @@ describe("syncChannelData", () => {
     );
   });
 
+  it("also writes a tracked channel's new outlier into the global outliers_feed", async () => {
+    const { freshVideos } = buildOutlierFixture();
+    const uuidFor = (i: number) => `00000000-0000-4000-8000-00000000000${i}`;
+    const upsertData = freshVideos.map((video, i) => ({
+      id: uuidFor(i),
+      youtube_video_id: video.id,
+    }));
+    const feedUpsert = vi.fn(() => Promise.resolve({ error: null }));
+
+    serviceFrom.mockReturnValueOnce(
+      channelsTable({ data: { ...CHANNEL_ROW, niche_id: "niche-1" }, error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(videosSelectTable({ data: [], error: null }));
+    getChannelVideos.mockResolvedValueOnce({ ok: true, value: freshVideos });
+    serviceFrom.mockReturnValueOnce(videosUpsertTable({ data: upsertData, error: null }));
+    serviceFrom.mockReturnValueOnce(outlierEventsTable({ data: [], error: null }));
+    serviceFrom.mockReturnValueOnce(insertTable());
+    serviceFrom.mockReturnValueOnce({ upsert: feedUpsert });
+
+    await syncChannelData(CHANNEL_ID);
+
+    expect(serviceFrom).toHaveBeenLastCalledWith("outliers_feed");
+    expect(feedUpsert).toHaveBeenCalledWith(
+      [
+        {
+          video_id: uuidFor(5),
+          channel_id: CHANNEL_ID,
+          niche_id: "niche-1",
+          outlier_multiple: 5,
+        },
+      ],
+      { onConflict: "video_id" },
+    );
+  });
+
   it("does not re-emit outlier_detected for a video that already has one (fire-once dedup)", async () => {
     const { freshVideos, upsertData } = buildOutlierFixture();
 

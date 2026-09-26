@@ -66,6 +66,11 @@ function computeCadence(publishedAtList: string[], now: number): number {
   return recentCount / CADENCE_WINDOW_WEEKS;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
 export function parseIso8601Duration(duration: string): number {
   const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration);
   if (!match) return 0;
@@ -142,7 +147,7 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
 
   const { data: channelRow, error: channelError } = await supabase
     .from("channels")
-    .select("id, youtube_channel_id, name")
+    .select("id, youtube_channel_id, name, niche_id")
     .eq("id", channelId)
     .maybeSingle();
 
@@ -327,6 +332,33 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
     );
     if (insertError) {
       throw new Error(`syncChannelData tracked_events insert failed: ${insertError.message}`);
+    }
+
+    // Niche-Discovery-Engine.md §6: tracked channels' outliers also land in
+    // the global feed. Upsert on video_id, so a repeat never duplicates.
+    const feedRows = events
+      .filter((event) => event.eventType === "outlier_detected")
+      .flatMap((event) => {
+        const { videoId, viewCount, baseline } = event.payload;
+        if (typeof videoId !== "string" || !isUuid(videoId)) return [];
+        if (typeof viewCount !== "number" || typeof baseline !== "number" || baseline <= 0)
+          return [];
+        return [
+          {
+            video_id: videoId,
+            channel_id: channelId,
+            niche_id: channelRow.niche_id ?? null,
+            outlier_multiple: viewCount / baseline,
+          },
+        ];
+      });
+    if (feedRows.length > 0) {
+      const { error: feedError } = await supabase
+        .from("outliers_feed")
+        .upsert(feedRows, { onConflict: "video_id" });
+      if (feedError) {
+        throw new Error(`syncChannelData outliers_feed upsert failed: ${feedError.message}`);
+      }
     }
   }
 

@@ -53,7 +53,18 @@ vi.mock("@/lib/youtube/quota", () => ({
   getQuotaHistory: vi.fn(),
 }));
 
-const { requireSuperAdmin, refundLastPayment, suspendUser } = await import("@/lib/services/admin");
+const inngestSend = vi.fn();
+vi.mock("@/lib/inngest/client", () => ({
+  inngest: { send: (...args: unknown[]) => inngestSend(...args) },
+}));
+const addManualSeed = vi.fn();
+vi.mock("@/lib/services/discovery/seeds", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/services/discovery/seeds")>()),
+  addManualSeed: (...args: unknown[]) => addManualSeed(...args),
+}));
+
+const { requireSuperAdmin, refundLastPayment, suspendUser, triggerDiscoveryJob, addDiscoverySeed } =
+  await import("@/lib/services/admin");
 
 function signedInAs(profile: { role: string; suspended_at: string | null }) {
   getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
@@ -157,5 +168,44 @@ describe("suspendUser", () => {
     const result = await suspendUser("admin-1", "oops");
     expect(result).toEqual({ ok: false, error: { type: "cannot_suspend_self" } });
     expect(updateUserById).not.toHaveBeenCalled();
+  });
+});
+
+describe("discovery admin (D-069)", () => {
+  it("refuses a non-admin before sending anything", async () => {
+    signedInAs({ role: "user", suspended_at: null });
+    expect(await triggerDiscoveryJob("discovery")).toEqual({
+      ok: false,
+      error: { type: "forbidden" },
+    });
+    expect(inngestSend).not.toHaveBeenCalled();
+  });
+
+  it("sends the manual event flagged admin:true and writes an audit row", async () => {
+    expect(await triggerDiscoveryJob("snapshot")).toEqual({ ok: true, value: undefined });
+    expect(inngestSend).toHaveBeenCalledWith({
+      name: "discovery/snapshot.requested",
+      data: { admin: true, adminId: "admin-1" },
+    });
+    expect(builders.admin_actions?.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "discovery_job_trigger", metadata: { job: "snapshot" } }),
+    );
+  });
+
+  it("normalises a new seed and reports duplicates", async () => {
+    addManualSeed.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    expect(await addDiscoverySeed("  Dark   Psychology ", 3)).toEqual({
+      ok: true,
+      value: undefined,
+    });
+    expect(addManualSeed).toHaveBeenCalledWith("dark psychology", 3);
+    expect(await addDiscoverySeed("dark psychology", 3)).toEqual({
+      ok: false,
+      error: { type: "duplicate" },
+    });
+    expect(await addDiscoverySeed("x", 3)).toEqual({
+      ok: false,
+      error: { type: "invalid_keyword" },
+    });
   });
 });
