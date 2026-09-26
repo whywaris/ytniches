@@ -56,7 +56,8 @@ export async function getNotificationPreferences(
     throw new Error(`getNotificationPreferences query failed: ${prefError.message}`);
   }
 
-  const emailAvailable = isEmailEligibleTier(subscription?.tier);
+  // Effective tier (D-059): Team workspace members get email too.
+  const emailAvailable = isEmailEligibleTier(ctx.tier ?? subscription?.tier);
   const rowByType = new Map(prefRows.map((row) => [row.notification_type, row]));
 
   const perType = NOTIFICATION_TYPES.map((type) => {
@@ -102,7 +103,7 @@ export async function updateNotificationPreferences(
 ): Promise<Result<void, never>> {
   const supabase = await createClient();
   const subscription = await getSubscriptionStatus(ctx);
-  const emailAvailable = isEmailEligibleTier(subscription?.tier);
+  const emailAvailable = isEmailEligibleTier(ctx.tier ?? subscription?.tier);
 
   const rows = input.perType.map((pref) => ({
     user_id: ctx.userId,

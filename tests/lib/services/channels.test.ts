@@ -42,6 +42,14 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom }),
 }));
 
+// Effective plan (D-059) has its own tests; here each case states the plan.
+const NO_PLAN = { tier: null, status: null, teamWorkspaceId: null };
+const getEffectivePlan = vi.fn<(userId: string) => Promise<unknown>>(async () => NO_PLAN);
+vi.mock("@/lib/billing/effective-plan", () => ({
+  getEffectivePlan: (userId: string) => getEffectivePlan(userId),
+}));
+const ownPlan = (tier: string, status = "active") => ({ tier, status, teamWorkspaceId: null });
+
 const { searchNiches, saveChannelToTracking, getChannelDetail, listVideosForChannel } =
   await import("@/lib/services/channels");
 
@@ -293,6 +301,7 @@ describe("saveChannelToTracking", () => {
   }
 
   it("saves successfully when under the tier limit", async () => {
+    getEffectivePlan.mockResolvedValue(ownPlan("pro"));
     sessionFrom.mockImplementation((table: string) => {
       if (table === "subscriptions")
         return subscriptionsTable({ data: { tier: "pro" }, error: null });
@@ -307,6 +316,7 @@ describe("saveChannelToTracking", () => {
   });
 
   it("treats an already-tracked channel as an idempotent success, not an error", async () => {
+    getEffectivePlan.mockResolvedValue(ownPlan("pro"));
     sessionFrom.mockImplementation((table: string) => {
       if (table === "subscriptions")
         return subscriptionsTable({ data: { tier: "pro" }, error: null });
@@ -324,6 +334,7 @@ describe("saveChannelToTracking", () => {
   });
 
   it("returns a tier_limit error at the cap, without a subscription row defaulting to the trial limit of 10", async () => {
+    getEffectivePlan.mockResolvedValue(NO_PLAN);
     sessionFrom.mockImplementation((table: string) => {
       if (table === "subscriptions") return subscriptionsTable({ data: null, error: null });
       if (table === "tracked_channels")
@@ -469,6 +480,9 @@ describe("listVideosForChannel", () => {
 
 describe("saveChannelToTracking sync cadence (pricing promise)", () => {
   function tables(subscription: { tier: string; status: string } | null) {
+    getEffectivePlan.mockResolvedValue(
+      subscription ? ownPlan(subscription.tier, subscription.status) : NO_PLAN,
+    );
     const insert = vi.fn<(row: Record<string, unknown>) => Promise<{ error: null }>>(() =>
       Promise.resolve({ error: null }),
     );
@@ -506,5 +520,52 @@ describe("saveChannelToTracking sync cadence (pricing promise)", () => {
     const insert = tables(subscription);
     await saveChannelToTracking(ctx, "internal-1");
     expect(insert.mock.calls[0][0]).toMatchObject({ refresh_cadence_hours: hours });
+  });
+});
+
+describe("saveChannelToTracking in a Team workspace (D-059)", () => {
+  function sharedPool(poolCount: number) {
+    getEffectivePlan.mockResolvedValue({ tier: "team", status: "active", teamWorkspaceId: "ws-1" });
+    const insert = vi.fn<(row: Record<string, unknown>) => Promise<{ error: null }>>(() =>
+      Promise.resolve({ error: null }),
+    );
+    sessionFrom.mockImplementation((table: string) => {
+      if (table === "tracked_channels") return { insert };
+      throw new Error(`unexpected session table ${table}`);
+    });
+    serviceFrom.mockImplementation((table: string) => {
+      if (table === "workspace_members") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() =>
+              Promise.resolve({ data: [{ user_id: "owner" }, { user_id: "user-1" }], error: null }),
+            ),
+          })),
+        };
+      }
+      if (table === "tracked_channels") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(() => Promise.resolve({ count: poolCount, error: null })),
+          })),
+        };
+      }
+      throw new Error(`unexpected service table ${table}`);
+    });
+    return insert;
+  }
+
+  it("counts everyone's channels against Team's shared 100", async () => {
+    sharedPool(100);
+    expect(await saveChannelToTracking(ctx, "internal-1")).toEqual({
+      ok: false,
+      error: { type: "tier_limit", limit: 100, current: 100 },
+    });
+  });
+
+  it("allows the save below the pool cap, syncing hourly like Team", async () => {
+    const insert = sharedPool(99);
+    expect(await saveChannelToTracking(ctx, "internal-1")).toEqual({ ok: true, value: undefined });
+    expect(insert.mock.calls[0][0]).toMatchObject({ refresh_cadence_hours: 1 });
   });
 });

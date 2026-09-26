@@ -32,6 +32,20 @@ vi.mock("@/lib/billing", () => ({
   cancelSubscription: (...args: unknown[]) => cancelSubscriptionApi(...args),
 }));
 
+// Effective plans (D-059) are resolved by effective-plan.ts (own tests);
+// here each test says who is affected and what their plan is now.
+type Plan = { tier: string | null; status: string | null; teamWorkspaceId: string | null };
+let plansByUser: Record<string, Plan> = {};
+let affectedUsers: string[] | null = null;
+vi.mock("@/lib/billing/effective-plan", () => ({
+  getEffectivePlans: async (ids: string[]) =>
+    new Map(
+      ids.map((id) => [id, plansByUser[id] ?? { tier: null, status: null, teamWorkspaceId: null }]),
+    ),
+  usersAffectedByPlanOf: async (id: string) => affectedUsers ?? [id],
+}));
+const own = (tier: string, status: string): Plan => ({ tier, status, teamWorkspaceId: null });
+
 const {
   getSubscriptionStatus,
   createCheckout,
@@ -309,6 +323,8 @@ describe("upsertSubscriptionFromProvider", () => {
     const retireBuilder = makeQueryBuilder({ data: null, error: null });
     const insertBuilder = makeQueryBuilder({ data: null, error: null });
     const trackedBuilder = makeQueryBuilder({ data: null, error: null });
+    plansByUser = { "user-1": own("pro", "active") };
+    affectedUsers = null;
     serviceFrom
       .mockReturnValueOnce(findBuilder)
       .mockReturnValueOnce(retireBuilder)
@@ -490,6 +506,8 @@ describe("upsertSubscriptionFromProvider -> sync cadence (pricing promise)", () 
     const retire = makeQueryBuilder({ data: null, error: null });
     const insert = makeQueryBuilder({ data: null, error: null });
     const tracked = makeQueryBuilder({ data: null, error: null });
+    plansByUser = { "user-1": own("team", "active") };
+    affectedUsers = null;
     serviceFrom
       .mockReturnValueOnce(find)
       .mockReturnValueOnce(retire)
@@ -507,6 +525,8 @@ describe("upsertSubscriptionFromProvider -> sync cadence (pricing promise)", () 
     const find = makeQueryBuilder({ data: { id: "row-1", is_current: true }, error: null });
     const update = makeQueryBuilder({ data: null, error: null });
     const tracked = makeQueryBuilder({ data: null, error: null });
+    plansByUser = { "user-1": own("pro", "cancelled") };
+    affectedUsers = null;
     serviceFrom.mockReturnValueOnce(find).mockReturnValueOnce(update).mockReturnValueOnce(tracked);
 
     await upsertSubscriptionFromProvider("user-1", "pro", {
@@ -525,5 +545,74 @@ describe("upsertSubscriptionFromProvider -> sync cadence (pricing promise)", () 
     await upsertSubscriptionFromProvider("user-1", "pro", providerSub);
 
     expect(serviceFrom).not.toHaveBeenCalledWith("tracked_channels");
+  });
+});
+
+describe("upsertSubscriptionFromProvider -> workspace members (D-059)", () => {
+  const teamSub = {
+    id: "sub_team",
+    status: "canceled" as const,
+    customerId: "cust_1",
+    productId: "prod_team_monthly",
+    currentPeriodStart: "2026-09-01T00:00:00.000Z",
+    currentPeriodEnd: "2026-10-01T00:00:00.000Z",
+    canceledAt: "2026-09-26T00:00:00.000Z",
+    metadata: {},
+    amountCents: 9900,
+    billingInterval: "month" as const,
+    lastTransaction: null,
+  };
+
+  it("drops every member back to their own plan when the owner's Team lapses", async () => {
+    affectedUsers = ["owner", "starter-member", "pro-member"];
+    plansByUser = {
+      owner: own("team", "cancelled"),
+      "starter-member": own("starter", "active"),
+      "pro-member": own("pro", "active"),
+    };
+    const find = makeQueryBuilder({ data: { id: "row-1", is_current: true }, error: null });
+    const update = makeQueryBuilder({ data: null, error: null });
+    const tracked = [0, 1, 2].map(() => makeQueryBuilder({ data: null, error: null }));
+    serviceFrom
+      .mockReturnValueOnce(find)
+      .mockReturnValueOnce(update)
+      .mockReturnValueOnce(tracked[0])
+      .mockReturnValueOnce(tracked[1])
+      .mockReturnValueOnce(tracked[2]);
+
+    await upsertSubscriptionFromProvider("owner", "team", teamSub);
+
+    expect(tracked[0].update).toHaveBeenCalledWith({ refresh_cadence_hours: 24 });
+    expect(tracked[0].eq).toHaveBeenCalledWith("user_id", "owner");
+    expect(tracked[1].update).toHaveBeenCalledWith({ refresh_cadence_hours: 24 });
+    expect(tracked[1].eq).toHaveBeenCalledWith("user_id", "starter-member");
+    expect(tracked[2].update).toHaveBeenCalledWith({ refresh_cadence_hours: 6 });
+    expect(tracked[2].eq).toHaveBeenCalledWith("user_id", "pro-member");
+    for (const userId of affectedUsers) expect(invalidateTierCache).toHaveBeenCalledWith(userId);
+  });
+
+  it("moves members to Team's hourly sync while the owner's Team is live", async () => {
+    affectedUsers = ["owner", "member"];
+    plansByUser = {
+      owner: { tier: "team", status: "active", teamWorkspaceId: "ws-1" },
+      member: { tier: "team", status: "active", teamWorkspaceId: "ws-1" },
+    };
+    const find = makeQueryBuilder({ data: { id: "row-1", is_current: true }, error: null });
+    const update = makeQueryBuilder({ data: null, error: null });
+    const tracked = [0, 1].map(() => makeQueryBuilder({ data: null, error: null }));
+    serviceFrom
+      .mockReturnValueOnce(find)
+      .mockReturnValueOnce(update)
+      .mockReturnValueOnce(tracked[0])
+      .mockReturnValueOnce(tracked[1]);
+
+    await upsertSubscriptionFromProvider("owner", "team", {
+      ...teamSub,
+      status: "active" as const,
+      canceledAt: null,
+    });
+
+    expect(tracked[1].update).toHaveBeenCalledWith({ refresh_cadence_hours: 1 });
+    expect(tracked[1].eq).toHaveBeenCalledWith("user_id", "member");
   });
 });

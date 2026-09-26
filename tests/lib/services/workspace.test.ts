@@ -37,6 +37,17 @@ let workspacesResult: { data: unknown; error: unknown } = { data: null, error: n
 let membersResult: QueryResult = { data: null, error: null };
 let invitationsResult: QueryResult = { data: null, error: null };
 let profilesResult: { data: unknown; error: unknown } = { data: [], error: null };
+// The caller's OWN current subscription (createWorkspace's gate, D-059).
+let subscriptionsResult: QueryResult = {
+  data: { tier: "team", status: "active" },
+  error: null,
+};
+
+// Plan effects after membership changes (D-059); billing.ts has its own tests.
+const reapplyPlanEffects = vi.fn<(userIds: string[]) => Promise<void>>(async () => {});
+vi.mock("@/lib/services/billing", () => ({
+  reapplyPlanEffects: (userIds: string[]) => reapplyPlanEffects(userIds),
+}));
 
 let authUser: { id: string; email: string } | null = { id: "user-1", email: "user1@example.com" };
 
@@ -45,6 +56,7 @@ const sessionFrom = vi.fn((table: string) => {
   if (table === "workspace_members") return makeBuilder(() => membersResult);
   if (table === "workspace_invitations") return makeBuilder(() => invitationsResult);
   if (table === "profiles") return makeBuilder(() => profilesResult);
+  if (table === "subscriptions") return makeBuilder(() => subscriptionsResult);
   throw new Error(`unexpected table ${table}`);
 });
 
@@ -83,17 +95,32 @@ const {
 const ctx = { userId: "user-1", workspaceId: null, tier: "team" as const };
 
 beforeEach(() => {
+  subscriptionsResult = { data: { tier: "team", status: "active" }, error: null };
   workspacesResult = { data: null, error: null };
   membersResult = { data: null, error: null };
   invitationsResult = { data: null, error: null };
   profilesResult = { data: [], error: null };
   authUser = { id: "user-1", email: "user1@example.com" };
   sendWorkspaceInviteEmail.mockClear();
+  reapplyPlanEffects.mockClear();
 });
 
 describe("createWorkspace", () => {
-  it("rejects a non-Team-tier caller without touching the database", async () => {
+  it("rejects a caller whose own plan isn't Team", async () => {
+    subscriptionsResult = { data: { tier: "pro", status: "active" }, error: null };
     const result = await createWorkspace({ ...ctx, tier: "pro" }, "Acme");
+    expect(result).toEqual({ ok: false, error: { type: "not_team_tier" } });
+  });
+
+  it("rejects a member who only inherits Team from someone else's workspace", async () => {
+    subscriptionsResult = { data: { tier: "starter", status: "active" }, error: null };
+    const result = await createWorkspace({ ...ctx, tier: "team" }, "Second workspace");
+    expect(result).toEqual({ ok: false, error: { type: "not_team_tier" } });
+  });
+
+  it("rejects a lapsed Team plan", async () => {
+    subscriptionsResult = { data: { tier: "team", status: "cancelled" }, error: null };
+    const result = await createWorkspace(ctx, "Acme");
     expect(result).toEqual({ ok: false, error: { type: "not_team_tier" } });
   });
 
@@ -337,10 +364,14 @@ describe("deleteWorkspace", () => {
     expect(result).toEqual({ ok: false, error: { type: "not_admin" } });
   });
 
-  it("deletes the workspace as an admin", async () => {
+  it("deletes the workspace as an admin, then re-applies everyone's own plan", async () => {
     membersResult = { data: { role: "admin" }, error: null };
+    serviceFrom.mockImplementationOnce(() =>
+      makeBuilder(() => ({ data: [{ user_id: "user-1" }, { user_id: "user-2" }], error: null })),
+    );
     const result = await deleteWorkspace(ctx, "ws-1");
     expect(result).toEqual({ ok: true, value: undefined });
+    expect(reapplyPlanEffects).toHaveBeenCalledWith(["user-1", "user-2"]);
   });
 });
 
@@ -397,5 +428,43 @@ describe("Team seat cap (3 seats, no seat purchasing yet)", () => {
       ok: false,
       error: { type: "workspace_full", seats: 3 },
     });
+  });
+});
+
+describe("membership changes re-apply plans (D-059)", () => {
+  it("joining a workspace re-applies the new member's plan", async () => {
+    authUser = { id: "user-1", email: "user1@example.com" };
+    invitationsResult = {
+      data: {
+        id: "inv-1",
+        workspace_id: "ws-1",
+        email: "user1@example.com",
+        role: "editor",
+        accepted_at: null,
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+      error: null,
+    };
+    workspacesResult = {
+      data: { id: "ws-1", name: "Acme", slug: "acme", owner_id: "owner-1" },
+      error: null,
+    };
+    membersResult = { data: null, error: null, count: 1 };
+
+    expect((await acceptInvitation(ctx, "token")).ok).toBe(true);
+    expect(reapplyPlanEffects).toHaveBeenCalledWith(["user-1"]);
+  });
+
+  it("removing a member re-applies their own plan", async () => {
+    membersResult = { data: { role: "admin" }, error: null };
+    workspacesResult = { data: { owner_id: "user-1" }, error: null };
+    expect((await removeMember(ctx, "ws-1", "user-2")).ok).toBe(true);
+    expect(reapplyPlanEffects).toHaveBeenCalledWith(["user-2"]);
+  });
+
+  it("leaving re-applies the leaver's own plan", async () => {
+    workspacesResult = { data: { owner_id: "owner-2" }, error: null };
+    expect((await leaveWorkspace(ctx, "ws-1")).ok).toBe(true);
+    expect(reapplyPlanEffects).toHaveBeenCalledWith(["user-1"]);
   });
 });

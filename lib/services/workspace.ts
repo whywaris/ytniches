@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { TIER_INFO } from "@/lib/billing/plans";
+import { reapplyPlanEffects } from "@/lib/services/billing";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendWorkspaceInviteEmail } from "@/lib/email/invitations";
@@ -76,11 +77,22 @@ async function seatsInUse(workspaceId: string, includePendingInvites: boolean): 
   return (memberResult.count ?? 0) + (inviteResult?.count ?? 0);
 }
 
-// Monetization.md §2.4/§2.5: workspace features are Team-tier only.
-// Server-side gate, same as isEmailEligibleTier for email notifications --
-// never trust a client-only check for a paid-tier feature.
-function requireTeamTier(ctx: RequestContext): Result<true, NotTeamTierError> {
-  return ctx.tier === "team" ? ok(true) : err({ type: "not_team_tier" });
+// Monetization.md §2.4/§2.5: creating a workspace needs the user's OWN
+// live Team plan. ctx.tier is the effective tier (D-059), which a member
+// inherits from someone else's workspace -- that must not let them open a
+// second workspace on the owner's subscription.
+async function requireOwnTeamPlan(userId: string): Promise<Result<true, NotTeamTierError>> {
+  const { data, error } = await (
+    await createClient()
+  )
+    .from("subscriptions")
+    .select("tier, status")
+    .eq("user_id", userId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (error) throw new Error(`requireOwnTeamPlan failed: ${error.message}`);
+  const live = data?.status === "active" || data?.status === "past_due";
+  return data?.tier === "team" && live ? ok(true) : err({ type: "not_team_tier" });
 }
 
 function slugify(name: string): string {
@@ -163,7 +175,7 @@ export async function createWorkspace(
   ctx: RequestContext,
   name: string,
 ): Promise<Result<Workspace, NotTeamTierError>> {
-  const tierCheck = requireTeamTier(ctx);
+  const tierCheck = await requireOwnTeamPlan(ctx.userId);
   if (!tierCheck.ok) return tierCheck;
 
   const supabase = await createClient();
@@ -405,6 +417,8 @@ export async function acceptInvitation(
   if (acceptError) {
     throw new Error(`acceptInvitation update failed: ${acceptError.message}`);
   }
+  // D-059: the new member now inherits the workspace owner's Team plan.
+  await reapplyPlanEffects([ctx.userId]);
 
   return ok({
     id: workspace.id,
@@ -447,6 +461,7 @@ export async function removeMember(
   if (error) {
     throw new Error(`removeMember delete failed: ${error.message}`);
   }
+  await reapplyPlanEffects([userId]);
   return ok(undefined);
 }
 
@@ -496,6 +511,7 @@ export async function leaveWorkspace(
   if (error) {
     throw new Error(`leaveWorkspace delete failed: ${error.message}`);
   }
+  await reapplyPlanEffects([ctx.userId]);
   return ok(undefined);
 }
 
@@ -512,10 +528,20 @@ export async function deleteWorkspace(
   const myRole = await getMyRole(ctx, workspaceId);
   if (myRole !== "admin") return err({ type: "not_admin" });
 
+  const { data: members, error: membersError } = await createServiceClient()
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId);
+  if (membersError) {
+    throw new Error(`deleteWorkspace member lookup failed: ${membersError.message}`);
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("workspaces").delete().eq("id", workspaceId);
   if (error) {
     throw new Error(`deleteWorkspace delete failed: ${error.message}`);
   }
+  // Everyone who was in it falls back to their own plan (D-059).
+  await reapplyPlanEffects((members ?? []).map((member) => member.user_id));
   return ok(undefined);
 }

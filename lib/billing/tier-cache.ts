@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import { getRedis } from "@/lib/cache/redis";
 import type { Tier } from "@/lib/billing/products";
 
@@ -35,18 +35,10 @@ export async function resolveTier(userId: string): Promise<Tier | null> {
     return cached === NO_TIER_SENTINEL ? null : (cached as Tier);
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("tier")
-    .eq("user_id", userId)
-    .eq("is_current", true)
-    .maybeSingle();
-  if (error) {
-    throw new Error(`resolveTier query failed: ${error.message}`);
-  }
-
-  const tier = isTier(data?.tier) ? data.tier : null;
+  // Effective tier (D-059): Team while a member of a workspace whose owner
+  // has a live Team plan, otherwise the user's own.
+  const { tier: effective } = await getEffectivePlan(userId);
+  const tier = isTier(effective) ? effective : null;
   await redis.set(tierCacheKey(userId), tier ?? NO_TIER_SENTINEL, { ex: TIER_CACHE_TTL_SECONDS });
   return tier;
 }

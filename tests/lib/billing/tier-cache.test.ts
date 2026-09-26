@@ -1,23 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-let subscriptionResult: { data: { tier: string } | null; error: { message: string } | null } = {
-  data: null,
-  error: null,
-};
-const maybeSingleSpy = vi.fn(() => Promise.resolve(subscriptionResult));
-
-function makeSubscriptionsSelectBuilder() {
-  const builder = {
-    eq: vi.fn(() => builder),
-    maybeSingle: maybeSingleSpy,
-  };
-  return builder;
-}
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({
-    from: vi.fn(() => ({ select: vi.fn(() => makeSubscriptionsSelectBuilder()) })),
-  }),
+// resolveTier resolves the *effective* tier (D-059); effective-plan.ts has
+// its own tests for the workspace rules, so it's mocked here.
+const getEffectivePlan = vi.fn();
+vi.mock("@/lib/billing/effective-plan", () => ({
+  getEffectivePlan: (userId: string) => getEffectivePlan(userId),
 }));
 
 const redisGet = vi.fn();
@@ -29,9 +16,15 @@ vi.mock("@/lib/cache/redis", () => ({
 
 const { resolveTier, invalidateTierCache } = await import("@/lib/billing/tier-cache");
 
+const plan = (tier: string | null) => ({
+  tier,
+  status: tier ? "active" : null,
+  teamWorkspaceId: null,
+});
+
 beforeEach(() => {
-  subscriptionResult = { data: null, error: null };
-  maybeSingleSpy.mockClear();
+  getEffectivePlan.mockReset();
+  getEffectivePlan.mockResolvedValue(plan(null));
   redisGet.mockReset();
   redisGet.mockResolvedValue(null);
   redisSet.mockReset();
@@ -39,10 +32,10 @@ beforeEach(() => {
 });
 
 describe("resolveTier", () => {
-  it("returns the cached tier without querying subscriptions", async () => {
+  it("returns the cached tier without resolving the plan", async () => {
     redisGet.mockResolvedValue("pro");
     expect(await resolveTier("user-1")).toBe("pro");
-    expect(maybeSingleSpy).not.toHaveBeenCalled();
+    expect(getEffectivePlan).not.toHaveBeenCalled();
   });
 
   it("treats the cached 'none' sentinel as no active subscription", async () => {
@@ -50,25 +43,20 @@ describe("resolveTier", () => {
     expect(await resolveTier("user-1")).toBeNull();
   });
 
-  it("queries subscriptions and caches the result on a cache miss", async () => {
-    subscriptionResult = { data: { tier: "team" }, error: null };
+  it("resolves the effective tier and caches it on a cache miss", async () => {
+    getEffectivePlan.mockResolvedValue(plan("team"));
     expect(await resolveTier("user-1")).toBe("team");
+    expect(getEffectivePlan).toHaveBeenCalledWith("user-1");
     expect(redisSet).toHaveBeenCalledWith("session:tier:user-1", "team", { ex: 60 });
   });
 
-  it("caches the 'none' sentinel when no current subscription row exists", async () => {
-    subscriptionResult = { data: null, error: null };
+  it("caches the 'none' sentinel when there's no plan", async () => {
     await resolveTier("user-1");
     expect(redisSet).toHaveBeenCalledWith("session:tier:user-1", "none", { ex: 60 });
   });
 
-  it("treats a legacy/unknown tier value as no active subscription", async () => {
-    subscriptionResult = { data: { tier: "free" }, error: null };
-    expect(await resolveTier("user-1")).toBeNull();
-  });
-
-  it("throws on a subscriptions query error", async () => {
-    subscriptionResult = { data: null, error: { message: "connection reset" } };
+  it("propagates a lookup error", async () => {
+    getEffectivePlan.mockRejectedValue(new Error("connection reset"));
     await expect(resolveTier("user-1")).rejects.toThrow("connection reset");
   });
 });

@@ -4,6 +4,7 @@ import { getBalance } from "@/lib/credits";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
+import { getEffectivePlans, usersAffectedByPlanOf } from "@/lib/billing/effective-plan";
 import { refreshCadenceHoursFor } from "@/lib/billing/plans";
 import { invalidateTierCache } from "@/lib/billing/tier-cache";
 import type { RequestContext } from "@/lib/context";
@@ -274,7 +275,7 @@ export async function upsertSubscriptionFromProvider(
     }
     // A retired row (e.g. the old plan after an upgrade, D-051) must not
     // override the current plan's cadence.
-    if (existing.is_current) await applyRefreshCadence(userId, { tier, status });
+    if (existing.is_current) await reapplyPlanEffects(await usersAffectedByPlanOf(userId));
     await invalidateTierCache(userId);
     return;
   }
@@ -300,23 +301,32 @@ export async function upsertSubscriptionFromProvider(
   if (insertError) {
     throw new Error(`upsertSubscriptionFromProvider insert failed: ${insertError.message}`);
   }
-  await applyRefreshCadence(userId, { tier, status });
+  await reapplyPlanEffects(await usersAffectedByPlanOf(userId));
   await invalidateTierCache(userId);
 }
 
 // Pricing promise: Starter syncs every 24h, Pro every 6h, Team hourly
-// (lib/billing/plans.ts). Every channel this user tracks follows their
-// current plan, so an upgrade or lapse takes effect at the next hourly
-// cron tick (workers/cron.ts).
-export async function applyRefreshCadence(
-  userId: string,
-  subscription: { tier: string; status: string } | null,
-): Promise<void> {
-  const { error } = await createServiceClient()
-    .from("tracked_channels")
-    .update({ refresh_cadence_hours: refreshCadenceHoursFor(subscription) })
-    .eq("user_id", userId);
-  if (error) throw new Error(`applyRefreshCadence failed: ${error.message}`);
+// (lib/billing/plans.ts). Each user's tracked channels follow their
+// *effective* plan (D-059: a live Team workspace's owner plan counts for
+// its members), re-applied whenever a plan or a workspace membership
+// changes; takes effect at the next hourly cron tick (workers/cron.ts).
+// Also drops their cached tier so feature gates switch right away.
+export async function reapplyPlanEffects(userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  const plans = await getEffectivePlans(userIds);
+  const service = createServiceClient();
+  for (const userId of userIds) {
+    const plan = plans.get(userId);
+    const cadence = refreshCadenceHoursFor(
+      plan?.tier && plan.status ? { tier: plan.tier, status: plan.status } : null,
+    );
+    const { error } = await service
+      .from("tracked_channels")
+      .update({ refresh_cadence_hours: cadence })
+      .eq("user_id", userId);
+    if (error) throw new Error(`reapplyPlanEffects failed: ${error.message}`);
+    await invalidateTierCache(userId);
+  }
 }
 
 // Monetization.md §3.2's recurring per-cycle amounts (starter=200/

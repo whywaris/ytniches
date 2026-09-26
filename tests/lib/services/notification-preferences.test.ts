@@ -231,3 +231,12 @@ describe("updateChannelNotificationOverride", () => {
     );
   });
 });
+
+describe("email availability follows the effective tier (D-059)", () => {
+  it("offers email to a Team workspace member with no subscription of their own", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: [], error: null }));
+    getSubscriptionStatus.mockResolvedValueOnce(null);
+    const summary = await getNotificationPreferences({ ...ctx, tier: "team" });
+    expect(summary.emailAvailable).toBe(true);
+  });
+});

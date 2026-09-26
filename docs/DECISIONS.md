@@ -707,3 +707,18 @@ Decisions that still need to close before their dependent docs / features can be
   - **One trial pitch:** "Try every Pro feature free for 14 days" (`TRIAL_PITCH`, built from `TRIAL`), used on pricing, landing and VS pages, and in the help center. "Full Pro access" is gone, and a test fails if "full Pro access" or "full Pro plan" reappears anywhere in `app/`, `components/`, `content/` or `lib/`.
   - **"Priority AI generation" removed from the Pro card.** There's no priority queue. Put it back only when one exists.
 - **Impacts:** `lib/billing/plans.ts`, landing `FINAL_CTA`, `/pricing`, `content/vs/*`, `/settings/billing`, migration `20260926100000_trial_cadence.sql`.
+
+### D-059: Workspace members inherit Team limits
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** D-056 made sync cadence follow each user's own plan, which left invited Team members (often with no subscription) on 24h and the 10-channel cap.
+- **Final call:**
+  - **Effective plan** (`lib/billing/effective-plan.ts`): Team while the user is a member of a workspace whose owner has a live (active or past_due) Team subscription; otherwise their own plan. If they're in several, the earliest-joined live one counts.
+  - **Where it applies:** the request tier (`resolveTier`, so every `ctx.tier` gate), tracked-channel sync cadence, email eligibility (notification settings and the sync worker's fan-out), and the tracked-channel cap.
+  - **Shared pool:** in a live Team workspace, all channels tracked by its members (owner included) count against Team's 100 together. No code ever sets `tracked_channels.workspace_id` (tracking is personal), so "workspace channels" means the members' channels, pooled.
+  - **Fallback:** when the owner's Team lapses, the billing webhook re-applies the effective plan to the owner and every member of workspaces they own, and each drops to their own plan. Joining, leaving, being removed and workspace deletion re-apply too. Tier caches are invalidated, so gates switch immediately.
+  - **Creating a workspace** still requires the user's own live Team plan. An inherited Team can't open a second workspace on someone else's subscription.
+- **Known limits:**
+  - Digests aren't gated by plan when sent, only when preferences are saved. A user who enabled digests on Pro, then dropped to Starter, keeps getting them. Out of scope here.
+  - Verified against the real dev schema (the join queries run), but dev has no workspaces, so the end-to-end behaviour is proven by unit tests, not live data.
+- **Impacts:** `lib/billing/{effective-plan,tier-cache}.ts`, `lib/services/{billing,channels,workspace,notification-preferences}.ts`, `workers/channel-sync.ts`.

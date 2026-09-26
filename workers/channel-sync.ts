@@ -18,6 +18,7 @@ import {
 } from "@/lib/email/notifications";
 import { isInQuietHours } from "@/lib/notifications/quiet-hours";
 import { isEmailEligibleTier } from "@/lib/billing";
+import { getEffectivePlans } from "@/lib/billing/effective-plan";
 import type { YouTubeVideoItem } from "@/lib/youtube/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -454,7 +455,13 @@ export async function fanOutNotifications(events: DetectedEvent[]): Promise<void
       (overrides ?? []).map((row) => [row.user_id, row.notifications_enabled]),
     );
     const prefByUser = new Map((prefs ?? []).map((row) => [row.user_id, row]));
-    const tierByUser = new Map((subscriptions ?? []).map((row) => [row.user_id, row.tier]));
+    const tierByUser = new Map<string, string>(
+      (subscriptions ?? []).map((row) => [row.user_id, row.tier]),
+    );
+    // D-059: members of a live Team workspace get Team's email too.
+    for (const [userId, plan] of await getEffectivePlans(userIds)) {
+      if (plan.teamWorkspaceId) tierByUser.set(userId, "team");
+    }
     const timeZoneByUser = new Map((profiles ?? []).map((row) => [row.id, row.time_zone]));
 
     // Per-channel override wins if set; otherwise the general preference;

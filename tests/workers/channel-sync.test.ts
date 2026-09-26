@@ -13,6 +13,13 @@ vi.mock("@/lib/services/channels", () => ({
 }));
 
 const serviceFrom = vi.fn();
+const getEffectivePlans = vi.fn<(userIds: string[]) => Promise<Map<string, unknown>>>(
+  async () => new Map(),
+);
+vi.mock("@/lib/billing/effective-plan", () => ({
+  getEffectivePlans: (userIds: string[]) => getEffectivePlans(userIds),
+}));
+
 vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom }),
 }));
@@ -762,6 +769,46 @@ describe("fanOutNotifications", () => {
     await fanOutNotifications([NEW_VIDEO_EVENT]);
 
     expect(sendNewVideoEmail).not.toHaveBeenCalled();
+  });
+
+  it("emails a Team workspace member who has no subscription of their own (D-059)", async () => {
+    getEffectivePlans.mockResolvedValueOnce(
+      new Map([["u1", { tier: "team", status: "active", teamWorkspaceId: "ws-1" }]]),
+    );
+    serviceFrom.mockReturnValueOnce(
+      trackedChannelsTable({ data: [{ user_id: "u1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // overrides
+    serviceFrom.mockReturnValueOnce(
+      overridesOrPrefsTable({
+        data: [
+          {
+            user_id: "u1",
+            in_app_enabled: true,
+            email_enabled: true,
+            quiet_hours_start: null,
+            quiet_hours_end: null,
+          },
+        ],
+        error: null,
+      }),
+    ); // prefs
+    serviceFrom.mockReturnValueOnce(overridesOrPrefsTable({ data: [], error: null })); // no own subscription
+    serviceFrom.mockReturnValueOnce(
+      selectInTable({ data: [{ id: "u1", time_zone: "UTC" }], error: null }),
+    ); // profiles
+    serviceFrom.mockReturnValueOnce(
+      insertTable({ error: null, data: [{ id: "notif-1", user_id: "u1" }] }),
+    );
+    sendNewVideoEmail.mockResolvedValueOnce(true);
+    serviceFrom.mockReturnValueOnce(updateTable());
+
+    await fanOutNotifications([NEW_VIDEO_EVENT]);
+
+    expect(sendNewVideoEmail).toHaveBeenCalledWith(
+      "u1",
+      expect.objectContaining({ channelId: CHANNEL_ID }),
+    );
   });
 
   it("does not email when email_enabled is false", async () => {

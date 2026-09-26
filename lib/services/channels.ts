@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 
-import { refreshCadenceHoursFor, trackedChannelsLimitFor } from "@/lib/billing/plans";
+import { getEffectivePlan } from "@/lib/billing/effective-plan";
+import { refreshCadenceHoursFor, TIER_INFO, trackedChannelsLimitFor } from "@/lib/billing/plans";
 import { getRedis } from "@/lib/cache/redis";
 import { consume, getBalance } from "@/lib/credits";
 import { getCachedSearchResult } from "@/lib/youtube/cache";
@@ -490,27 +491,54 @@ export async function listVideosForChannel(
   }));
 }
 
+async function countOwnTracked(userId: string): Promise<number> {
+  const { count, error } = await (
+    await createClient()
+  )
+    .from("tracked_channels")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw new Error(`countOwnTracked failed: ${error.message}`);
+  return count ?? 0;
+}
+
+// Service client: members can't read each other's tracked_channels rows.
+async function countWorkspacePool(workspaceId: string): Promise<number> {
+  const service = createServiceClient();
+  const { data: members, error: membersError } = await service
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId);
+  if (membersError) throw new Error(`countWorkspacePool members failed: ${membersError.message}`);
+  const { count, error } = await service
+    .from("tracked_channels")
+    .select("id", { count: "exact", head: true })
+    .in(
+      "user_id",
+      (members ?? []).map((member) => member.user_id),
+    );
+  if (error) throw new Error(`countWorkspacePool failed: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function saveChannelToTracking(
   ctx: RequestContext,
   channelId: string,
 ): Promise<Result<void, SaveChannelError>> {
   const supabase = await createClient();
+  const plan = await getEffectivePlan(ctx.userId);
 
-  const [{ data: subscription }, { count }] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("tier, status")
-      .eq("user_id", ctx.userId)
-      .eq("is_current", true)
-      .maybeSingle(),
-    supabase
-      .from("tracked_channels")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", ctx.userId),
-  ]);
-
-  const limit = trackedChannelsLimitFor(subscription?.tier);
-  const current = count ?? 0;
+  // D-059: in a live Team workspace, everyone's tracked channels share one
+  // pool of Team's cap; otherwise the user's own plan cap applies.
+  const { limit, current } = plan.teamWorkspaceId
+    ? {
+        limit: TIER_INFO.team.trackedChannels,
+        current: await countWorkspacePool(plan.teamWorkspaceId),
+      }
+    : {
+        limit: trackedChannelsLimitFor(plan.tier),
+        current: await countOwnTracked(ctx.userId),
+      };
 
   if (current >= limit) {
     return err({ type: "tier_limit", limit, current });
@@ -521,7 +549,9 @@ export async function saveChannelToTracking(
     channel_id: channelId,
     // The plan's sync cadence (Pro 6h, Team 1h, otherwise 24h). Kept in
     // step with plan changes by applyRefreshCadence in lib/services/billing.ts.
-    refresh_cadence_hours: refreshCadenceHoursFor(subscription),
+    refresh_cadence_hours: refreshCadenceHoursFor(
+      plan.tier && plan.status ? { tier: plan.tier, status: plan.status } : null,
+    ),
   });
 
   if (error) {
