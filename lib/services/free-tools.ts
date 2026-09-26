@@ -4,7 +4,7 @@ import { getRedis } from "@/lib/cache/redis";
 import { evaluateAgainstChannel, OUTLIER_THRESHOLD_MULTIPLIER } from "@/lib/outliers/scoring";
 import { err, ok, type Result } from "@/lib/result";
 import { getChannelById, getChannelVideos, getVideoById, resolveChannelUrl } from "@/lib/youtube";
-import { FREE_TOOLS_QUOTA_CUTOFF, getQuotaUsedToday } from "@/lib/youtube/quota";
+import { FREE_TOOLS_QUOTA_CUTOFF, getQuotaUsedToday, withQuotaSource } from "@/lib/youtube/quota";
 import { parseChannelInput, parseVideoInput } from "@/lib/youtube/urls";
 
 // D-014 / D-054: the server-backed free tools (channel lookup, outlier
@@ -76,11 +76,13 @@ export async function lookupChannel(
   const guard = await guardFreeTool(ip);
   if (!guard.ok) return guard;
 
-  const resolved = await resolveChannelUrl(`@${parsed.handle}`);
+  const resolved = await withQuotaSource("free_tools", () =>
+    resolveChannelUrl(`@${parsed.handle}`),
+  );
   if (!resolved.ok) return err(fromYouTubeError(resolved.error));
 
   // resolveChannelUrl just cached the channel, so this costs nothing.
-  const channel = await getChannelById(resolved.value);
+  const channel = await withQuotaSource("free_tools", () => getChannelById(resolved.value));
   return ok({
     channelId: resolved.value,
     title: channel.ok ? channel.value.snippet?.title : undefined,
@@ -106,14 +108,16 @@ export async function checkOutlier(
   const guard = await guardFreeTool(ip);
   if (!guard.ok) return guard;
 
-  const video = await getVideoById(parsed.id);
+  const video = await withQuotaSource("free_tools", () => getVideoById(parsed.id));
   if (!video.ok) {
     return err(
       video.error.type === "api_error" ? { type: "not_found" } : fromYouTubeError(video.error),
     );
   }
 
-  const uploads = await getChannelVideos(video.value.snippet.channelId);
+  const uploads = await withQuotaSource("free_tools", () =>
+    getChannelVideos(video.value.snippet.channelId),
+  );
   if (!uploads.ok) return err(fromYouTubeError(uploads.error));
 
   const toScored = (item: typeof video.value) => ({
@@ -164,7 +168,7 @@ export async function extractTags(
   const guard = await guardFreeTool(ip);
   if (!guard.ok) return guard;
 
-  const video = await getVideoById(parsed.id);
+  const video = await withQuotaSource("free_tools", () => getVideoById(parsed.id));
   if (!video.ok) {
     return err(
       video.error.type === "api_error" ? { type: "not_found" } : fromYouTubeError(video.error),

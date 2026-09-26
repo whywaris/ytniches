@@ -37,6 +37,21 @@ export const YouTubeSearchResponseSchema = z
 
 export type YouTubeSearchResponse = z.infer<typeof YouTubeSearchResponseSchema>;
 
+// search.list?part=snippet&type=video (discovery). Still 100 units; the
+// snippet is what carries the uploading channel's ID.
+export const YouTubeVideoSearchResponseSchema = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          id: z.object({ videoId: z.string() }).passthrough(),
+          snippet: z.object({ channelId: z.string() }).passthrough(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
 // channels.list?part=snippet,statistics,brandingSettings,contentDetails — 1
 // unit. `contentDetails.relatedPlaylists.uploads` is the channel's uploads
 // playlist ID — the cheap (1-unit, via playlistItems.list) way to enumerate
@@ -79,6 +94,9 @@ export const YouTubeChannelResponseSchema = z
             })
             .passthrough()
             .optional(),
+          // part=status costs nothing extra; madeForKids feeds the
+          // "exclude kids content" discovery filter.
+          status: z.object({ madeForKids: z.boolean().optional() }).passthrough().optional(),
           contentDetails: z
             .object({
               relatedPlaylists: z

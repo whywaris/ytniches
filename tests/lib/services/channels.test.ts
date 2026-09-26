@@ -39,6 +39,11 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: sessionFrom }),
 }));
 
+const addUserSearchSeed = vi.fn();
+vi.mock("@/lib/services/discovery/seeds", () => ({
+  addUserSearchSeed: (...args: unknown[]) => addUserSearchSeed(...args),
+}));
+
 const serviceFrom = vi.fn();
 vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom }),
@@ -213,6 +218,22 @@ describe("searchNiches", () => {
       { uploadFrequency: "any", monetized: "any" },
       [makeChannel()],
     );
+  });
+
+  it("feeds a real (cache-miss) keyword search to the discovery crawler", async () => {
+    getCachedSearchChannels.mockResolvedValueOnce(null);
+    getBalance.mockResolvedValueOnce(10);
+    searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
+    getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel()] });
+    serviceFrom.mockReturnValueOnce(
+      channelsUpsertTable({ data: [{ id: "internal-1", youtube_channel_id: "UC1" }], error: null }),
+    );
+    sessionFrom.mockReturnValueOnce(videosTable({ data: [], error: null }));
+    consume.mockResolvedValueOnce({ ok: true, value: undefined });
+
+    await searchNiches(ctx, { ...defaultFilters(), keyword: "mafia history" }, "key-2");
+
+    expect(addUserSearchSeed).toHaveBeenCalledWith("mafia history");
   });
 
   it("applies the avgViewsMin filter against DB video rows, excluding channels below it", async () => {

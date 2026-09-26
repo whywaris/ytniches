@@ -3,6 +3,7 @@ import {
   YouTubeChannelResponseSchema,
   YouTubePlaylistItemsResponseSchema,
   YouTubeSearchResponseSchema,
+  YouTubeVideoSearchResponseSchema,
   YouTubeVideoResponseSchema,
   type YouTubeChannelItem,
   type YouTubeVideoItem,
@@ -91,11 +92,42 @@ export async function searchChannels(query: string): Promise<Result<string[], Yo
   return ok(parsed.data.items.map((item) => item.id.channelId));
 }
 
+// Discovery (Niche-Discovery-Engine.md §6): recent breakout videos for a
+// seed keyword. Same 100 units as a channel search; we ask for `snippet`
+// only to learn each video's channelId -- the channels themselves are
+// fetched in bulk afterwards (1 unit per 50).
+export async function searchRecentVideos(
+  query: string,
+  publishedAfter: string,
+): Promise<Result<{ videoId: string; channelId: string }[], YouTubeClientError>> {
+  const result = await fetchYouTube("search", {
+    part: "snippet",
+    type: "video",
+    q: query,
+    order: "viewCount",
+    publishedAfter,
+    maxResults: "50",
+  });
+  if (!result.ok) return result;
+
+  const parsed = YouTubeVideoSearchResponseSchema.safeParse(result.value);
+  if (!parsed.success) {
+    return err({ type: "invalid_response", message: parsed.error.message });
+  }
+
+  return ok(
+    parsed.data.items.map((item) => ({
+      videoId: item.id.videoId,
+      channelId: item.snippet.channelId,
+    })),
+  );
+}
+
 async function fetchChannelsBatch(
   ids: string[],
 ): Promise<Result<YouTubeChannelItem[], YouTubeClientError>> {
   const result = await fetchYouTube("channels", {
-    part: "snippet,statistics,brandingSettings,contentDetails",
+    part: "snippet,statistics,brandingSettings,contentDetails,status",
     id: ids.join(","),
   });
   if (!result.ok) return result;
@@ -176,11 +208,12 @@ export async function fetchVideosByIds(
 // 50 (YouTube's own per-call max for this endpoint).
 export async function fetchPlaylistItemVideoIds(
   playlistId: string,
+  maxResults = 50,
 ): Promise<Result<string[], YouTubeClientError>> {
   const result = await fetchYouTube("playlistItems", {
     part: "contentDetails",
     playlistId,
-    maxResults: "50",
+    maxResults: String(Math.min(50, Math.max(1, maxResults))),
   });
   if (!result.ok) return result;
 

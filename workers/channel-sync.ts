@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getChannelById, getChannelVideos } from "@/lib/youtube";
 import { upsertChannels } from "@/lib/services/channels";
+import { withQuotaSource } from "@/lib/youtube/quota";
 import { createServiceClient } from "@/lib/supabase/service";
 import { inngest } from "@/lib/inngest/client";
 import {
@@ -65,7 +66,7 @@ function computeCadence(publishedAtList: string[], now: number): number {
   return recentCount / CADENCE_WINDOW_WEEKS;
 }
 
-function parseIso8601Duration(duration: string): number {
+export function parseIso8601Duration(duration: string): number {
   const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration);
   if (!match) return 0;
   const [, hours, minutes, seconds] = match;
@@ -103,15 +104,23 @@ function toVideoRow(
 // Exported -- lib/services/prompts.ts (Phase 1 Task 3) reuses this exact
 // mapping for the "From URL" entry path, same reasoning as
 // lib/services/channels.ts's upsertChannels export.
+// `outlierMultiples` (discovery enrichment, keyed by youtube_video_id)
+// rides along in the same upsert so it's one round-trip, not one per video.
 export async function upsertVideos(
   channelId: string,
   videos: YouTubeVideoItem[],
+  outlierMultiples?: Map<string, number | null>,
 ): Promise<Map<string, string>> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("videos")
     .upsert(
-      videos.map((video) => toVideoRow(video, channelId)),
+      videos.map((video) => ({
+        ...toVideoRow(video, channelId),
+        ...(outlierMultiples?.has(video.id)
+          ? { outlier_multiple: outlierMultiples.get(video.id) ?? null }
+          : {}),
+      })),
       { onConflict: "youtube_video_id" },
     )
     .select("id, youtube_video_id");
@@ -154,7 +163,9 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
     throw new Error(`syncChannelData old videos query failed: ${oldVideosError.message}`);
   }
 
-  const channelResult = await getChannelById(channelRow.youtube_channel_id);
+  const channelResult = await withQuotaSource("channel_sync", () =>
+    getChannelById(channelRow.youtube_channel_id),
+  );
   if (!channelResult.ok) {
     // Thrown, not returned as a typed error: TRD.md §4.3 wants at-least-once
     // delivery with idempotent handlers, so a transient YouTube/quota
@@ -162,7 +173,9 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
     throw new Error(`syncChannelData channel fetch failed: ${JSON.stringify(channelResult.error)}`);
   }
 
-  const videosResult = await getChannelVideos(channelRow.youtube_channel_id);
+  const videosResult = await withQuotaSource("channel_sync", () =>
+    getChannelVideos(channelRow.youtube_channel_id),
+  );
   if (!videosResult.ok) {
     throw new Error(`syncChannelData videos fetch failed: ${JSON.stringify(videosResult.error)}`);
   }

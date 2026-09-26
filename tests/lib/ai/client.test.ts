@@ -2,11 +2,13 @@ import { z } from "zod";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
+const embeddingsCreate = vi.fn();
 
 vi.mock("openai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("openai")>();
   class MockOpenAI {
     chat = { completions: { parse: parseMock } };
+    embeddings = { create: embeddingsCreate };
   }
   // The real error classes are static properties on the default export
   // (OpenAI.RateLimitError, etc.) -- client.ts checks `instanceof
@@ -22,7 +24,7 @@ vi.mock("openai", async (importOriginal) => {
 });
 
 const OpenAI = (await import("openai")).default;
-const { generateStructuredOutput } = await import("@/lib/ai/client");
+const { createEmbedding, generateStructuredOutput } = await import("@/lib/ai/client");
 
 const VALID_OUTPUT = {
   title_variants: ["A", "B", "C", "D", "E"],
@@ -143,5 +145,44 @@ describe("generateStructuredOutput", () => {
       ok: false,
       error: { type: "network_error", message: "totally unexpected" },
     });
+  });
+});
+
+describe("model override (D-074)", () => {
+  it("lets background classification run on the mini model", async () => {
+    parseMock.mockResolvedValueOnce({ choices: [{ message: { parsed: VALID_OUTPUT } }] });
+
+    await generateStructuredOutput("s", "u", TEST_SCHEMA, "t", { model: "gpt-4o-mini" });
+
+    expect(parseMock).toHaveBeenCalledWith(expect.objectContaining({ model: "gpt-4o-mini" }));
+  });
+});
+
+describe("createEmbedding", () => {
+  it("returns a 1536-dim text-embedding-3-small vector", async () => {
+    const vector = Array.from({ length: 1536 }, () => 0.01);
+    embeddingsCreate.mockResolvedValueOnce({ data: [{ embedding: vector }] });
+
+    const result = await createEmbedding("Mafia History: organised crime stories");
+
+    expect(result).toEqual({ ok: true, value: vector });
+    expect(embeddingsCreate).toHaveBeenCalledWith({
+      model: "text-embedding-3-small",
+      input: "Mafia History: organised crime stories",
+      dimensions: 1536,
+    });
+  });
+
+  it("rejects a vector of the wrong size", async () => {
+    embeddingsCreate.mockResolvedValueOnce({ data: [{ embedding: [0.1] }] });
+    const result = await createEmbedding("x");
+    expect(result.ok).toBe(false);
+  });
+
+  it("maps a rate limit", async () => {
+    embeddingsCreate.mockRejectedValueOnce(
+      new OpenAI.RateLimitError(429, undefined, "slow down", new Headers()),
+    );
+    expect(await createEmbedding("x")).toEqual({ ok: false, error: { type: "rate_limited" } });
   });
 });

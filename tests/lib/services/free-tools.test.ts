@@ -19,6 +19,7 @@ const getQuotaUsedToday = vi.fn();
 vi.mock("@/lib/youtube/quota", () => ({
   FREE_TOOLS_QUOTA_CUTOFF: 7_000,
   getQuotaUsedToday: () => getQuotaUsedToday(),
+  withQuotaSource: (_source: string, fn: () => Promise<unknown>) => fn(),
 }));
 
 const resolveChannelUrl = vi.fn();

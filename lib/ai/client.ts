@@ -9,6 +9,11 @@ import type { z } from "zod";
 // D-032: switched from claude-sonnet-5 to gpt-4o (Anthropic billing
 // unavailable) -- this is the only file that needed to change.
 const MODEL = "gpt-4o";
+// D-074: background niche classification is high-volume and low-stakes,
+// so it runs on the mini model; user-facing generation stays on MODEL.
+export const CLASSIFY_MODEL = "gpt-4o-mini";
+export const EMBEDDING_MODEL = "text-embedding-3-small";
+export const EMBEDDING_DIMENSIONS = 1536; // niches.embedding vector(1536)
 // Non-streaming default: never lowball max_tokens (a truncated structured
 // response can't be repaired), and the ceiling only bounds worst case --
 // billing is by tokens actually generated, not by this number.
@@ -37,10 +42,11 @@ export async function generateStructuredOutput<T>(
   user: string,
   schema: z.ZodType<T>,
   schemaName: string,
+  options: { model?: string } = {},
 ): Promise<Result<T, AiClientError>> {
   try {
     const completion = await getClient().chat.completions.parse({
-      model: MODEL,
+      model: options.model ?? MODEL,
       max_completion_tokens: MAX_TOKENS,
       messages: [
         { role: "system", content: system },
@@ -58,6 +64,23 @@ export async function generateStructuredOutput<T>(
     }
 
     return ok(parsed);
+  } catch (cause) {
+    return err(toAiClientError(cause));
+  }
+}
+
+export async function createEmbedding(text: string): Promise<Result<number[], AiClientError>> {
+  try {
+    const response = await getClient().embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: text,
+      dimensions: EMBEDDING_DIMENSIONS,
+    });
+    const embedding = response.data[0]?.embedding;
+    if (!embedding || embedding.length !== EMBEDDING_DIMENSIONS) {
+      return err({ type: "invalid_response", message: "embedding missing or wrong size" });
+    }
+    return ok(embedding);
   } catch (cause) {
     return err(toAiClientError(cause));
   }

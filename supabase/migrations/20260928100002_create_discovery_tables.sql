@@ -108,11 +108,17 @@ create table public.niche_snapshots (
   channel_count int not null default 0,
   new_channels_30d int not null default 0,
   median_views numeric,
+  -- Denormalised at snapshot time so the feed is a plain indexed read:
+  -- trend = score minus the score TREND_WINDOW_DAYS earlier (null if none),
+  -- why_chips = the top-2 contributing signals, already worded (spec §8).
+  trend int,
+  why_chips text[] not null default '{}',
   created_at timestamptz not null default now(),
   primary key (niche_id, snapshot_date)
 );
 
-create index niche_snapshots_snapshot_date_idx on public.niche_snapshots (snapshot_date);
+create index niche_snapshots_snapshot_date_idx
+  on public.niche_snapshots (snapshot_date, opportunity_score desc);
 
 alter table public.niche_snapshots enable row level security;
 

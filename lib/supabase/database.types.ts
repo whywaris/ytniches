@@ -388,6 +388,8 @@ export type Database = {
           outlier_density: number | null;
           snapshot_date: string;
           supply: number | null;
+          trend: number | null;
+          why_chips: string[];
         };
         Insert: {
           accessibility?: number | null;
@@ -402,6 +404,8 @@ export type Database = {
           outlier_density?: number | null;
           snapshot_date: string;
           supply?: number | null;
+          trend?: number | null;
+          why_chips?: string[];
         };
         Update: {
           accessibility?: number | null;
@@ -416,6 +420,8 @@ export type Database = {
           outlier_density?: number | null;
           snapshot_date?: string;
           supply?: number | null;
+          trend?: number | null;
+          why_chips?: string[];
         };
         Relationships: [
           {
