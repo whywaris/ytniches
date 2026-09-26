@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const serviceFrom = vi.fn();
 const rpc = vi.fn();
+// Plan at send time (effective-plan.ts has its own tests).
+let currentTier: string | null = "pro";
+vi.mock("@/lib/billing/effective-plan", () => ({
+  getEffectivePlan: async () => ({ tier: currentTier, status: "active", teamWorkspaceId: null }),
+}));
+
 vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => ({ from: serviceFrom, rpc }),
 }));
@@ -199,5 +205,61 @@ describe("sendDigestForUser", () => {
 
     expect(sent).toBe(false);
     expect(sendWeeklyDigestEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendDigestForUser plan check at send time", () => {
+  function digestWithOneOutlier() {
+    serviceFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: [{ channel_id: "chan-1" }], error: null }),
+    );
+    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: [{ id: "e1" }], error: null }));
+    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: [], error: null }));
+    buildOutlierItems.mockResolvedValueOnce([
+      {
+        id: "e1",
+        channelId: "chan-1",
+        channelName: "Chan",
+        videoId: "v1",
+        videoTitle: "T",
+        viewCount: 100,
+        outlierScore: 4,
+      },
+    ]);
+    sendWeeklyDigestEmail.mockResolvedValueOnce(true);
+  }
+
+  it("stops when a Pro user with digests on moves to Starter, and resumes when they upgrade back", async () => {
+    currentTier = "pro";
+    digestWithOneOutlier();
+    expect(await sendDigestForUser("user-1", "weekly")).toBe(true);
+
+    currentTier = "starter";
+    sendWeeklyDigestEmail.mockClear();
+    serviceFrom.mockClear();
+    expect(await sendDigestForUser("user-1", "weekly")).toBe(false);
+    expect(sendWeeklyDigestEmail).not.toHaveBeenCalled();
+    // Skipped silently: no digest built, and nothing touches their saved preference.
+    expect(serviceFrom).not.toHaveBeenCalled();
+
+    currentTier = "pro";
+    digestWithOneOutlier();
+    expect(await sendDigestForUser("user-1", "weekly")).toBe(true);
+    expect(sendWeeklyDigestEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends to a Team workspace member with no plan of their own", async () => {
+    currentTier = "team";
+    digestWithOneOutlier();
+    expect(await sendDigestForUser("user-1", "daily")).toBe(true);
+    currentTier = "pro";
+  });
+
+  it("sends nothing to someone with no plan at all", async () => {
+    currentTier = null;
+    serviceFrom.mockClear();
+    expect(await sendDigestForUser("user-1", "daily")).toBe(false);
+    expect(serviceFrom).not.toHaveBeenCalled();
+    currentTier = "pro";
   });
 });

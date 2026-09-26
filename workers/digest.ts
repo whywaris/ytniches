@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isEmailEligibleTier } from "@/lib/billing";
+import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import { buildOutlierItems } from "@/lib/services/outliers";
 import { sendWeeklyDigestEmail, type WeeklyDigestData } from "@/lib/email/notifications";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -153,6 +155,14 @@ export async function buildDigestData(
 // users with no tracked channels, so an empty digest here is defensive,
 // not expected.
 export async function sendDigestForUser(userId: string, cadence: DigestCadence): Promise<boolean> {
+  // Checked at SEND time, not just when the preference was saved: someone
+  // who turned digests on while on Pro and later moved to Starter must stop
+  // getting them. Their saved preference stays as-is, so the digest
+  // resumes by itself if they upgrade again. Effective plan, so a Team
+  // workspace member counts (D-059).
+  const plan = await getEffectivePlan(userId);
+  if (!isEmailEligibleTier(plan.tier)) return false;
+
   const data = await buildDigestData(userId, cadence);
   if (data.topOutliers.length === 0 && data.newVideos.length === 0) {
     return false;

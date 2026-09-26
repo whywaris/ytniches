@@ -722,3 +722,14 @@ Decisions that still need to close before their dependent docs / features can be
   - Digests aren't gated by plan when sent, only when preferences are saved. A user who enabled digests on Pro, then dropped to Starter, keeps getting them. Out of scope here.
   - Verified against the real dev schema (the join queries run), but dev has no workspaces, so the end-to-end behaviour is proven by unit tests, not live data.
 - **Impacts:** `lib/billing/{effective-plan,tier-cache}.ts`, `lib/services/{billing,channels,workspace,notification-preferences}.ts`, `workers/channel-sync.ts`.
+
+### D-061: Email plan checks happen at send time
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** Digests were gated only when the preference was saved, so a user who enabled them on Pro and then moved to Starter kept receiving them.
+- **Final call:** The digest job now checks the user's effective plan (`effective-plan.ts`, so an inherited Team counts) right before building and sending. If they're not email-eligible, it's skipped silently, and the saved preference is left unchanged so the digest resumes on its own if they upgrade again.
+- **Other email paths:**
+  - Real-time alerts (channel sync) already checked the effective plan at send time (D-059).
+  - Workspace invites are transactional, not a plan feature, so they're unaffected.
+- **Known limit:** "email-eligible" is by plan tier (Pro or Team), not subscription status. An expired trial still has tier Pro. That's the same gap as D-057 and gets fixed with it.
+- **Impacts:** `workers/digest.ts`.
