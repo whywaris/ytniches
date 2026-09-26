@@ -62,7 +62,7 @@ async function pickChannelAndVideo(user: ReturnType<typeof userEvent.setup>) {
 // which dismisses a second test's Select the instant it opens.
 async function enterUrl(user: ReturnType<typeof userEvent.setup>, url: string) {
   await user.click(screen.getByRole("tab", { name: "From URL" }));
-  await user.type(screen.getByLabelText("Channel URL"), url);
+  await user.type(screen.getByLabelText("Video URL"), url);
 }
 
 describe("GeneratorForm", () => {

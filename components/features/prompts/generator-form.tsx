@@ -291,7 +291,7 @@ function GeneratorForm({
 
         <TabsContent value="url" className="pt-4">
           <TextInput
-            label="Channel URL"
+            label="Video URL"
             placeholder="https://youtube.com/watch?v=..."
             value={url}
             onChange={(event) => setUrl(event.target.value)}
