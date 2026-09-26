@@ -63,6 +63,7 @@ export const FACTS: Record<string, string | number> = {
   ...planFacts,
   "team.seats": TIER_INFO.team.seats,
   "team.pool": TIER_INFO.team.trackedChannels,
+  "team.rollover": TIER_INFO.team.rolloverCredits,
 
   "outliers.multiplier": `${OUTLIER_THRESHOLD_MULTIPLIER}×`,
   "outliers.baselineWindow": BASELINE_WINDOW,

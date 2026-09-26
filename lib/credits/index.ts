@@ -6,36 +6,14 @@ import type { Database } from "@/lib/supabase/database.types";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Backend-Schema.md §2.5: balance is derived, never stored — SUM(amount)
-// WHERE user_id = ? AND created_at >= cycle_start.
+// Backend-Schema.md §2.5: balance is derived, never stored -- the sum of
+// the user's whole credit_events ledger. Cycle resets are explicit
+// 'expiration' rows written at each cycle close (lib/credits/ledger.ts,
+// allocateCycleCredits), so top-ups and Team rollover survive a new cycle.
 export interface InsufficientCreditsError {
   type: "insufficient_credits";
   balance: number;
   required: number;
-}
-
-// Task 5: reads the user's active subscription's current_period_start
-// (Monetization.md §3.3: credits allocate on the billing anniversary, not
-// the calendar month). Falls back to UTC month start if no subscription
-// row exists yet -- shouldn't happen once completeOnboarding() always
-// creates a trial row, but keeps this safe for any user who predates it.
-async function getCycleStart(supabase: SupabaseClient<Database>, userId: string): Promise<Date> {
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("current_period_start")
-    .eq("user_id", userId)
-    .eq("is_current", true)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`getCycleStart subscription query failed: ${error.message}`);
-  }
-  if (data?.current_period_start) {
-    return new Date(data.current_period_start);
-  }
-
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
 export async function getBalance(ctx: RequestContext): Promise<number> {
@@ -48,18 +26,14 @@ export async function computeBalance(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<number> {
-  const cycleStart = await getCycleStart(supabase, userId);
-  const { data, error } = await supabase
-    .from("credit_events")
-    .select("amount")
-    .eq("user_id", userId)
-    .gte("created_at", cycleStart.toISOString());
+  // Summed in SQL: a plain select would stop at PostgREST's 1,000-row cap.
+  const { data, error } = await supabase.rpc("credit_balance", { p_user_id: userId });
 
   if (error) {
     throw new Error(`getBalance query failed: ${error.message}`);
   }
 
-  return data.reduce((sum, row) => sum + row.amount, 0);
+  return data;
 }
 
 // TOCTOU: balance check and insert are not atomic.

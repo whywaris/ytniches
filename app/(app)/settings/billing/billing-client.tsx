@@ -12,6 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Tag } from "@/components/ui/tag";
 import { useToast } from "@/components/ui/toast-provider";
+import { isAnnualPeriod } from "@/lib/billing/cycles";
 import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
 import { UpgradeModal } from "@/components/features/billing/upgrade-modal";
 
@@ -30,14 +31,9 @@ const ACCOUNT_STATE_LABEL: Record<AccountState, string> = {
   expired: "Expired",
 };
 
-// Not stored on our subscriptions row (Backend-Schema.md §2.3 has no
-// billing-frequency column) -- inferred from the period length purely for
-// display. A real ~30-day period reads as monthly, anything longer as
-// annual.
+// Inferred from the period length (no billing-frequency column).
 function inferredFrequencyLabel(currentPeriodStart: string, currentPeriodEnd: string): "mo" | "yr" {
-  const days =
-    (new Date(currentPeriodEnd).getTime() - new Date(currentPeriodStart).getTime()) / 86_400_000;
-  return days > 300 ? "yr" : "mo";
+  return isAnnualPeriod(currentPeriodStart, currentPeriodEnd) ? "yr" : "mo";
 }
 
 // UI-UX-Flow.md §8.1.3. No sub-nav shell (see page.tsx's comment) --

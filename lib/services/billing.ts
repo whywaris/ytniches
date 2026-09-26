@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import { getEffectivePlans, usersAffectedByPlanOf } from "@/lib/billing/effective-plan";
-import { refreshCadenceHoursFor, TRIAL } from "@/lib/billing/plans";
+import { refreshCadenceHoursFor, TIER_INFO, TRIAL } from "@/lib/billing/plans";
+import {
+  CYCLE_CLOSE_KEY_PREFIX,
+  cycleCloseExpiry,
+  settleLedger,
+  type LedgerEvent,
+} from "@/lib/credits/ledger";
 import { invalidateTierCache } from "@/lib/billing/tier-cache";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
@@ -340,6 +346,11 @@ export async function reapplyPlanEffects(userIds: string[]): Promise<void> {
 // fires both on a first payment) collapses to one allocation via
 // credit_events' unique idempotency_key index, on top of (not instead of)
 // webhook_events' own provider_event_id dedup.
+//
+// Every allocation first closes the previous cycle (D-063): unused credits
+// expire, except Team's rollover and top-ups (lib/credits/ledger.ts). Both
+// writes are keyed on cycleKey, so a retry never expires or allocates twice,
+// and the close always lands before the new allocation it must not touch.
 export async function allocateCycleCredits(
   userId: string,
   tier: Tier,
@@ -361,16 +372,66 @@ export async function allocateCycleCredits(
     throw new Error(`allocateCycleCredits: no credit_allocations row for tier=${tier}`);
   }
 
+  await closeCreditCycle(userId, cycleKey);
+
   const { error } = await supabase.from("credit_events").insert({
     user_id: userId,
     event_type: "allocation",
     amount: allocation.credits_per_cycle,
     reason: `Monthly ${tier} allocation`,
     idempotency_key: `creem:allocation:${cycleKey}`,
+    // The rollover this cycle earns is decided by the plan it was on.
+    metadata: { tier, rolloverCap: rolloverCapFor(tier) },
   });
   if (error) {
     if (error.code === "23505") return; // already allocated for this cycle
     throw new Error(`allocateCycleCredits insert failed: ${error.message}`);
+  }
+}
+
+function rolloverCapFor(tier: Tier): number {
+  return tier === "team" ? TIER_INFO.team.rolloverCredits : 0;
+}
+
+const LEDGER_PAGE = 1000;
+
+// The whole ledger, oldest first, paged past PostgREST's row cap.
+async function readLedger(userId: string): Promise<{ events: LedgerEvent[]; balance: number }> {
+  const supabase = createServiceClient();
+  const events: LedgerEvent[] = [];
+  for (let from = 0; ; from += LEDGER_PAGE) {
+    const { data, error } = await supabase
+      .from("credit_events")
+      .select("event_type, amount, idempotency_key, metadata")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + LEDGER_PAGE - 1);
+    if (error) throw new Error(`readLedger failed: ${error.message}`);
+    events.push(...data);
+    if (data.length < LEDGER_PAGE) break;
+  }
+  return { events, balance: events.reduce((sum, event) => sum + event.amount, 0) };
+}
+
+async function closeCreditCycle(userId: string, cycleKey: string): Promise<void> {
+  const { events, balance } = await readLedger(userId);
+  // Never below zero, even after a (rare) concurrent-spend overdraft.
+  const expire = Math.min(cycleCloseExpiry(settleLedger(events)), Math.max(0, balance));
+
+  // Written even when nothing expires: the row marks the cycle boundary
+  // the ledger replay uses to tell rollover from this cycle's credits.
+  const { error } = await createServiceClient()
+    .from("credit_events")
+    .insert({
+      user_id: userId,
+      event_type: "expiration",
+      amount: -expire,
+      reason: "Unused credits expired at cycle end",
+      idempotency_key: `${CYCLE_CLOSE_KEY_PREFIX}${cycleKey}`,
+    });
+  if (error && error.code !== "23505") {
+    throw new Error(`closeCreditCycle insert failed: ${error.message}`);
   }
 }
 

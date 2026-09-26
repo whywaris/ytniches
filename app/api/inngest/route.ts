@@ -2,6 +2,7 @@ import { serve } from "inngest/next";
 
 import { inngest } from "@/lib/inngest/client";
 import { channelSyncFunction } from "@/workers/channel-sync";
+import { annualCreditsCron } from "@/workers/credit-cycles";
 import { channelSyncCron } from "@/workers/cron";
 import { digestCron, digestSendFunction } from "@/workers/digest";
 
@@ -9,5 +10,11 @@ import { digestCron, digestSendFunction } from "@/workers/digest";
 // only POST (the common mistake) breaks function discovery.
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [channelSyncFunction, channelSyncCron, digestCron, digestSendFunction],
+  functions: [
+    channelSyncFunction,
+    channelSyncCron,
+    digestCron,
+    digestSendFunction,
+    annualCreditsCron,
+  ],
 });

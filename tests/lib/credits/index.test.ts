@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Chainable query-builder mock: .select().eq().gte() resolves like the real
-// (thenable) Supabase builder. .insert() resolves directly, matching how
+// The ledger rows the credit_balance RPC sums (mocked here as a plain sum,
+// the real function is SQL). .insert() resolves directly, matching how
 // lib/credits/index.ts awaits it without a trailing .select().
 let selectResult: { data: { amount: number }[] | null; error: { message: string } | null } = {
   data: [],
@@ -9,46 +9,21 @@ let selectResult: { data: { amount: number }[] | null; error: { message: string 
 };
 let insertResult: { error: { message: string; code?: string } | null } = { error: null };
 const insertSpy = vi.fn(() => Promise.resolve(insertResult));
-const gteSpy = vi.fn(() => Promise.resolve(selectResult));
+const rpcSpy = vi.fn(() =>
+  Promise.resolve(
+    selectResult.error
+      ? { data: null, error: selectResult.error }
+      : { data: (selectResult.data ?? []).reduce((sum, row) => sum + row.amount, 0), error: null },
+  ),
+);
 
 let refundInsertResult: { error: { message: string; code?: string } | null } = { error: null };
 const refundInsertSpy = vi.fn(() => Promise.resolve(refundInsertResult));
 
-// getCycleStart's own subscriptions lookup -- a separate table from
-// credit_events, so `from` has to dispatch by table name.
-let subscriptionResult: {
-  data: { current_period_start: string } | null;
-  error: { message: string } | null;
-} = { data: null, error: null };
-const subscriptionMaybeSingleSpy = vi.fn(() => Promise.resolve(subscriptionResult));
-
-function makeCreditEventsSelectBuilder() {
-  const builder = {
-    eq: vi.fn(() => builder),
-    gte: gteSpy,
-  };
-  return builder;
-}
-
-function makeSubscriptionsSelectBuilder() {
-  const builder = {
-    eq: vi.fn(() => builder),
-    maybeSingle: subscriptionMaybeSingleSpy,
-  };
-  return builder;
-}
-
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
-    from: vi.fn((table: string) => {
-      if (table === "subscriptions") {
-        return { select: vi.fn(() => makeSubscriptionsSelectBuilder()) };
-      }
-      return {
-        select: vi.fn(() => makeCreditEventsSelectBuilder()),
-        insert: insertSpy,
-      };
-    }),
+    rpc: rpcSpy,
+    from: vi.fn(() => ({ insert: insertSpy })),
   })),
 }));
 
@@ -65,11 +40,9 @@ beforeEach(() => {
   selectResult = { data: [], error: null };
   insertResult = { error: null };
   insertSpy.mockClear();
-  gteSpy.mockClear();
+  rpcSpy.mockClear();
   refundInsertResult = { error: null };
   refundInsertSpy.mockClear();
-  subscriptionResult = { data: null, error: null };
-  subscriptionMaybeSingleSpy.mockClear();
 });
 
 describe("getBalance", () => {
@@ -78,39 +51,18 @@ describe("getBalance", () => {
     expect(await getBalance(ctx)).toBe(44);
   });
 
-  it("returns 0 when no events exist in the current cycle", async () => {
+  it("sums the whole ledger through the credit_balance RPC", async () => {
+    await getBalance(ctx);
+    expect(rpcSpy).toHaveBeenCalledWith("credit_balance", { p_user_id: "user-1" });
+  });
+
+  it("returns 0 when the ledger is empty", async () => {
     selectResult = { data: [], error: null };
     expect(await getBalance(ctx)).toBe(0);
   });
 
   it("throws on a query error rather than silently returning 0", async () => {
     selectResult = { data: null, error: { message: "connection reset" } };
-    await expect(getBalance(ctx)).rejects.toThrow("connection reset");
-  });
-});
-
-describe("getCycleStart (via getBalance's gte filter)", () => {
-  it("uses the active subscription's current_period_start when one exists", async () => {
-    subscriptionResult = {
-      data: { current_period_start: "2026-09-05T00:00:00.000Z" },
-      error: null,
-    };
-    await getBalance(ctx);
-
-    expect(gteSpy).toHaveBeenCalledWith("created_at", "2026-09-05T00:00:00.000Z");
-  });
-
-  it("falls back to UTC calendar month start when no subscription row exists", async () => {
-    subscriptionResult = { data: null, error: null };
-    await getBalance(ctx);
-
-    const now = new Date();
-    const expected = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    expect(gteSpy).toHaveBeenCalledWith("created_at", expected);
-  });
-
-  it("throws if the subscription lookup itself fails", async () => {
-    subscriptionResult = { data: null, error: { message: "connection reset" } };
     await expect(getBalance(ctx)).rejects.toThrow("connection reset");
   });
 });

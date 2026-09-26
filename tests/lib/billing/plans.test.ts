@@ -46,6 +46,7 @@ describe("pricing cards are derived from the numbers", () => {
       "Track up to 100 channels",
       "Refreshes hourly",
       "3 seats included",
+      "Up to 500 unused credits roll over",
     ]);
   });
 

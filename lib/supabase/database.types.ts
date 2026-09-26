@@ -1132,6 +1132,7 @@ export type Database = {
         Returns: undefined;
       };
       check_request: { Args: never; Returns: undefined };
+      credit_balance: { Args: { p_user_id: string }; Returns: number };
       find_due_channel_ids: {
         Args: never;
         Returns: {

@@ -16,6 +16,9 @@ interface TierNumbers {
   trackedChannels: number;
   refreshCadenceHours: number;
   seats?: number;
+  // Unused credits carried into the next cycle (one cycle only, not
+  // stackable). Enforced by lib/credits/ledger.ts at each cycle close.
+  rolloverCredits?: number;
   extras: string[];
 }
 
@@ -31,6 +34,9 @@ function withFeatures<T extends TierNumbers>(numbers: T): T & { features: string
       `Track up to ${numbers.trackedChannels} channels`,
       cadenceLabel(numbers.refreshCadenceHours),
       ...(numbers.seats ? [`${numbers.seats} seats included`] : []),
+      ...(numbers.rolloverCredits
+        ? [`Up to ${numbers.rolloverCredits} unused credits roll over`]
+        : []),
       ...numbers.extras,
     ],
   };
@@ -66,6 +72,7 @@ export const TIER_INFO = {
     // Hard cap, enforced in lib/services/workspace.ts. No seat purchasing
     // exists yet, so no "+$ per extra seat" anywhere.
     seats: 3,
+    rolloverCredits: 500,
     extras: [],
   }),
 } satisfies Record<Tier, TierNumbers & { features: string[] }>;

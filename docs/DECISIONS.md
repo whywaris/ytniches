@@ -742,7 +742,15 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-063: Credits never reset, and annual plans get one allocation per year
 
-- **Status:** Open (logged 2026-09-26). Money path.
+- **Status:** Resolved (2026-09-27). Money path.
+- **Correction:** the original finding was wrong on one point. Credits did reset: the balance only summed events since the current period start, so old cycles dropped out implicitly. That same rule also wiped admin grants and left no way to do Team rollover. The annual finding was right.
+- **Final call:**
+  - The balance is the sum of the whole ledger (`credit_balance` SQL function).
+  - Every cycle close writes an explicit `expiration` row before the new allocation, never taking the balance below zero.
+  - Team keeps up to `TIER_INFO.team.rolloverCredits` (500) of the ending cycle's unused credits for one more cycle. Rollover doesn't stack.
+  - Spending order: rollover, then this cycle, then top-ups. Admin grants are the top-ups, and they never expire.
+  - Annual subscribers get months 2-12 from an hourly Inngest job (`workers/credit-cycles.ts`). It's idempotent per subscription, period and month.
+  - Migration `20260927100000` expired past-cycle credits once, so every existing balance stayed exactly the same (verified on dev: 0 mismatches).
 - **Finding:** Monetization.md §3 says unused credits reset at cycle end, and that Team can roll over up to 500 for one cycle. In code, credits are a ledger that only grows. Nothing writes `expiration` events, so every unused credit carries over forever. Also, `allocateCycleCredits` runs once per paid billing cycle. On an annual plan that's once a year, so a yearly Pro user gets one month's allowance for twelve months.
 - **Help center:** says "credits each month" (from `TIER_INFO`) and deliberately says nothing about rollover or reset until this is decided.
 - **Needed:** a reset/rollover job to match §3, and a monthly allocation for annual subscribers (a scheduled job keyed on the month, not the Creem cycle).

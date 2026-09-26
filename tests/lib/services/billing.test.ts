@@ -66,6 +66,7 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
     is: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
+    range: vi.fn(() => Promise.resolve(result)),
     update: vi.fn(() => builder),
     maybeSingle: vi.fn(() => Promise.resolve(result)),
     insert: vi.fn(() => Promise.resolve(result)),
@@ -390,29 +391,58 @@ describe("upsertSubscriptionFromProvider", () => {
 });
 
 describe("allocateCycleCredits", () => {
-  it("inserts the tier's per-cycle allocation with a cycle-scoped idempotency key", async () => {
-    const allocationBuilder = makeQueryBuilder({ data: { credits_per_cycle: 1000 }, error: null });
-    const insertBuilder = makeQueryBuilder({ data: null, error: null });
-    serviceFrom.mockReturnValueOnce(allocationBuilder).mockReturnValueOnce(insertBuilder);
+  // Order: allocation lookup, ledger read, cycle-close insert, allocation insert.
+  function mockCycle(
+    ledger: unknown[],
+    closeError: unknown = null,
+    allocationError: unknown = null,
+  ) {
+    const closeBuilder = makeQueryBuilder({ data: null, error: closeError });
+    const insertBuilder = makeQueryBuilder({ data: null, error: allocationError });
+    serviceFrom
+      .mockReturnValueOnce(makeQueryBuilder({ data: { credits_per_cycle: 1000 }, error: null }))
+      .mockReturnValueOnce(makeQueryBuilder({ data: ledger, error: null }))
+      .mockReturnValueOnce(closeBuilder)
+      .mockReturnValueOnce(insertBuilder);
+    return { closeBuilder, insertBuilder };
+  }
+
+  it("expires last cycle's unused credits, then allocates with a cycle-scoped key", async () => {
+    const { closeBuilder, insertBuilder } = mockCycle([
+      { event_type: "allocation", amount: 1000, idempotency_key: "a", metadata: {} },
+      { event_type: "consumption", amount: -300, idempotency_key: "b", metadata: {} },
+    ]);
 
     await allocateCycleCredits("user-1", "pro", "sub_1:2026-09-01");
 
+    expect(closeBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_type: "expiration",
+        amount: -700,
+        idempotency_key: "cycle-close:sub_1:2026-09-01",
+      }),
+    );
     expect(insertBuilder.insert).toHaveBeenCalledWith({
       user_id: "user-1",
       event_type: "allocation",
       amount: 1000,
       reason: "Monthly pro allocation",
       idempotency_key: "creem:allocation:sub_1:2026-09-01",
+      metadata: { tier: "pro", rolloverCap: 0 },
     });
   });
 
-  it("no-ops on a duplicate cycle allocation (idempotency_key collision)", async () => {
-    const allocationBuilder = makeQueryBuilder({ data: { credits_per_cycle: 1000 }, error: null });
-    const insertBuilder = makeQueryBuilder({
-      data: null,
-      error: { message: "duplicate", code: "23505" },
-    });
-    serviceFrom.mockReturnValueOnce(allocationBuilder).mockReturnValueOnce(insertBuilder);
+  it("records Team's rollover cap on the allocation", async () => {
+    const { insertBuilder } = mockCycle([]);
+    await allocateCycleCredits("user-1", "team", "sub_1:2026-09-01");
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { tier: "team", rolloverCap: 500 } }),
+    );
+  });
+
+  it("no-ops on a retried cycle (both idempotency keys collide)", async () => {
+    const duplicate = { message: "duplicate", code: "23505" };
+    mockCycle([], duplicate, duplicate);
 
     await expect(
       allocateCycleCredits("user-1", "pro", "sub_1:2026-09-01"),
