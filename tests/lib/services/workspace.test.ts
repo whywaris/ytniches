@@ -14,7 +14,9 @@ vi.mock("@/lib/email/invitations", () => ({
 // tests/lib/credits/index.test.ts -- a builder resolves whichever result
 // is currently set for the table it was created against, and every
 // chainable method just returns itself so call order doesn't matter.
-function makeBuilder(getResult: () => { data: unknown; error: unknown }) {
+type QueryResult = { data: unknown; error: unknown; count?: number };
+
+function makeBuilder(getResult: () => QueryResult) {
   const builder: Record<string, unknown> = {
     select: vi.fn(() => builder),
     insert: vi.fn(() => builder),
@@ -22,16 +24,18 @@ function makeBuilder(getResult: () => { data: unknown; error: unknown }) {
     delete: vi.fn(() => builder),
     eq: vi.fn(() => builder),
     in: vi.fn(() => builder),
+    is: vi.fn(() => builder),
+    gt: vi.fn(() => builder),
     single: vi.fn(() => Promise.resolve(getResult())),
     maybeSingle: vi.fn(() => Promise.resolve(getResult())),
-    then: (resolve: (value: { data: unknown; error: unknown }) => void) => resolve(getResult()),
+    then: (resolve: (value: QueryResult) => void) => resolve(getResult()),
   };
   return builder;
 }
 
 let workspacesResult: { data: unknown; error: unknown } = { data: null, error: null };
-let membersResult: { data: unknown; error: unknown } = { data: null, error: null };
-let invitationsResult: { data: unknown; error: unknown } = { data: null, error: null };
+let membersResult: QueryResult = { data: null, error: null };
+let invitationsResult: QueryResult = { data: null, error: null };
 let profilesResult: { data: unknown; error: unknown } = { data: [], error: null };
 
 let authUser: { id: string; email: string } | null = { id: "user-1", email: "user1@example.com" };
@@ -345,5 +349,53 @@ describe("listMyWorkspaceMemberships", () => {
     membersResult = { data: [{ workspace_id: "ws-1", role: "admin" }], error: null };
     const result = await listMyWorkspaceMemberships(ctx);
     expect(result).toEqual([{ workspaceId: "ws-1", role: "admin" }]);
+  });
+});
+
+describe("Team seat cap (3 seats, no seat purchasing yet)", () => {
+  const liveInvitation = {
+    id: "inv-1",
+    workspace_id: "ws-1",
+    email: "user1@example.com",
+    role: "editor",
+    accepted_at: null,
+    expires_at: "2099-01-01T00:00:00Z",
+  };
+
+  it("refuses an invite when members + pending invites already fill the seats", async () => {
+    authUser = { id: "user-1", email: "user1@example.com" };
+    membersResult = { data: { role: "admin" }, error: null, count: 2 };
+    invitationsResult = { data: null, error: null, count: 1 };
+
+    const result = await inviteMember(ctx, "ws-1", "fourth@example.com", "viewer");
+
+    expect(result).toEqual({ ok: false, error: { type: "workspace_full", seats: 3 } });
+    expect(sendWorkspaceInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it("allows an invite while a seat is free", async () => {
+    membersResult = { data: { role: "admin" }, error: null, count: 1 };
+    invitationsResult = { data: null, error: null, count: 1 };
+    workspacesResult = { data: { name: "Acme" }, error: null };
+
+    expect(await inviteMember(ctx, "ws-1", "third@example.com", "viewer")).toEqual({
+      ok: true,
+      value: undefined,
+    });
+  });
+
+  it("refuses to accept when the workspace filled up in the meantime", async () => {
+    authUser = { id: "user-1", email: "user1@example.com" };
+    invitationsResult = { data: liveInvitation, error: null };
+    workspacesResult = {
+      data: { id: "ws-1", name: "Acme", slug: "acme", owner_id: "owner-1" },
+      error: null,
+    };
+    membersResult = { data: null, error: null, count: 3 };
+
+    expect(await acceptInvitation(ctx, "token")).toEqual({
+      ok: false,
+      error: { type: "workspace_full", seats: 3 },
+    });
   });
 });

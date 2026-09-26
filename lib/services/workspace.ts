@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 
+import { TIER_INFO } from "@/lib/billing/plans";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendWorkspaceInviteEmail } from "@/lib/email/invitations";
@@ -45,6 +46,35 @@ export type NotAdminError = { type: "not_admin" };
 export type InvalidInvitationError = { type: "invalid_invitation" };
 export type MustTransferOrDeleteError = { type: "must_transfer_or_delete" };
 export type CannotRemoveOwnerError = { type: "cannot_remove_owner" };
+export type WorkspaceFullError = { type: "workspace_full"; seats: number };
+
+// Team includes a fixed number of seats (lib/billing/plans.ts) and seat
+// purchasing doesn't exist yet, so the cap is hard. Members plus pending
+// (unexpired, unaccepted) invites both hold a seat, so sending extra
+// invites can't get round it.
+export const WORKSPACE_SEATS = TIER_INFO.team.seats;
+
+async function seatsInUse(workspaceId: string, includePendingInvites: boolean): Promise<number> {
+  const service = createServiceClient();
+  const members = service
+    .from("workspace_members")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId);
+  const invites = includePendingInvites
+    ? service
+        .from("workspace_invitations")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString())
+    : null;
+  const [memberResult, inviteResult] = await Promise.all([members, invites]);
+  if (memberResult.error)
+    throw new Error(`seatsInUse members failed: ${memberResult.error.message}`);
+  if (inviteResult?.error)
+    throw new Error(`seatsInUse invites failed: ${inviteResult.error.message}`);
+  return (memberResult.count ?? 0) + (inviteResult?.count ?? 0);
+}
 
 // Monetization.md §2.4/§2.5: workspace features are Team-tier only.
 // Server-side gate, same as isEmailEligibleTier for email notifications --
@@ -225,9 +255,12 @@ export async function inviteMember(
   workspaceId: string,
   email: string,
   role: WorkspaceRole,
-): Promise<Result<void, NotAdminError>> {
+): Promise<Result<void, NotAdminError | WorkspaceFullError>> {
   const myRole = await getMyRole(ctx, workspaceId);
   if (myRole !== "admin") return err({ type: "not_admin" });
+  if ((await seatsInUse(workspaceId, true)) >= WORKSPACE_SEATS) {
+    return err({ type: "workspace_full", seats: WORKSPACE_SEATS });
+  }
 
   const supabase = await createClient();
   const { data: workspace, error: workspaceError } = await supabase
@@ -302,7 +335,7 @@ export async function getInvitationPreview(
 export async function acceptInvitation(
   ctx: RequestContext,
   token: string,
-): Promise<Result<Workspace, InvalidInvitationError>> {
+): Promise<Result<Workspace, InvalidInvitationError | WorkspaceFullError>> {
   const session = await createClient();
   const {
     data: { user },
@@ -349,6 +382,11 @@ export async function acceptInvitation(
   }
 
   if (!existingMembership) {
+    // Second check at accept time: invites sent before the cap existed, or
+    // two accepted at once, can't push a workspace past its seats.
+    if ((await seatsInUse(invitation.workspace_id, false)) >= WORKSPACE_SEATS) {
+      return err({ type: "workspace_full", seats: WORKSPACE_SEATS });
+    }
     const { error: insertError } = await service.from("workspace_members").insert({
       workspace_id: invitation.workspace_id,
       user_id: ctx.userId,

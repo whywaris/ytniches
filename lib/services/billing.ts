@@ -4,6 +4,7 @@ import { getBalance } from "@/lib/credits";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
+import { refreshCadenceHoursFor } from "@/lib/billing/plans";
 import { invalidateTierCache } from "@/lib/billing/tier-cache";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
@@ -259,7 +260,7 @@ export async function upsertSubscriptionFromProvider(
 
   const { data: existing, error: findError } = await supabase
     .from("subscriptions")
-    .select("id")
+    .select("id, is_current")
     .eq("provider_subscription_id", providerSub.id)
     .maybeSingle();
   if (findError) {
@@ -271,6 +272,9 @@ export async function upsertSubscriptionFromProvider(
     if (error) {
       throw new Error(`upsertSubscriptionFromProvider update failed: ${error.message}`);
     }
+    // A retired row (e.g. the old plan after an upgrade, D-051) must not
+    // override the current plan's cadence.
+    if (existing.is_current) await applyRefreshCadence(userId, { tier, status });
     await invalidateTierCache(userId);
     return;
   }
@@ -296,7 +300,23 @@ export async function upsertSubscriptionFromProvider(
   if (insertError) {
     throw new Error(`upsertSubscriptionFromProvider insert failed: ${insertError.message}`);
   }
+  await applyRefreshCadence(userId, { tier, status });
   await invalidateTierCache(userId);
+}
+
+// Pricing promise: Starter syncs every 24h, Pro every 6h, Team hourly
+// (lib/billing/plans.ts). Every channel this user tracks follows their
+// current plan, so an upgrade or lapse takes effect at the next hourly
+// cron tick (workers/cron.ts).
+export async function applyRefreshCadence(
+  userId: string,
+  subscription: { tier: string; status: string } | null,
+): Promise<void> {
+  const { error } = await createServiceClient()
+    .from("tracked_channels")
+    .update({ refresh_cadence_hours: refreshCadenceHoursFor(subscription) })
+    .eq("user_id", userId);
+  if (error) throw new Error(`applyRefreshCadence failed: ${error.message}`);
 }
 
 // Monetization.md §3.2's recurring per-cycle amounts (starter=200/

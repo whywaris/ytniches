@@ -18,6 +18,7 @@ import {
   type MyWorkspaceMembership,
   type NotAdminError,
   type NotTeamTierError,
+  type WorkspaceFullError,
   type Workspace,
 } from "@/lib/services/workspace";
 import {
@@ -73,7 +74,7 @@ export async function createWorkspaceAction(
 export async function inviteMemberAction(
   workspaceId: string,
   input: unknown,
-): Promise<Result<void, NotAdminError | ValidationError>> {
+): Promise<Result<void, NotAdminError | WorkspaceFullError | ValidationError>> {
   const parsed = InviteMemberInputSchema.safeParse(input);
   if (!parsed.success) {
     return err(toValidationError(parsed.error.flatten().fieldErrors));
@@ -84,7 +85,7 @@ export async function inviteMemberAction(
 
 export async function acceptInvitationAction(
   token: string,
-): Promise<Result<Workspace, InvalidInvitationError>> {
+): Promise<Result<Workspace, InvalidInvitationError | WorkspaceFullError>> {
   const ctx = await getRequestContext();
   return acceptInvitation(ctx, token);
 }
@@ -101,7 +102,7 @@ export async function updateMemberRoleAction(
   workspaceId: string,
   userId: string,
   input: unknown,
-): Promise<Result<void, NotAdminError | ValidationError>> {
+): Promise<Result<void, NotAdminError | WorkspaceFullError | ValidationError>> {
   const parsed = UpdateMemberRoleInputSchema.safeParse(input);
   if (!parsed.success) {
     return err(toValidationError(parsed.error.flatten().fieldErrors));

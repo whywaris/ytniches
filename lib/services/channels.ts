@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 
+import { refreshCadenceHoursFor, trackedChannelsLimitFor } from "@/lib/billing/plans";
 import { getRedis } from "@/lib/cache/redis";
 import { consume, getBalance } from "@/lib/credits";
 import { getCachedSearchResult } from "@/lib/youtube/cache";
@@ -34,16 +35,9 @@ function getSearchRateLimiter(): Ratelimit {
   return rateLimiter;
 }
 
-// Backend-Schema.md §2.3 tiers + Monetization.md §2.5 tracked-channel caps.
-// No current subscription row = trial (Monetization.md §3.2's 50-credit
-// trial state, prior to any paid tier) -> same cap as Starter.
-const TRACKED_CHANNELS_LIMIT: Record<string, number> = {
-  free: 10,
-  starter: 10,
-  pro: 50,
-  team: 100,
-};
-const DEFAULT_TRACKED_CHANNELS_LIMIT = 10;
+// Tracked-channel caps and sync cadence come from lib/billing/plans.ts,
+// the same numbers the pricing cards show. No current subscription row ->
+// the Starter cap and cadence.
 
 export interface ChannelSearchResult {
   id: string;
@@ -505,7 +499,7 @@ export async function saveChannelToTracking(
   const [{ data: subscription }, { count }] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("tier")
+      .select("tier, status")
       .eq("user_id", ctx.userId)
       .eq("is_current", true)
       .maybeSingle(),
@@ -515,9 +509,7 @@ export async function saveChannelToTracking(
       .eq("user_id", ctx.userId),
   ]);
 
-  const limit = subscription
-    ? (TRACKED_CHANNELS_LIMIT[subscription.tier] ?? DEFAULT_TRACKED_CHANNELS_LIMIT)
-    : DEFAULT_TRACKED_CHANNELS_LIMIT;
+  const limit = trackedChannelsLimitFor(subscription?.tier);
   const current = count ?? 0;
 
   if (current >= limit) {
@@ -527,6 +519,9 @@ export async function saveChannelToTracking(
   const { error } = await supabase.from("tracked_channels").insert({
     user_id: ctx.userId,
     channel_id: channelId,
+    // The plan's sync cadence (Pro 6h, Team 1h, otherwise 24h). Kept in
+    // step with plan changes by applyRefreshCadence in lib/services/billing.ts.
+    refresh_cadence_hours: refreshCadenceHoursFor(subscription),
   });
 
   if (error) {

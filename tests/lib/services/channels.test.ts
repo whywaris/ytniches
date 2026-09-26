@@ -466,3 +466,45 @@ describe("listVideosForChannel", () => {
     expect(builder.limit).not.toHaveBeenCalled();
   });
 });
+
+describe("saveChannelToTracking sync cadence (pricing promise)", () => {
+  function tables(subscription: { tier: string; status: string } | null) {
+    const insert = vi.fn<(row: Record<string, unknown>) => Promise<{ error: null }>>(() =>
+      Promise.resolve({ error: null }),
+    );
+    sessionFrom.mockImplementation((table: string) => {
+      if (table === "subscriptions") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(() => Promise.resolve({ data: subscription, error: null })),
+              })),
+            })),
+          })),
+        };
+      }
+      if (table === "tracked_channels") {
+        return {
+          select: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ count: 0, error: null })) })),
+          insert,
+        };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+    return insert;
+  }
+
+  it.each([
+    [{ tier: "starter", status: "active" }, 24],
+    [{ tier: "pro", status: "active" }, 6],
+    [{ tier: "team", status: "active" }, 1],
+    [{ tier: "pro", status: "trialing" }, 24],
+    [{ tier: "pro", status: "cancelled" }, 24],
+    [null, 24],
+  ])("subscription %o -> syncs every %i h", async (subscription, hours) => {
+    const insert = tables(subscription);
+    await saveChannelToTracking(ctx, "internal-1");
+    expect(insert.mock.calls[0][0]).toMatchObject({ refresh_cadence_hours: hours });
+  });
+});

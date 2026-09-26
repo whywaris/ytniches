@@ -671,3 +671,30 @@ Decisions that still need to close before their dependent docs / features can be
   - **301 to `/tools`:** `/youtube-word-counter`, `/dislike-viewer`, `/random-comment-picker`, `/youtube-automation-tools`. Explicit `statusCode: 301`, since Next's `permanent: true` sends a 308. The list lives in `lib/tools/legacy-redirects.ts` and `next.config.ts` reads it.
   - **Guard:** a test fails if any of the old tool URLs would 404: each must be a page or a 301 to a page, and `next.config` must actually serve the redirects.
 - **Impacts:** `lib/tools/{calculators,legacy-redirects,registry}.ts`, `lib/services/free-tools.ts`, `next.config.ts`, six new `app/(marketing)/<old-slug>/` routes.
+
+### D-056: Pricing promises vs product
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** The help-center audit found the pricing cards promising things the product didn't do.
+- **Final call:**
+  - **Sync cadence by plan.** Every tracked channel synced every 24h on every plan, while the cards said Pro 6h and Team hourly. Now `tracked_channels.refresh_cadence_hours` is set from the tracker's plan when a channel is saved (`saveChannelToTracking`) and re-applied to all their channels whenever the billing webhook changes their current subscription (`applyRefreshCadence`). Values: Starter 24h, Pro 6h, Team 1h; trial, no plan or lapsed 24h. A migration backfilled existing rows.
+  - **Credit allocations seeded by migration.** The 200 / 1,000 / 3,000 monthly rows existed only as hand-inserted data in ytniches-dev, so a fresh (production) database would have allocated 0 credits on a first payment. Migration `20260925120000_pricing_promises.sql` seeds them idempotently.
+  - **Team seat cap.** A workspace is hard-capped at 3 seats (members plus pending, unexpired invites), checked on invite and again on accept. There's no seat purchasing, and no "+$25 per seat" copy existed in the product (it was only in Monetization.md), so nothing needed removing.
+  - **One source of numbers.** `lib/billing/plans.ts` now holds monthly credits, tracked-channel caps, sync cadence and seats, and the pricing-card bullets are derived from them. Tests fail if the migration's seed or backfill values drift from `plans.ts`.
+- **Open questions:**
+  - **Trial cadence:** trial channels sync every 24h (as instructed), while the trial is marketed as "Full Pro access". Either keep 24h and soften "full", or give trials Pro's 6h. It's one constant: `TRIAL.refreshCadenceHours`.
+  - **Team members' cadence:** cadence follows each tracker's _own_ subscription (same as the existing tracked-channel cap). An invited Team member with no subscription of their own gets 24h and the default cap, not Team's 1h / 100. It needs a decision on how workspace members inherit the owner's plan.
+  - **"Priority AI generation"** (Pro card) isn't implemented: there's no priority queue. It's the same kind of broken promise, left on the card pending a decision.
+- **Impacts:** `lib/billing/plans.ts`, `lib/services/{channels,billing,workspace}.ts`, the workspace invite/accept UI, migration `20260925120000_pricing_promises.sql`.
+
+### D-057: Pre-launch blocker — trial expiry isn't enforced
+
+- **Status:** Open. **Blocks launch** (with D-051).
+- **Finding:** Monetization.md §5.3 says an expired trial becomes read-only. In code, the trial's subscription keeps `tier = 'pro'`, and nothing checks `trial_ends_at` outside the Billing page. Trial users keep Pro access indefinitely (tracked-channel cap, email notifications, outlier feeds, sync); only the 50 credits stop refilling. That's a revenue leak.
+- **Needed:** enforce the expired-trial state (read-only) wherever tier-gated features are checked, and stop background work (sync, email) for expired trials.
+
+### D-058: Pre-launch blocker — legal pages missing
+
+- **Status:** Open. **Blocks launch.**
+- **Finding:** There are no Terms, Privacy or Refunds pages (`/legal/terms`, `/privacy`, `/refunds`; the footer shows them as "Soon"). We take payments, so they're legally required, and Creem will likely expect them. Until then the help center's Refunds article is the only public statement of the refund policy (Monetization.md §6.2).
+- **Needed:** proper drafts, ideally written or at least reviewed by a lawyer.

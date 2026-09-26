@@ -32,7 +32,13 @@ function InviteClient({ token, preview, isAuthenticated }: InviteClientProps) {
     const result = await acceptInvitationAndActivateAction(token);
     setAccepting(false);
     if (!result.ok) {
-      showToast({ title: "That invitation is no longer valid", variant: "error" });
+      showToast({
+        title:
+          result.error.type === "workspace_full"
+            ? "This workspace is already full. Ask its admin to free up a seat."
+            : "That invitation is no longer valid",
+        variant: "error",
+      });
       return;
     }
     showToast({ title: `Joined ${result.value.name}`, variant: "success" });

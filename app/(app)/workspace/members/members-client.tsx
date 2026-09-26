@@ -51,7 +51,11 @@ function MembersClient({ workspace, myUserId, myRole }: MembersClientProps) {
     if (!result.ok) {
       showToast({
         title:
-          result.error.type === "not_admin" ? "Only admins can invite" : "Couldn't send invite",
+          result.error.type === "not_admin"
+            ? "Only admins can invite"
+            : result.error.type === "workspace_full"
+              ? `This workspace is full (${result.error.seats} seats, pending invites included). Remove a member or let an invite expire first.`
+              : "Couldn't send invite",
         variant: "error",
       });
       return;

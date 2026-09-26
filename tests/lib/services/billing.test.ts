@@ -308,13 +308,16 @@ describe("upsertSubscriptionFromProvider", () => {
     const findBuilder = makeQueryBuilder({ data: null, error: null }); // no existing row
     const retireBuilder = makeQueryBuilder({ data: null, error: null });
     const insertBuilder = makeQueryBuilder({ data: null, error: null });
+    const trackedBuilder = makeQueryBuilder({ data: null, error: null });
     serviceFrom
       .mockReturnValueOnce(findBuilder)
       .mockReturnValueOnce(retireBuilder)
-      .mockReturnValueOnce(insertBuilder);
+      .mockReturnValueOnce(insertBuilder)
+      .mockReturnValueOnce(trackedBuilder);
 
     await upsertSubscriptionFromProvider("user-1", "pro", providerSub);
 
+    expect(trackedBuilder.update).toHaveBeenCalledWith({ refresh_cadence_hours: 6 });
     expect(retireBuilder.update).toHaveBeenCalledWith({ is_current: false });
     expect(insertBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -464,5 +467,63 @@ describe("handleRefund", () => {
     await handleRefund("sub_unknown", "evt_refund_4");
 
     expect(getBalance).not.toHaveBeenCalled();
+  });
+});
+
+describe("upsertSubscriptionFromProvider -> sync cadence (pricing promise)", () => {
+  const providerSub = {
+    id: "sub_1",
+    status: "active" as const,
+    customerId: "cust_1",
+    productId: "prod_team_monthly",
+    currentPeriodStart: "2026-09-01T00:00:00.000Z",
+    currentPeriodEnd: "2026-10-01T00:00:00.000Z",
+    canceledAt: null,
+    metadata: {},
+    amountCents: 9900,
+    billingInterval: "month" as const,
+    lastTransaction: null,
+  };
+
+  it("moves every tracked channel to the new plan's cadence on a new subscription", async () => {
+    const find = makeQueryBuilder({ data: null, error: null });
+    const retire = makeQueryBuilder({ data: null, error: null });
+    const insert = makeQueryBuilder({ data: null, error: null });
+    const tracked = makeQueryBuilder({ data: null, error: null });
+    serviceFrom
+      .mockReturnValueOnce(find)
+      .mockReturnValueOnce(retire)
+      .mockReturnValueOnce(insert)
+      .mockReturnValueOnce(tracked);
+
+    await upsertSubscriptionFromProvider("user-1", "team", providerSub);
+
+    expect(serviceFrom).toHaveBeenLastCalledWith("tracked_channels");
+    expect(tracked.update).toHaveBeenCalledWith({ refresh_cadence_hours: 1 });
+    expect(tracked.eq).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("drops back to the default cadence when the current subscription is cancelled", async () => {
+    const find = makeQueryBuilder({ data: { id: "row-1", is_current: true }, error: null });
+    const update = makeQueryBuilder({ data: null, error: null });
+    const tracked = makeQueryBuilder({ data: null, error: null });
+    serviceFrom.mockReturnValueOnce(find).mockReturnValueOnce(update).mockReturnValueOnce(tracked);
+
+    await upsertSubscriptionFromProvider("user-1", "pro", {
+      ...providerSub,
+      status: "canceled" as const,
+    });
+
+    expect(tracked.update).toHaveBeenCalledWith({ refresh_cadence_hours: 24 });
+  });
+
+  it("never lets a retired subscription row change the cadence", async () => {
+    const find = makeQueryBuilder({ data: { id: "old-row", is_current: false }, error: null });
+    const update = makeQueryBuilder({ data: null, error: null });
+    serviceFrom.mockReturnValueOnce(find).mockReturnValueOnce(update);
+
+    await upsertSubscriptionFromProvider("user-1", "pro", providerSub);
+
+    expect(serviceFrom).not.toHaveBeenCalledWith("tracked_channels");
   });
 });
