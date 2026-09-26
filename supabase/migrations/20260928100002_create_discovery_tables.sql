@@ -100,6 +100,8 @@ create table public.niche_snapshots (
   niche_id uuid not null references public.niches (id) on delete cascade,
   snapshot_date date not null,
   opportunity_score int not null check (opportunity_score between 0 and 100),
+  -- The five signals, percentile-normalised 0-1 (supply inverted: 1 = least
+  -- supply). Score = sum of weight x signal (lib/discovery/config.ts).
   demand numeric,
   accessibility numeric,
   momentum numeric,

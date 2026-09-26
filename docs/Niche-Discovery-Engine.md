@@ -124,10 +124,12 @@ create table niche_snapshots (
   snapshot_date date not null,
   opportunity_score int not null,           -- 0–100
   demand numeric, accessibility numeric, momentum numeric,
-  outlier_density numeric, supply numeric,  -- raw signals
+  outlier_density numeric, supply numeric,  -- normalised 0-1 (supply inverted)
   channel_count int not null default 0,
   new_channels_30d int not null default 0,
   median_views numeric,
+  trend int,                                -- score minus score 7 days earlier
+  why_chips text[] not null default '{}',   -- top-2 signals, worded
   primary key (niche_id, snapshot_date)
 );
 

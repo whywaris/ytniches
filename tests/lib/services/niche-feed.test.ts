@@ -96,8 +96,10 @@ describe("listNiches", () => {
       data: [
         {
           niche_id: "a",
+          channel_id: "c1",
           outlier_multiple: 9,
           videos: {
+            id: "vid-1",
             youtube_video_id: "yt1",
             title: "Big one",
             thumbnail_url: "https://i.ytimg.com/1.jpg",
@@ -117,7 +119,13 @@ describe("listNiches", () => {
       trend: 4,
       whyChips: ["62% small channels ranking", "4 new channels breaking out"],
       thumbnails: [
-        { youtubeVideoId: "yt1", title: "Big one", thumbnailUrl: "https://i.ytimg.com/1.jpg" },
+        {
+          videoId: "vid-1",
+          channelId: "c1",
+          youtubeVideoId: "yt1",
+          title: "Big one",
+          thumbnailUrl: "https://i.ytimg.com/1.jpg",
+        },
       ],
     });
     const list = fake.queriesFor("niche_snapshots")[1];

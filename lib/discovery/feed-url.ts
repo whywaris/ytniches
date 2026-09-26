@@ -1,0 +1,152 @@
+import { z } from "zod";
+
+import type {
+  ChannelFeedFilters,
+  NicheFeedFilters,
+  OutlierFeedFilters,
+} from "@/lib/services/niche-feed";
+
+// Niche-Discovery-Engine.md §9.4: every feed filter lives in the URL so a
+// view is shareable (Application-Flow.md §2.5). Parsing is lenient: a bad
+// or hand-edited param is dropped, never an error page. Plain module (no
+// "use client") so the server page and the client filter panels share it.
+
+export const FEED_TABS = ["niches", "channels", "outliers", "search"] as const;
+export type FeedTab = (typeof FEED_TABS)[number];
+
+export type SearchParams = Record<string, string | string[] | undefined>;
+
+function first(params: SearchParams, key: string): string | undefined {
+  const value = params[key];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function pick<T>(schema: z.ZodType<T>, value: string | undefined): T | undefined {
+  if (value === undefined || value === "") return undefined;
+  const parsed = schema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
+const count = z.coerce.number().int().min(0).max(10_000_000_000);
+const score = z.coerce.number().int().min(0).max(100);
+const page = z.coerce.number().int().min(1).max(500);
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const slug = z.string().regex(/^[a-z0-9-]{1,80}$/);
+const flag = z.literal("1").transform(() => true);
+
+export function parseTab(params: SearchParams): FeedTab | undefined {
+  return pick(z.enum(FEED_TABS), first(params, "tab"));
+}
+
+export function parseNicheFilters(params: SearchParams): NicheFeedFilters {
+  return {
+    minScore: pick(score, first(params, "minScore")),
+    maxScore: pick(score, first(params, "maxScore")),
+    status: pick(z.enum(["active", "rising", "saturated", "declining"]), first(params, "status")),
+    sort: pick(z.enum(["score", "trend", "newest"]), first(params, "sort")) ?? "score",
+    page: pick(page, first(params, "page")) ?? 1,
+  };
+}
+
+export function parseChannelFilters(params: SearchParams): ChannelFeedFilters {
+  return {
+    niche: pick(slug, first(params, "niche")),
+    createdAfter: pick(date, first(params, "after")),
+    createdBefore: pick(date, first(params, "before")),
+    minSubs: pick(count, first(params, "minSubs")),
+    maxSubs: pick(count, first(params, "maxSubs")),
+    minAvgViews: pick(count, first(params, "minViews")),
+    maxAvgViews: pick(count, first(params, "maxViews")),
+    minOutlierScore: pick(z.coerce.number().min(0).max(1_000), first(params, "minOutlier")),
+    faceless: pick(flag, first(params, "faceless")),
+    excludeKids: pick(flag, first(params, "noKids")),
+    hasShorts: pick(flag, first(params, "shorts")),
+    likelyMonetized: pick(flag, first(params, "monetized")),
+    language: pick(z.string().regex(/^[a-z]{2}$/), first(params, "lang")),
+    sort:
+      pick(
+        z.enum(["outlier_score", "avg_views", "newest", "subscribers"]),
+        first(params, "sort"),
+      ) ?? "outlier_score",
+    page: pick(page, first(params, "page")) ?? 1,
+  };
+}
+
+export function parseOutlierFilters(params: SearchParams): OutlierFeedFilters {
+  const within = pick(z.enum(["7", "30", "90"]), first(params, "within"));
+  return {
+    niche: pick(slug, first(params, "niche")),
+    minMultiple: pick(z.coerce.number().min(3).max(1_000), first(params, "minMultiple")),
+    withinDays: within ? (Number(within) as 7 | 30 | 90) : 30,
+    page: pick(page, first(params, "page")) ?? 1,
+  };
+}
+
+// Builds `/niches?tab=...&...`, dropping defaults and empties so URLs stay
+// short and a default view has a clean URL.
+export function buildFeedUrl(tab: FeedTab, values: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  if (tab !== "niches") params.set("tab", tab);
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== "") params.set(key, value);
+  }
+  const query = params.toString();
+  return query ? `/niches?${query}` : "/niches";
+}
+
+const DEFAULT_SORT: Record<FeedTab, string> = {
+  niches: "score",
+  channels: "outlier_score",
+  outliers: "",
+  search: "",
+};
+
+// Filter state as URL strings, from parsed filters (the inverse of parse*).
+export function nicheFiltersToValues(
+  filters: NicheFeedFilters,
+): Record<string, string | undefined> {
+  return {
+    minScore: filters.minScore?.toString(),
+    maxScore: filters.maxScore?.toString(),
+    status: filters.status,
+    sort: filters.sort === DEFAULT_SORT.niches ? undefined : filters.sort,
+  };
+}
+
+export function channelFiltersToValues(
+  filters: ChannelFeedFilters,
+): Record<string, string | undefined> {
+  return {
+    niche: filters.niche,
+    after: filters.createdAfter,
+    before: filters.createdBefore,
+    minSubs: filters.minSubs?.toString(),
+    maxSubs: filters.maxSubs?.toString(),
+    minViews: filters.minAvgViews?.toString(),
+    maxViews: filters.maxAvgViews?.toString(),
+    minOutlier: filters.minOutlierScore?.toString(),
+    faceless: filters.faceless ? "1" : undefined,
+    noKids: filters.excludeKids ? "1" : undefined,
+    shorts: filters.hasShorts ? "1" : undefined,
+    monetized: filters.likelyMonetized ? "1" : undefined,
+    lang: filters.language,
+    sort: filters.sort === DEFAULT_SORT.channels ? undefined : filters.sort,
+  };
+}
+
+export function outlierFiltersToValues(
+  filters: OutlierFeedFilters,
+): Record<string, string | undefined> {
+  return {
+    niche: filters.niche,
+    minMultiple: filters.minMultiple?.toString(),
+    within: filters.withinDays === 30 ? undefined : String(filters.withinDays),
+  };
+}
+
+export function withPage(
+  values: Record<string, string | undefined>,
+  pageNumber: number,
+): Record<string, string | undefined> {
+  return { ...values, page: pageNumber > 1 ? String(pageNumber) : undefined };
+}

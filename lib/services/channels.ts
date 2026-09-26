@@ -9,6 +9,7 @@ import { getCachedSearchChannels, setCachedSearchChannels } from "@/lib/youtube/
 import { getChannelsByIds, searchChannelIds, type YouTubeError } from "@/lib/youtube";
 import { withQuotaSource } from "@/lib/youtube/quota";
 import { addUserSearchSeed } from "@/lib/services/discovery/seeds";
+import { listTopNicheChannelIds } from "@/lib/services/niche-feed";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
@@ -574,4 +575,30 @@ export async function saveChannelToTracking(
   }
 
   return ok(undefined);
+}
+
+// Niche-Discovery-Engine.md §9.2/§9.5 "Track niche": tracks the niche's top
+// channels through saveChannelToTracking, so the plan's cap and cadence
+// apply exactly as for single Track clicks. Stops at the cap.
+export const TRACK_NICHE_CHANNELS = 3;
+
+export interface TrackNicheResult {
+  tracked: number;
+  limitReached: boolean;
+}
+
+export async function trackNiche(
+  ctx: RequestContext,
+  slug: string,
+): Promise<Result<TrackNicheResult, NotFoundError>> {
+  const channelIds = await listTopNicheChannelIds(slug, TRACK_NICHE_CHANNELS);
+  if (channelIds.length === 0) return err({ type: "not_found" });
+
+  let tracked = 0;
+  for (const channelId of channelIds) {
+    const saved = await saveChannelToTracking(ctx, channelId);
+    if (!saved.ok) return ok({ tracked, limitReached: true });
+    tracked += 1;
+  }
+  return ok({ tracked, limitReached: false });
 }

@@ -39,6 +39,11 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: sessionFrom }),
 }));
 
+const listTopNicheChannelIds = vi.fn();
+vi.mock("@/lib/services/niche-feed", () => ({
+  listTopNicheChannelIds: (...args: unknown[]) => listTopNicheChannelIds(...args),
+}));
+
 const addUserSearchSeed = vi.fn();
 vi.mock("@/lib/services/discovery/seeds", () => ({
   addUserSearchSeed: (...args: unknown[]) => addUserSearchSeed(...args),
@@ -57,7 +62,7 @@ vi.mock("@/lib/billing/effective-plan", () => ({
 }));
 const ownPlan = (tier: string, status = "active") => ({ tier, status, teamWorkspaceId: null });
 
-const { searchNiches, saveChannelToTracking, getChannelDetail, listVideosForChannel } =
+const { searchNiches, saveChannelToTracking, getChannelDetail, listVideosForChannel, trackNiche } =
   await import("@/lib/services/channels");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
@@ -360,6 +365,30 @@ describe("saveChannelToTracking", () => {
     const result = await saveChannelToTracking(ctx, "internal-1");
 
     expect(result).toEqual({ ok: true, value: undefined });
+  });
+
+  it("Track niche tracks the niche's top channels and stops at the plan cap", async () => {
+    getEffectivePlan.mockResolvedValue(ownPlan("starter"));
+    listTopNicheChannelIds.mockResolvedValueOnce(["c1", "c2", "c3"]);
+    let count = 9; // Starter's cap is 10: one more fits.
+    sessionFrom.mockImplementation((table: string) => {
+      if (table === "tracked_channels") {
+        const current = count;
+        count += 1;
+        return trackedChannelsTable({ count: current, error: null }, { error: null });
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const result = await trackNiche(ctx, "mafia-history");
+
+    expect(listTopNicheChannelIds).toHaveBeenCalledWith("mafia-history", 3);
+    expect(result).toEqual({ ok: true, value: { tracked: 1, limitReached: true } });
+  });
+
+  it("Track niche is not_found for an empty or unknown niche", async () => {
+    listTopNicheChannelIds.mockResolvedValueOnce([]);
+    expect(await trackNiche(ctx, "nope")).toEqual({ ok: false, error: { type: "not_found" } });
   });
 
   it("treats an already-tracked channel as an idempotent success, not an error", async () => {

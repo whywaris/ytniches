@@ -1,9 +1,14 @@
 "use server";
 
+import { z } from "zod";
+
 import { getRequestContext } from "@/lib/context";
 import {
   saveChannelToTracking,
   searchNiches,
+  trackNiche,
+  type NotFoundError,
+  type TrackNicheResult,
   type ChannelSearchResult,
   type SaveChannelError,
   type SearchError,
@@ -83,4 +88,16 @@ export async function saveChannelAction(
     void capture("first_save", { distinctId: ctx.userId });
   }
   return result;
+}
+
+const SlugSchema = z.string().regex(/^[a-z0-9-]{1,80}$/);
+
+// Niche-Discovery-Engine.md §9.2/§9.5: "Track" on a niche card or page.
+export async function trackNicheAction(
+  slug: unknown,
+): Promise<Result<TrackNicheResult, NotFoundError | { type: "validation_error" }>> {
+  const parsed = SlugSchema.safeParse(slug);
+  if (!parsed.success) return err({ type: "validation_error" });
+  const ctx = await getRequestContext();
+  return trackNiche(ctx, parsed.data);
 }

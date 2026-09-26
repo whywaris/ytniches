@@ -79,6 +79,9 @@ export interface NicheFeedFilters {
 }
 
 export interface NicheThumbnail {
+  /** Internal ids, for "Generate prompts" (/prompts?channelId&videoId). */
+  videoId: string;
+  channelId: string;
   youtubeVideoId: string;
   title: string;
   thumbnailUrl: string;
@@ -144,7 +147,9 @@ async function thumbnailsFor(
   if (nicheIds.length === 0) return result;
   const { data, error } = await supabase
     .from("outliers_feed")
-    .select("niche_id, outlier_multiple, videos!inner(youtube_video_id, title, thumbnail_url)")
+    .select(
+      "niche_id, channel_id, outlier_multiple, videos!inner(id, youtube_video_id, title, thumbnail_url)",
+    )
     .in("niche_id", nicheIds)
     .order("outlier_multiple", { ascending: false })
     .limit(nicheIds.length * 10);
@@ -154,6 +159,8 @@ async function thumbnailsFor(
     const list = result.get(row.niche_id) ?? [];
     if (list.length >= perNiche) continue;
     list.push({
+      videoId: row.videos.id,
+      channelId: row.channel_id,
       youtubeVideoId: row.videos.youtube_video_id,
       title: row.videos.title,
       thumbnailUrl: row.videos.thumbnail_url,
@@ -614,6 +621,21 @@ export async function getNicheBySlug(
     topChannels: channels.items,
     topOutliers: outliers.items,
   });
+}
+
+// --- Track niche support ---------------------------------------------------
+
+// Top channels of a niche by outlier score, for "Track niche" (the write
+// itself lives in lib/services/channels.ts, next to saveChannelToTracking,
+// so this read-only module stays free of the YouTube-calling search path).
+export async function listTopNicheChannelIds(slug: string, limit: number): Promise<string[]> {
+  const page = await loadChannelPage(
+    { niche: slug, sort: "outlier_score", page: 1 },
+    Date.now(),
+    undefined,
+    limit,
+  );
+  return page.items.map((channel) => channel.id);
 }
 
 // For the niche filter <select>: every niche with a current score.

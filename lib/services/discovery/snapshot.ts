@@ -97,11 +97,14 @@ export async function snapshotNiches(now: Date = new Date()): Promise<SnapshotRe
       niche_id: niche.nicheId,
       snapshot_date: snapshotDate,
       opportunity_score: niche.score,
-      demand: niche.raw.demand,
-      accessibility: niche.raw.accessibility,
-      momentum: niche.raw.momentum,
-      outlier_density: niche.raw.outlierDensity,
-      supply: niche.raw.supply,
+      // Normalised 0-1 signals (supply already inverted), so the niche
+      // page can draw the breakdown as points out of each weight. Raw
+      // shares survive in why_chips; raw demand in median_views.
+      demand: niche.normalized.demand,
+      accessibility: niche.normalized.accessibility,
+      momentum: niche.normalized.momentum,
+      outlier_density: niche.normalized.outlierDensity,
+      supply: niche.normalized.supply,
       channel_count: input.channelCount,
       new_channels_30d: input.newChannels30d,
       median_views: input.medianViews90d,
