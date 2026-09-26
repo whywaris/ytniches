@@ -769,6 +769,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-065: Paging or re-sorting a niche search charges another credit
 
-- **Status:** Open (logged 2026-09-26). Money path.
+- **Status:** Resolved (2026-09-27)
+- **Final call:** Niche Finder caches a search's full channel list (not just ids) for `SEARCH_RESULTS_CACHE_HOURS` (24), keyed on the filters minus `page` and `sort`. Paging and re-sorting within that window read the cache: no credit, no search.list, no channels.list. Changing a filter or the keyword is a new search. The cache is shared, as before: an identical search by anyone within the window is free.
 - **Finding:** `getCachedSearchResult` keys the cache on all filters, including `page` and sort. YouTube's `search.list` only uses the keyword. So moving to page 2, re-sorting, or changing a post-filter misses the cache, runs another YouTube search, and charges another credit.
 - **Needed:** key the YouTube cache on the keyword alone, and apply page, sort and post-filters to the cached channel list. Charge once per new keyword search. Until then, the help center just says "a search costs N credits" and doesn't describe paging.

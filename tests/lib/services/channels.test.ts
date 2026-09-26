@@ -20,9 +20,11 @@ vi.mock("@/lib/credits", () => ({
   consume: (...args: unknown[]) => consume(...args),
 }));
 
-const getCachedSearchResult = vi.fn();
+const getCachedSearchChannels = vi.fn();
+const setCachedSearchChannels = vi.fn();
 vi.mock("@/lib/youtube/cache", () => ({
-  getCachedSearchResult: (...args: unknown[]) => getCachedSearchResult(...args),
+  getCachedSearchChannels: (...args: unknown[]) => getCachedSearchChannels(...args),
+  setCachedSearchChannels: (...args: unknown[]) => setCachedSearchChannels(...args),
 }));
 
 const searchChannelIds = vi.fn();
@@ -123,7 +125,7 @@ describe("searchNiches", () => {
   });
 
   it("returns insufficient_credits on a cache miss when the balance is too low", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(0);
 
     const result = await searchNiches(ctx, defaultFilters(), "key-1");
@@ -136,7 +138,7 @@ describe("searchNiches", () => {
   });
 
   it("maps a quota_exceeded YouTube error to quota_exhausted", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);
     searchChannelIds.mockResolvedValueOnce({ ok: false, error: { type: "quota_exceeded" } });
 
@@ -147,9 +149,7 @@ describe("searchNiches", () => {
   });
 
   it("on a cache hit, returns results without calling getBalance, consume, or hitting quota", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(["UC1"]);
-    searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
-    getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel()] });
+    getCachedSearchChannels.mockResolvedValueOnce([makeChannel()]);
     serviceFrom.mockReturnValueOnce(
       channelsUpsertTable({ data: [{ id: "internal-1", youtube_channel_id: "UC1" }], error: null }),
     );
@@ -164,10 +164,32 @@ describe("searchNiches", () => {
     }
     expect(getBalance).not.toHaveBeenCalled();
     expect(consume).not.toHaveBeenCalled();
+    expect(searchChannelIds).not.toHaveBeenCalled();
+    expect(getChannelsByIds).not.toHaveBeenCalled();
+  });
+
+  it("keys the cache without page and sort, so paging and re-sorting are cache hits", async () => {
+    getCachedSearchChannels.mockResolvedValueOnce([makeChannel()]);
+    serviceFrom.mockReturnValueOnce(
+      channelsUpsertTable({ data: [{ id: "internal-1", youtube_channel_id: "UC1" }], error: null }),
+    );
+    sessionFrom.mockReturnValueOnce(videosTable({ data: [], error: null }));
+
+    await searchNiches(
+      ctx,
+      defaultFilters({ keyword: "sleep", page: 3, sort: "subscribers" }),
+      "k",
+    );
+
+    expect(getCachedSearchChannels).toHaveBeenCalledWith({
+      keyword: "sleep",
+      uploadFrequency: "any",
+      monetized: "any",
+    });
   });
 
   it("on a cache miss, calls YouTube, upserts into channels, and consumes exactly one credit", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);
     searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
     getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel()] });
@@ -187,10 +209,14 @@ describe("searchNiches", () => {
       { onConflict: "youtube_channel_id" },
     );
     expect(consume).toHaveBeenCalledWith(ctx, 1, "Niche search", "key-1");
+    expect(setCachedSearchChannels).toHaveBeenCalledWith(
+      { uploadFrequency: "any", monetized: "any" },
+      [makeChannel()],
+    );
   });
 
   it("applies the avgViewsMin filter against DB video rows, excluding channels below it", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);
     searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1", "UC2"] });
     getChannelsByIds.mockResolvedValueOnce({
@@ -229,7 +255,7 @@ describe("searchNiches", () => {
   });
 
   it("returns viewTrend sorted oldest-to-newest regardless of DB row order", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);
     searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
     getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel({ id: "UC1" })] });
@@ -258,7 +284,7 @@ describe("searchNiches", () => {
   });
 
   it("returns an empty viewTrend for a cold-cache channel with no video rows", async () => {
-    getCachedSearchResult.mockResolvedValueOnce(null);
+    getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);
     searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1"] });
     getChannelsByIds.mockResolvedValueOnce({ ok: true, value: [makeChannel({ id: "UC1" })] });

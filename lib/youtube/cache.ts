@@ -1,4 +1,5 @@
 import { getRedis } from "@/lib/cache/redis";
+import { SEARCH_RESULTS_CACHE_HOURS } from "@/lib/credits/costs";
 import type { YouTubeChannelItem, YouTubeVideoItem } from "@/lib/youtube/schemas";
 
 // TRD.md §5.2 key conventions. TTL 6h on all three — search-result caching
@@ -98,6 +99,30 @@ export async function setCachedChannelVideos(
 ): Promise<void> {
   const redis = getRedis();
   await redis.set(channelVideosKey(youtubeChannelId), videos, { ex: CHANNEL_VIDEOS_TTL_SECONDS });
+}
+
+// D-065: a whole Niche Finder result set (the channel items, not just ids),
+// keyed on its filters minus page and sort. Serving pages and sorts from
+// here needs no search.list and no channels.list, so they cost nothing.
+function searchResultsKey(hash: string): string {
+  return `youtube:search-results:${hash}`;
+}
+
+export async function getCachedSearchChannels(
+  filters: Record<string, unknown>,
+): Promise<YouTubeChannelItem[] | null> {
+  return (
+    (await getRedis().get<YouTubeChannelItem[]>(searchResultsKey(hashFilters(filters)))) ?? null
+  );
+}
+
+export async function setCachedSearchChannels(
+  filters: Record<string, unknown>,
+  channels: YouTubeChannelItem[],
+): Promise<void> {
+  await getRedis().set(searchResultsKey(hashFilters(filters)), channels, {
+    ex: SEARCH_RESULTS_CACHE_HOURS * 60 * 60,
+  });
 }
 
 export async function getCachedSearchResult(

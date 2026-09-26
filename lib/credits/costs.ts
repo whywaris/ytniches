@@ -13,6 +13,11 @@ export const CREDIT_COSTS = {
   thumbnailIdeasRegenerate: 5,
 } as const;
 
+// D-065: a Niche Finder search's results are kept this long. Paging,
+// re-sorting or re-running the same search within it is free: no credit,
+// no YouTube quota.
+export const SEARCH_RESULTS_CACHE_HOURS = 24;
+
 export const FAIR_USE = {
   nicheSearchesPerHour: 60,
 } as const;

@@ -5,7 +5,7 @@ import { refreshCadenceHoursFor, TIER_INFO, trackedChannelsLimitFor } from "@/li
 import { getRedis } from "@/lib/cache/redis";
 import { CREDIT_COSTS, FAIR_USE } from "@/lib/credits/costs";
 import { consume, getBalance } from "@/lib/credits";
-import { getCachedSearchResult } from "@/lib/youtube/cache";
+import { getCachedSearchChannels, setCachedSearchChannels } from "@/lib/youtube/cache";
 import { getChannelsByIds, searchChannelIds, type YouTubeError } from "@/lib/youtube";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -358,38 +358,40 @@ export async function searchNiches(
     return err({ type: "rate_limited", retryAfterSeconds });
   }
 
-  // TRD.md §5.3 "never fetch what's cached fresh": if this exact filter
-  // combination was already searched by anyone within the cache TTL, the
-  // user gets the result without being charged — they aren't the one who
-  // caused the YouTube API cost this time.
-  const cachedIds = await getCachedSearchResult(filters);
-  const isCacheHit = cachedIds !== null;
+  // TRD.md §5.3 "never fetch what's cached fresh", D-065: results are
+  // cached per filter set *without* page and sort, so paging and re-sorting
+  // are cache hits. A hit is free for anyone within the window -- they
+  // didn't cause the YouTube cost this time.
+  const { page: pageNumber, sort, ...searchFilters } = filters;
+  let channels = await getCachedSearchChannels(searchFilters);
+  const isCacheHit = channels !== null;
 
-  if (!isCacheHit) {
+  if (channels === null) {
     const balance = await getBalance(ctx);
     if (balance < SEARCH_CREDIT_COST) {
       return err({ type: "insufficient_credits", balance, required: SEARCH_CREDIT_COST });
     }
+
+    const idsResult = await searchChannelIds(searchFilters);
+    if (!idsResult.ok) {
+      return err(toSearchError(idsResult.error));
+    }
+    const channelsResult = await getChannelsByIds(idsResult.value);
+    if (!channelsResult.ok) {
+      return err(toSearchError(channelsResult.error));
+    }
+    channels = channelsResult.value;
+    await setCachedSearchChannels(searchFilters, channels);
   }
 
-  const idsResult = await searchChannelIds(filters);
-  if (!idsResult.ok) {
-    return err(toSearchError(idsResult.error));
-  }
-
-  const channelsResult = await getChannelsByIds(idsResult.value);
-  if (!channelsResult.ok) {
-    return err(toSearchError(channelsResult.error));
-  }
-
-  const idByYoutubeId = await upsertChannels(channelsResult.value);
+  const idByYoutubeId = await upsertChannels(channels);
   const supabase = await createClient();
   const metrics = await computeChannelMetrics(supabase, [...idByYoutubeId.values()]);
 
-  const allResults = await toSearchResults(channelsResult.value, idByYoutubeId, metrics);
+  const allResults = await toSearchResults(channels, idByYoutubeId, metrics);
   const filtered = applyFilters(allResults, filters);
-  const sorted = sortResults(filtered, filters.sort);
-  const page = sorted.slice((filters.page - 1) * RESULTS_PER_PAGE, filters.page * RESULTS_PER_PAGE);
+  const sorted = sortResults(filtered, sort);
+  const page = sorted.slice((pageNumber - 1) * RESULTS_PER_PAGE, pageNumber * RESULTS_PER_PAGE);
 
   if (!isCacheHit) {
     const consumeResult = await consume(ctx, SEARCH_CREDIT_COST, "Niche search", idempotencyKey);

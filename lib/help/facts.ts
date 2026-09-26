@@ -1,6 +1,6 @@
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
-import { CREDIT_COSTS, FAIR_USE } from "@/lib/credits/costs";
+import { CREDIT_COSTS, FAIR_USE, SEARCH_RESULTS_CACHE_HOURS } from "@/lib/credits/costs";
 import { DIGEST_ITEM_LIMIT, DIGEST_LOCAL_HOUR } from "@/lib/notifications/digest-config";
 import {
   BASELINE_MIN_VIDEOS,
@@ -53,6 +53,7 @@ export const FACTS: Record<string, string | number> = {
   "credits.thumbnailIdeas": CREDIT_COSTS.thumbnailIdeas,
   "credits.thumbnailIdeasRegenerate": CREDIT_COSTS.thumbnailIdeasRegenerate,
   "fairUse.searchesPerHour": FAIR_USE.nicheSearchesPerHour,
+  "search.cacheHours": SEARCH_RESULTS_CACHE_HOURS,
 
   "trial.pitch": TRIAL_PITCH,
   "trial.days": TRIAL.days,
