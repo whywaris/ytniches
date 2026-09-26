@@ -445,6 +445,7 @@ export type Database = {
           suspended_reason: string | null;
           theme_preference: string;
           time_zone: string;
+          time_zone_source: string;
           updated_at: string;
           youtube_channel_id: string | null;
         };
@@ -463,6 +464,7 @@ export type Database = {
           suspended_reason?: string | null;
           theme_preference?: string;
           time_zone?: string;
+          time_zone_source?: string;
           updated_at?: string;
           youtube_channel_id?: string | null;
         };
@@ -481,6 +483,7 @@ export type Database = {
           suspended_reason?: string | null;
           theme_preference?: string;
           time_zone?: string;
+          time_zone_source?: string;
           updated_at?: string;
           youtube_channel_id?: string | null;
         };

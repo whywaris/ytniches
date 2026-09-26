@@ -135,6 +135,7 @@ describe("getProfileSummary", () => {
           name: "Ada",
           avatar_url: "https://example.com/a.jpg",
           time_zone: "America/New_York",
+          time_zone_source: "browser",
         },
         error: null,
       }),
@@ -146,6 +147,7 @@ describe("getProfileSummary", () => {
       name: "Ada",
       avatarUrl: "https://example.com/a.jpg",
       timeZone: "America/New_York",
+      timeZoneSource: "browser",
     });
   });
 

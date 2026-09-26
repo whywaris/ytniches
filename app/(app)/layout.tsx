@@ -36,6 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         profileName={profile.name}
         profileAvatarUrl={profile.avatarUrl}
         isSuperAdmin={profile.role === "super_admin"}
+        detectTimeZone={profile.timeZoneSource === "default"}
         notificationBell={<NotificationBell />}
         creditChip={<CreditChip />}
       >

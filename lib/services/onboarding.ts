@@ -16,6 +16,8 @@ export interface ProfileSummary {
   name: string | null;
   avatarUrl: string | null;
   timeZone: string;
+  // "default" until the browser's zone is detected or the user picks one.
+  timeZoneSource: string;
   role: string;
 }
 
@@ -26,7 +28,7 @@ export async function getProfileSummary(ctx: RequestContext): Promise<ProfileSum
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("name, avatar_url, time_zone, role")
+    .select("name, avatar_url, time_zone, time_zone_source, role")
     .eq("id", ctx.userId)
     .single();
 
@@ -37,6 +39,7 @@ export async function getProfileSummary(ctx: RequestContext): Promise<ProfileSum
     name: data.name,
     avatarUrl: data.avatar_url,
     timeZone: data.time_zone,
+    timeZoneSource: data.time_zone_source,
     role: data.role,
   };
 }

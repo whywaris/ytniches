@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { usePathname } from "next/navigation";
 
-import { LogOut, Search as SearchIcon, Settings, ShieldAlert } from "lucide-react";
+import { Bell, LogOut, Search as SearchIcon, Settings, ShieldAlert, User } from "lucide-react";
 
 import { labelForPathname } from "@/components/features/shell/nav-config";
 import { Avatar } from "@/components/ui/avatar";
@@ -84,6 +84,16 @@ function AppTopBar({
             />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
+            <DropdownMenuItem asChild>
+              <a href="/settings/profile">
+                <User /> Profile
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href="/settings/notifications">
+                <Bell /> Notifications
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a href="/settings/billing">
                 <Settings /> Billing

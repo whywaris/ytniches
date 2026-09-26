@@ -757,7 +757,13 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-064: No time zone setting, so digest and quiet hours run on UTC
 
-- **Status:** Open (logged 2026-09-26)
+- **Status:** Resolved (2026-09-27)
+- **Final call:**
+  - New column `profiles.time_zone_source` (`default` / `browser` / `user`), because "UTC" alone can't tell "never set" from "chose UTC".
+  - On app load, while the source is `default`, the shell saves the browser's `Intl` zone once. The write is conditional on `time_zone_source = 'default'`, so it never overwrites anything.
+  - Settings → Profile has a time zone picker. A choice made there is marked `user` and is never auto-replaced.
+  - Zones are checked against `Intl` before saving, since an unknown name would break the digest SQL.
+  - The account menu now links Profile and Notifications (Notifications had no link at all).
 - **Finding:** `profiles.time_zone` defaults to `'UTC'`, and nothing in the app ever writes it: no settings field, and onboarding doesn't capture the browser zone. The digest ("8 am local") and quiet hours both read it, so they're UTC for everyone. The help center says so plainly.
 - **Needed:** capture the browser's time zone at onboarding (`Intl.DateTimeFormat().resolvedOptions().timeZone`) and add a field under Settings → Notifications. Then update the two help articles.
 

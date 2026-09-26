@@ -17,6 +17,7 @@ import {
   labelForPathname,
 } from "@/components/features/shell/nav-config";
 import { readRecentRoutes, recordRouteVisit } from "@/lib/client/recent-routes";
+import { saveDetectedTimeZoneAction } from "@/app/(app)/actions";
 
 export interface AppShellProps {
   hasWorkspace: boolean;
@@ -25,6 +26,8 @@ export interface AppShellProps {
   profileName: string | null;
   profileAvatarUrl: string | null;
   isSuperAdmin: boolean;
+  // True while the profile still has the default time zone (D-064).
+  detectTimeZone: boolean;
   notificationBell: React.ReactNode;
   creditChip: React.ReactNode;
   children: React.ReactNode;
@@ -37,6 +40,7 @@ function AppShell({
   profileName,
   profileAvatarUrl,
   isSuperAdmin,
+  detectTimeZone,
   notificationBell,
   creditChip,
   children,
@@ -45,6 +49,14 @@ function AppShell({
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
+
+  // A one-off write, not a data fetch: fills in profiles.time_zone from the
+  // browser the first time the app loads (D-064).
+  React.useEffect(() => {
+    if (detectTimeZone) {
+      void saveDetectedTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    }
+  }, [detectTimeZone]);
 
   React.useEffect(() => {
     recordRouteVisit(pathname, labelForPathname(pathname));
