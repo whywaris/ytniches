@@ -508,7 +508,7 @@ Essential indexes for MVP:
 | `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
 | `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
 
-Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`, `purge_stale_youtube_data`. Migration `20260928100004`.
+Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`, `purge_stale_youtube_data`. Migration `20260928100004`; `channels(discovered_via_seed)` is indexed in `20260928100005`.
 
 ### 6.3 Audit tables
 
