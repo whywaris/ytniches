@@ -183,6 +183,11 @@ function TrackingClient({
     router.push(`/tracking/${channelId}`);
   }
 
+  function handleOpenNiche(notificationId: string, slug: string) {
+    markReadOptimistic(notificationId);
+    router.push(`/niches/${slug}`);
+  }
+
   function handleDismiss(notificationId: string) {
     setState((current) =>
       current.status === "populated"
@@ -297,6 +302,7 @@ function TrackingClient({
                       onGoToChannel={() =>
                         handleGoToChannel(notification.id, notification.channel.id)
                       }
+                      onOpenNiche={(slug) => handleOpenNiche(notification.id, slug)}
                       onDismiss={handleDismiss}
                     />
                   ))

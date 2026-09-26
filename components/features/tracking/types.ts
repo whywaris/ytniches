@@ -20,6 +20,8 @@ export interface ActivityFeedNotification {
   readAt: string | null;
   dismissedAt: string | null;
   channel: ActivityFeedChannelRef;
+  /** Set for Discovery Engine niche notes (related_resource "niche:<slug>"). */
+  niche?: { slug: string; name: string };
 }
 
 export interface TrackedChannelSummary {

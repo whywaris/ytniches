@@ -35,9 +35,16 @@ vi.mock("@/lib/services/discovery/classify", () => ({
   classifyBatch: (...args: unknown[]) => classifyBatch(...args),
 }));
 
-vi.mock("@/lib/services/discovery/snapshot", () => ({ snapshotNiches: vi.fn() }));
+const snapshotNiches = vi.fn();
+vi.mock("@/lib/services/discovery/snapshot", () => ({
+  snapshotNiches: (...args: unknown[]) => snapshotNiches(...args),
+}));
+const notifyNicheTrackers = vi.fn();
+vi.mock("@/lib/services/discovery/niche-notifications", () => ({
+  notifyNicheTrackers: (...args: unknown[]) => notifyNicheTrackers(...args),
+}));
 
-const { dispatchEnrichment, runDiscovery, runClassify, runEnrichmentBatch, runPurge } =
+const { dispatchEnrichment, runDiscovery, runClassify, runEnrichmentBatch, runPurge, runSnapshot } =
   await import("@/workers/discovery");
 
 const NOW = new Date("2026-09-26T20:00:00Z");
@@ -153,14 +160,12 @@ describe("runDiscovery", () => {
       searched: [{ seedId: "s1", channelIds: [] }],
       stoppedForBudget: false,
     });
-    ingestDiscoveredChannels
-      .mockRejectedValueOnce(new Error("db blip"))
-      .mockResolvedValue({
-        newChannelIds: [],
-        skippedExisting: 0,
-        rejectedByPrefilter: 0,
-        stoppedForBudget: false,
-      });
+    ingestDiscoveredChannels.mockRejectedValueOnce(new Error("db blip")).mockResolvedValue({
+      newChannelIds: [],
+      skippedExisting: 0,
+      rejectedByPrefilter: 0,
+      stoppedForBudget: false,
+    });
     const step = makeStep();
 
     await expect(runDiscovery(step, NOW)).rejects.toThrow("db blip");
@@ -202,5 +207,23 @@ describe("runPurge", () => {
       p_snapshot_days: 90,
     });
     expect(result).toEqual({ channels: 3, videos: 40, snapshots: 0 });
+  });
+});
+
+describe("runSnapshot", () => {
+  it("scores, then notifies niche trackers in a separate retryable step", async () => {
+    const changes = [{ nicheId: "n1", score: 80, trend: 12, status: "rising" }];
+    snapshotNiches.mockResolvedValue({ snapshotDate: "2026-09-27", scored: 1, changes });
+    notifyNicheTrackers
+      .mockRejectedValueOnce(new Error("insert blip"))
+      .mockResolvedValue({ scoreMoves: 1, newOutliers: 0 });
+    const step = makeStep();
+
+    await expect(runSnapshot(step)).rejects.toThrow("insert blip");
+    const result = await runSnapshot(step); // retry: scores are memoised
+
+    expect(snapshotNiches).toHaveBeenCalledTimes(1);
+    expect(notifyNicheTrackers).toHaveBeenCalledWith(changes);
+    expect(result.notified).toEqual({ scoreMoves: 1, newOutliers: 0 });
   });
 });

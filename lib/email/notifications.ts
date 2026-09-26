@@ -6,6 +6,7 @@ import { getResendClient, NOTIFICATIONS_FROM_ADDRESS } from "@/lib/email/client"
 import {
   DigestEmail,
   digestEmailText,
+  type DigestNicheItem,
   type DigestOutlierItem,
   type DigestVideoItem,
 } from "@/lib/email/templates/digest-email";
@@ -180,6 +181,7 @@ export interface WeeklyDigestData {
   cadence: "daily" | "weekly";
   topOutliers: DigestOutlierItem[];
   newVideos: DigestVideoItem[];
+  risingNiches?: DigestNicheItem[];
 }
 
 export async function sendWeeklyDigestEmail(

@@ -34,7 +34,10 @@ const TYPE_LABELS: Record<NotificationEventType, string> = {
   view_spike: "View spike",
   cadence_change: "Cadence change",
   outlier_detected: "Outlier detected",
+  niche_update: "Tracked niche updates",
 };
+
+const IN_APP_ONLY_TYPES = new Set<NotificationEventType>(["niche_update"]);
 
 const CADENCE_OPTIONS: { value: DigestCadence; label: string }[] = [
   { value: "off", label: "Off" },
@@ -154,12 +157,18 @@ function NotificationsClient({
                 onCheckedChange={(checked) => updateType(pref.type, { inAppEnabled: checked })}
                 aria-label={`${TYPE_LABELS[pref.type]} in-app`}
               />
-              <Switch
-                checked={emailAvailable && pref.emailEnabled}
-                disabled={!emailAvailable}
-                onCheckedChange={(checked) => updateType(pref.type, { emailEnabled: checked })}
-                aria-label={`${TYPE_LABELS[pref.type]} email`}
-              />
+              {IN_APP_ONLY_TYPES.has(pref.type) ? (
+                // Niche notes are in-app plus the weekly digest (spec §11);
+                // there is no per-event email to switch on.
+                <span className="w-9 text-center text-caption text-text-tertiary">—</span>
+              ) : (
+                <Switch
+                  checked={emailAvailable && pref.emailEnabled}
+                  disabled={!emailAvailable}
+                  onCheckedChange={(checked) => updateType(pref.type, { emailEnabled: checked })}
+                  aria-label={`${TYPE_LABELS[pref.type]} email`}
+                />
+              )}
             </div>
           ))}
         </div>

@@ -76,4 +76,29 @@ describe("ActivityFeedItem", () => {
     );
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
+
+  it("shows a tracked-niche note under the niche, opening the niche page", async () => {
+    const onOpenNiche = vi.fn();
+    const onGoToChannel = vi.fn();
+    const notification = makeNotification({
+      notificationType: "niche_update",
+      title: "Mafia History moved +12 this week",
+      channel: { id: "", name: "Unknown channel", avatarUrl: null },
+      niche: { slug: "mafia-history", name: "Mafia History" },
+    });
+    const { container } = render(
+      <ActivityFeedItem
+        notification={notification}
+        onOpenNiche={onOpenNiche}
+        onGoToChannel={onGoToChannel}
+      />,
+    );
+
+    expect(screen.getByText("Tracked niche")).toBeInTheDocument();
+    expect(screen.queryByText("Unknown channel")).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Open niche" }));
+    expect(onOpenNiche).toHaveBeenCalledWith("mafia-history");
+    expect(onGoToChannel).not.toHaveBeenCalled();
+    expect(await axe(container)).toHaveNoViolations();
+  });
 });

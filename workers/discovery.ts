@@ -21,6 +21,10 @@ import {
   type SeedSearchOutcome,
 } from "@/lib/services/discovery/ingest";
 import { pickDueSeeds, type DiscoverySeed } from "@/lib/services/discovery/seeds";
+import {
+  notifyNicheTrackers,
+  type NicheNotifyResult,
+} from "@/lib/services/discovery/niche-notifications";
 import { snapshotNiches, type SnapshotResult } from "@/lib/services/discovery/snapshot";
 import { createServiceClient } from "@/lib/supabase/service";
 import { hasJobBudget, withQuotaSource } from "@/lib/youtube/quota";
@@ -172,8 +176,15 @@ export async function runClassify(step: JobStep): Promise<{ classified: number; 
 
 // --- snapshot + purge -------------------------------------------------------
 
-export async function runSnapshot(step: JobStep): Promise<SnapshotResult> {
-  return (await step.run("snapshot-niches", () => snapshotNiches())) as SnapshotResult;
+export async function runSnapshot(
+  step: JobStep,
+): Promise<SnapshotResult & { notified: NicheNotifyResult }> {
+  const snapshot = (await step.run("snapshot-niches", () => snapshotNiches())) as SnapshotResult;
+  // Separate step: a notification hiccup retries without recomputing scores.
+  const notified = (await step.run("notify-niche-trackers", () =>
+    notifyNicheTrackers(snapshot.changes),
+  )) as NicheNotifyResult;
+  return { ...snapshot, notified };
 }
 
 export async function runPurge(step: JobStep): Promise<unknown> {

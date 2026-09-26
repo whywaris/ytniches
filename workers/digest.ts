@@ -10,6 +10,7 @@ import { inngest } from "@/lib/inngest/client";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RISING_NICHES_IN_DIGEST = 3;
 
 export type DigestCadence = "daily" | "weekly";
 
@@ -146,7 +147,38 @@ export async function buildDigestData(
     url: `${SITE_URL}/tracking/${video.channel_id}`,
   }));
 
-  return { cadence, topOutliers, newVideos };
+  const risingNiches = cadence === "weekly" ? await loadRisingNiches() : [];
+
+  return { cadence, topOutliers, newVideos, risingNiches };
+}
+
+// Niche-Discovery-Engine.md §11: the weekly digest's "top rising niches" --
+// the biggest positive 7-day score moves in the latest snapshot.
+async function loadRisingNiches(): Promise<NonNullable<WeeklyDigestData["risingNiches"]>> {
+  const supabase = createServiceClient();
+  const latest = await supabase
+    .from("niche_snapshots")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latest.error) throw new Error(`loadRisingNiches date failed: ${latest.error.message}`);
+  if (!latest.data) return [];
+
+  const { data, error } = await supabase
+    .from("niche_snapshots")
+    .select("opportunity_score, trend, niches!inner(slug, name)")
+    .eq("snapshot_date", latest.data.snapshot_date)
+    .gt("trend", 0)
+    .order("trend", { ascending: false })
+    .limit(RISING_NICHES_IN_DIGEST);
+  if (error) throw new Error(`loadRisingNiches failed: ${error.message}`);
+  return data.map((row) => ({
+    name: row.niches.name,
+    url: `${SITE_URL}/niches/${row.niches.slug}`,
+    score: row.opportunity_score,
+    trend: row.trend ?? 0,
+  }));
 }
 
 // The testable core for the event-driven half: build this one user's
@@ -164,7 +196,11 @@ export async function sendDigestForUser(userId: string, cadence: DigestCadence):
   if (!isEmailEligibleTier(plan.tier)) return false;
 
   const data = await buildDigestData(userId, cadence);
-  if (data.topOutliers.length === 0 && data.newVideos.length === 0) {
+  if (
+    data.topOutliers.length === 0 &&
+    data.newVideos.length === 0 &&
+    (data.risingNiches?.length ?? 0) === 0
+  ) {
     return false;
   }
   return sendWeeklyDigestEmail(userId, data);
