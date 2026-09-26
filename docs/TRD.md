@@ -222,6 +222,13 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 | `prompt.generate`              | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
 | ~~`youtube.transcript.fetch`~~ | Removed (D-067)    | —                           | No transcripts: YouTube Developer Policies forbid the unofficial endpoint    |
 | `youtube-retention-cron`       | Daily              | 03:15 UTC                   | Purge YouTube data not refreshed in 30 days (III.E.4.d, D-067)               |
+| `discovery-run`            | Scheduled          | Daily 20:00 UTC             | Search seeds → qualify → ingest new channels (D-069)                         |
+| `enrichment-cron/batch`    | Scheduled          | Every 2h                    | Refresh due channels by tier, compute outliers → `outliers_feed`             |
+| `classify-run`             | Scheduled          | Daily 22:00 UTC             | gpt-4o-mini niche label + embedding match (D-074)                            |
+| `niches-snapshot`          | Scheduled          | Daily 01:00 UTC             | Opportunity Score + status per niche, cache warm, niche notifications        |
+| `retention-purge`          | Scheduled          | Daily 03:00 UTC             | `purge_stale_youtube_data()` (D-073)                                         |
+
+Discovery jobs share a budget guard: `used + cost ≤ DISCOVERY_DAILY_BUDGET`, which defaults to the daily limit − 500. They stop cleanly when the budget runs out. Every YouTube call records its source (`search`, `free_tools`, `channel_sync`, `discovery`, `enrichment`) in `quota:youtube:{date}:{source}`. See `Niche-Discovery-Engine.md` §6.
 
 ### 4.3 Job execution guarantees
 

@@ -116,7 +116,7 @@ Not in MVP. When added:
 
 - Every user-scoped table has RLS enabled from day 1 (see Backend-Schema.md §6.1)
 - Application code uses the user's session token — RLS filters automatically
-- Migrations may use the service role (`bypass_rls`); nothing else does
+- Migrations may use the service role (`bypass_rls`). The only other use is the documented exception in D-070: server-only code writing shared public YouTube/research tables. That covers Inngest workers, `lib/services/discovery/*` and service-layer cache writes, plus audited admin actions (§3.3). Client components never import the service client.
 - Automated test: for every user-scoped table, a test asserts user A cannot read/write user B's rows via the API
 
 ### 3.2 Workspace isolation (Phase 3)

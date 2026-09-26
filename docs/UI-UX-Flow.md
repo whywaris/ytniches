@@ -303,6 +303,30 @@ Aggregated view showing recent activity + shortcuts.
 
 The entry point of the product loop. URL: `/niches`.
 
+### 5.0 Discovery tabs (D-069)
+
+`/niches` has four tabs, chosen with `?tab=`:
+
+1. **Niches** (default)
+2. **Channels**
+3. **Outliers**
+4. **Search**
+
+The **Search** tab is the live search described in §5.1–§5.4, with no changes. A freshness line ("Updated 3h ago · N new channels this week") sits above the tabs.
+
+Screen details are in `Niche-Discovery-Engine.md` §9:
+
+- **Niche card** (§9.2).
+- **Channel card** (§9.3): four stat tiles plus 4 popular videos.
+- **URL-backed filters** (§9.4): a left panel on desktop and a bottom sheet on mobile.
+- **Niche detail page** `/niches/[slug]` (§9.5).
+
+States:
+
+- **Loading:** skeleton cards.
+- **Empty feed** (engine hasn't run yet): "Fresh niches land here daily. Try a live search meanwhile." with a link to the Search tab.
+- **Starter/Trial after niche #50:** an upgrade card.
+
 ### 5.1 Search page (default state)
 
 **Layout:** two-column on desktop (filter panel 320px left / results right); stacked on mobile.

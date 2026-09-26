@@ -166,6 +166,7 @@ Credits meter the actions that have real marginal cost. The credit unit exists s
 | Thumbnail idea generation (Phase 2) | 5 | Same AI cost as prompt generation |
 | Export results (CSV, JSON) | 0 (free) | Data user already has access to |
 | View channel detail / video list | 0 (free) | Served from cache |
+| Browse Niches / Channels / Outliers feeds, niche detail | 0 (free) | Served from our DB. Starter/Trial see the top 50 niches, Pro/Team see all (D-072) |
 | Save channel to workspace | 0 (free) | DB-only operation |
 | Notification delivery | 0 (free) | Email cost negligible |
 

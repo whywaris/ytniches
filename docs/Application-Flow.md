@@ -68,8 +68,10 @@ Next.js App Router. Routes grouped by access requirement. Dynamic segments use `
 | ------------------------------- | ---------------------------- | --------------------------------------------- |
 | `/dashboard`                    | Dashboard                    | Default post-login landing                    |
 | `/onboarding`                   | Onboarding                   | Only if not yet completed; skippable          |
-| `/niches`                       | Niche Finder                 | Search + results                              |
+| `/niches`                       | Niche Finder                 | `?tab=niches` (default), `channels`, `outliers`, `search` (D-069) |
+| `/niches/[slug]`                | Niche detail                 | Score breakdown + trend; slug `channels` reserved |
 | `/niches/channels/[channelId]`  | Channel detail               | Deep-linkable                                 |
+| `/outliers`                     | Outliers (tracked channels)  | Per-user feed (D-037); global feed is `/niches?tab=outliers` |
 | `/tracking`                     | Competitor Tracking overview | Activity feed                                 |
 | `/tracking/[channelId]`         | Per-channel tracking         | Deep-linkable                                 |
 | `/tracking/compare?ids=id1,id2` | Compare view                 | Multi-channel                                 |
@@ -95,7 +97,8 @@ Next.js App Router. Routes grouped by access requirement. Dynamic segments use `
 | `/admin/users/[userId]` | User detail              | Impersonate action      |
 | `/admin/blog`           | Blog CMS                 | Post management         |
 | `/admin/revenue`        | Revenue                  | MRR + charts            |
-| `/admin/api-quotas`     | API Quotas               | YouTube usage           |
+| `/admin/api-quotas`     | API Quotas               | YouTube usage, per-source breakdown |
+| `/admin/discovery`      | Discovery Engine         | Seeds + manual job triggers (D-069) |
 | `/admin/tools`          | Admin tools              | Recompute, cache, flags |
 | `/admin/automation`     | Automation Tools         | Job control             |
 

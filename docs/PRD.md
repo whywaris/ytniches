@@ -180,7 +180,17 @@ Phase 1 covers steps 1–4 of the product loop plus partial step 5 (prompt extra
 
 **Empty state:** "No channels matched your filters. Try widening subscriber range or removing country filter."
 
-**Out of MVP scope:** RPM estimation, Insights tags (High profitability, High demand). Both require backend scoring models not built yet.
+**Out of MVP scope:** RPM estimation. (Insights tags were deferred here originally. They now ship as the niche-level Opportunity Score and "why" chips; see §6.1.1.)
+
+#### 6.1.1 Discovery feed (Niche Discovery Engine, D-069)
+
+`/niches` opens on a browse feed, and the search described above becomes its **Search** tab. The feed has three other tabs:
+
+- **Niches:** AI-clustered niches with a 0–100 Opportunity Score, a 7-day trend and two "why" chips.
+- **Channels:** discovered channels. Each card shows avg views/video, days since start, uploads, outlier score and 4 popular videos.
+- **Outliers:** a global feed of videos at ≥ 3× baseline.
+
+A background engine refreshes the data daily. Browsing costs 0 credits and 0 YouTube quota (D-072). The full spec is `docs/Niche-Discovery-Engine.md`.
 
 ---
 
@@ -561,7 +571,7 @@ Features explicitly deferred so scope stays honest and the MVP ships on time.
 **Deferred to Phase 2 or later:**
 
 - RPM estimation per channel (needs backend scoring model)
-- Insights tags — "High profitability", "High demand" (needs backend scoring model)
+- ~~Insights tags — "High profitability", "High demand"~~ shipped as the niche Opportunity Score (D-069, §6.1.1)
 - Outlier Finder (Phase 2)
 - Email + Slack notifications (Phase 2)
 - Thumbnail Ideas (Phase 2)

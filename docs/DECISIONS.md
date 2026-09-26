@@ -814,3 +814,72 @@ Decisions that still need to close before their dependent docs / features can be
   - Hard-coded emerald replaced in the calendar palette, email layout and blog OG image.
   - Calendar entry labels were white on the palette, which failed contrast; they're now near-black. Violet is lightened to #a78bfa so every palette colour clears 4.5:1.
   - `tests/lib/design-tokens.test.ts` checks every accent pairing in both themes, because jest-axe in jsdom can't see CSS variables.
+
+### D-069: Niche Discovery Engine — extend `channels`/`videos`, don't fork them
+
+- **Status:** Resolved (2026-09-26). The build gate is still open (see below).
+- **Context:** Niche Finder only offers live search: 100 quota units per keyword, and it has no feed, no niche score and no global outliers. The owner's spec (now `docs/Niche-Discovery-Engine.md`) adds a background engine that crawls, enriches, classifies and scores channels every day, and turns `/niches` into a browse feed.
+- **Options:**
+  - A: New `yt_channels` / `yt_videos` tables, as in the draft spec.
+  - B: Extend the existing shared `channels` / `videos`.
+- **Final call:** B. Tracked channels, prompts, calendar entries and tracked events already have FKs to these rows. Forking them would store the same channel twice and create a sync problem. The new tables are `discovery_seeds`, `niches`, `niche_snapshots` and `outliers_feed`. The route stays `/niches`, and the feed is a set of tabs (`?tab=niches|channels|outliers|search`).
+- **Quota warning:** the spec budget (about 9,500 units a day for jobs, 500 buffer) leaves roughly 5 live searches a day at the default 10k quota. `DISCOVERY_DAILY_BUDGET` (env) caps the jobs. It is realistic only after D-036.
+- **Gate (open):** all of the following, before this is called done:
+  - [ ] 7 days of unattended cron runs
+  - [ ] the quota was never exceeded
+  - [ ] no untracked YouTube row is older than 30 days
+  - [ ] Lighthouse/a11y pass on `/niches` tabs and `/niches/[slug]`
+- **Impacts:** PRD §6.1, Backend-Schema §3 / §6, TRD §4.2, UI-UX-Flow §5, Application-Flow §2.3, `docs/Niche-Discovery-Engine.md`.
+
+### D-070: Service-role writes from workers and discovery services
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** Security.md §3.1 says only migrations use the service role, and Backend-Schema §6.1 says the same. The shared cache tables have always been service-role-only writes, and `workers/*` already use `createServiceClient()`. The docs contradicted the code.
+- **Final call:** this is a documented exception. The service-role client may be used by:
+  - (a) Inngest functions in `workers/`;
+  - (b) `lib/services/discovery/*`;
+  - (c) the existing service-layer writes to shared cache tables and admin actions.
+
+  All three are server-only, and client components must never import them. User-facing reads of research data (`niches`, `niche_snapshots`, `outliers_feed`, `channels`, `videos`) go through the user client under RLS, using `anyone_read_*` policies. Admin-triggered discovery actions are written to `admin_actions`.
+- **Impacts:** Security.md §3.1, Backend-Schema §6.1.
+
+### D-071: Opportunity Score weights v1 and qualification thresholds
+
+- **Status:** Resolved (2026-09-26). Tune after beta.
+- **Final call:** use the spec defaults. All of them live in `lib/discovery/config.ts`.
+  - **Weights:** Accessibility 30, Demand 25, Momentum 20, Outlier density 15, Supply (inverse) 10. Each signal is percentile-normalised across niches.
+  - **Labels:** 80+ Low competition, 50–79 Medium, < 50 High.
+  - **Qualification:** the channel was created within 12 months OR has a ≥ 3× video in the last 30 days, AND avg recent views ≥ 5,000.
+  - **Refresh tiers:** hot 2d, warm 7d, cold 25d.
+  - **Minimum sample:** a niche needs 3 performing channels before it gets a score.
+- **Revisit:** after 2 weeks of beta data. Compare the score with what users actually track.
+
+### D-072: Browsing the discovery feeds is credit-free; Starter/Trial see the top 50 niches
+
+- **Status:** Resolved (2026-09-26)
+- **Final call:**
+  - The Niches, Channels and Outliers feeds and `/niches/[slug]` cost 0 credits. They are served from our DB and make no YouTube calls.
+  - Live search is still 1 credit (D-065).
+  - Starter and Trial (no plan, or tier `starter`) see the top 50 niches by score, with an upgrade prompt after them. Pro, Team and inherited Team (D-059) see all niches.
+  - Channels and Outliers feeds are uncapped.
+- **Impacts:** Monetization.md §3.1, `lib/services/niche-feed.ts`.
+
+### D-073: 30-day retention for untracked YouTube data
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** YouTube API policy requires refreshing or deleting API data within 30 days. Before the engine we stored only channels that users searched or tracked, and there was no retention rule for `channels` / `videos`.
+- **Final call:** `retention-purge` runs nightly and calls `purge_stale_youtube_data()`. It does three things:
+  - Deletes channels not synced for 30 days. It never deletes a channel that is tracked, or that is referenced by prompts, calendar entries or tracked events.
+  - Trims untracked channels to their latest 30 videos. Videos that user data references are skipped.
+  - Keeps 90 days of daily `niche_snapshots`, then one row per week.
+- **Impacts:** Backend-Schema §6.4.
+
+### D-074: gpt-4o-mini + text-embedding-3-small for niche classification
+
+- **Status:** Resolved (2026-09-26). This refines D-029 and D-032.
+- **Final call:**
+  - User-facing generation stays on `gpt-4o`.
+  - Background classification uses `gpt-4o-mini` through the same `generateStructuredOutput` wrapper, which now takes a `model` option.
+  - Niche labels are embedded with `text-embedding-3-small` (1536 dims) and stored in `niches.embedding` (pgvector).
+  - A label joins an existing niche at cosine similarity ≥ 0.85; otherwise a new niche is created.
+- **Impacts:** `lib/ai/client.ts`, TRD §6.2.

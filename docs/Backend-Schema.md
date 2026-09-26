@@ -171,6 +171,8 @@ Cached YouTube channel data. Shared across users — not user-scoped.
 | `last_synced_at`     | `timestamptz`          | When we last refreshed from API    |
 | `unavailable_since`  | `timestamptz` nullable | If channel deleted / suspended     |
 
+**Discovery columns (D-069):** `avg_views_recent`, `outlier_score`, `first_upload_at`, `uploads_playlist_id`, `has_shorts`, `made_for_kids`, `likely_monetized` (estimate), `is_faceless`, `niche_id` → `niches`, `classification_confidence`, `classified_at`, `refresh_tier` (`hot`/`warm`/`cold`), `discovered_at`, `discovered_via_seed` → `discovery_seeds`. Full definitions are in `Niche-Discovery-Engine.md` §5.1.
+
 ### 3.2 videos
 
 Cached YouTube video data. Shared across users.
@@ -193,6 +195,19 @@ Cached YouTube video data. Shared across users.
 | `has_transcript`    | `boolean`              |                       |
 | `last_synced_at`    | `timestamptz`          |                       |
 | `unavailable_since` | `timestamptz` nullable |                       |
+
+**Discovery column (D-069):** `outlier_multiple numeric` holds views ÷ baseline (D-054 rule).
+
+### 3.2.1 Discovery tables (D-069)
+
+The full DDL is in `Niche-Discovery-Engine.md` §5.3.
+
+| Table | Purpose | RLS |
+| --- | --- | --- |
+| `discovery_seeds` | Keywords the crawler searches (`manual` / `user_search` / `expansion`) | Service-role only (zero policies) |
+| `niches` | AI niche clusters. `embedding vector(1536)` (pgvector); `status` is one of `active` / `rising` / `saturated` / `declining` | `anyone_read_niches` |
+| `niche_snapshots` | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)` | `anyone_read_niche_snapshots` |
+| `outliers_feed` | Global outlier feed: one row per video ≥ 3× | `anyone_read_outliers_feed` |
 
 ### 3.3 video\_transcripts\_cache (unused since D-067, emptied)
 
@@ -461,7 +476,7 @@ CREATE POLICY "users_delete_own_prompts" ON prompts
   USING (auth.uid() = user_id);
 ```
 
-**Shared tables (channels, videos):** everyone-read, service-role-only-write. Data is public YouTube info — no user scoping needed on read.
+**Shared tables (channels, videos, niches, niche\_snapshots, outliers\_feed):** everyone-read, service-role-only-write. Data is public YouTube info, so reads need no user scoping. The service role writes them from server-only code (workers, `lib/services/discovery/*`, cache writes in the service layer). This is a documented exception to the rule above (D-070).
 
 **Admin tables:** super-admin role check via `profiles.role = 'super_admin'`.
 
@@ -486,6 +501,12 @@ Essential indexes for MVP:
 | `notifications`    | `(user_id, read_at, created_at DESC)` | Unread + feed              |
 | `prompts`          | `(user_id, created_at DESC)`          | User's library             |
 | `prompts`          | `(source_video_id)`                   | Videos-with-prompts lookup |
+| `channels`         | `(niche_id)`                          | Channels in a niche        |
+| `channels`         | `(last_synced_at)`                    | Enrichment due-list        |
+| `channels`         | `(youtube_created_at)`                | Channel-age filter         |
+| `channels`         | `(outlier_score DESC)`                | Channels feed sort         |
+| `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
+| `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
 
 ### 6.3 Audit tables
 
@@ -525,6 +546,7 @@ Background job (nightly) enforces:
 | `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                         |
 | Failed webhook events               | 30 days                 | Delete after review                                                                             |
 | `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                      |
+| `niche_snapshots`                  | 90 days daily              | Roll up to one row per week                                                                     |
 
 **GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 
