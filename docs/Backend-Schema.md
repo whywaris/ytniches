@@ -116,7 +116,7 @@ Append-only ledger of every credit movement. Balance is derived, not stored.
 | `related_resource` | `text` nullable          | e.g. `prompt:<uuid>`, `channel:<uuid>`                                                      |
 | `idempotency_key`  | `text` nullable          | Prevents double-charging on retries                                                         |
 
-**Balance query:** `SUM(amount) WHERE user_id = ? AND created_at >= <cycle_start>` — `cycle_start` is the user's current subscription's `current_period_start` (`lib/credits/index.ts`'s `getCycleStart()`), not a calendar-month boundary.
+**Balance query:** `SUM(amount) WHERE user_id = ?` over the whole ledger, via the `credit_balance(p_user_id)` SQL function (security invoker, so RLS applies; summed in SQL because PostgREST caps selects at 1,000 rows). Cycle resets are explicit: each cycle close writes one `expiration` row keyed `cycle-close:<cycleKey>` before the new allocation (D-063, `lib/credits/ledger.ts`). Allocations carry `metadata.rolloverCap` (Team: up to 500 unused credits roll over one cycle); `grant` rows are top-ups and never expire.
 
 Trial's 50-credit one-time grant (Monetization.md §3.2) doesn't come from `credit_allocations` — it's a hardcoded `TRIAL_CREDITS` constant, inserted directly as an `'allocation'` row by `lib/services/onboarding.ts`'s `completeOnboarding()` when the trial subscription is created. No webhook fires for trial start, and the amount (50) doesn't match Pro's real per-cycle allocation (1,000) even though a trial gets Pro-tier access — keeping it out of `credit_allocations` avoids overloading that table's per-cycle-tier semantics.
 
