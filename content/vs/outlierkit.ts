@@ -1,3 +1,4 @@
+import { TRIAL_PITCH } from "@/lib/billing/plans";
 import type { CompetitorPage } from "@/content/vs/types";
 
 const PRICING = "https://outlierkit.com/pricing";
@@ -90,6 +91,6 @@ export const OUTLIERKIT: CompetitorPage = {
     "You want outliers turned into titles, hooks and script outlines, not just analysed.",
     "You want a content calendar and team tasks next to your research.",
     "A cheaper way in: our Starter plan is $19/month, $10 less than their Hobby plan.",
-    "You'd rather try the full Pro plan for 14 days with no card.",
+    `${TRIAL_PITCH}, no card needed.`,
   ],
 };

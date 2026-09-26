@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -7,6 +7,7 @@ import {
   refreshCadenceHoursFor,
   TIER_INFO,
   TRIAL,
+  TRIAL_PITCH,
 } from "@/lib/billing/plans";
 
 const migration = readFileSync(
@@ -23,7 +24,6 @@ describe("migration matches lib/billing/plans.ts", () => {
     expect(migration).toContain(`s.tier = 'pro' then ${TIER_INFO.pro.refreshCadenceHours}`);
     expect(migration).toContain(`s.tier = 'team' then ${TIER_INFO.team.refreshCadenceHours}`);
     expect(migration).toMatch(new RegExp(`else ${DEFAULT_REFRESH_CADENCE_HOURS}\\s`));
-    expect(TRIAL.refreshCadenceHours).toBe(DEFAULT_REFRESH_CADENCE_HOURS);
     expect(TIER_INFO.starter.refreshCadenceHours).toBe(DEFAULT_REFRESH_CADENCE_HOURS);
   });
 });
@@ -39,7 +39,6 @@ describe("pricing cards are derived from the numbers", () => {
       "1,000 credits / month",
       "Track up to 50 channels",
       "Refreshes every 6 hours",
-      "Priority AI generation",
       "Email digests",
     ]);
     expect(TIER_INFO.team.features).toEqual([
@@ -65,5 +64,40 @@ describe("refreshCadenceHoursFor", () => {
     [undefined, 24],
   ])("%o -> %i h", (subscription, hours) => {
     expect(refreshCadenceHoursFor(subscription)).toBe(hours);
+  });
+});
+
+describe("trial (D-060)", () => {
+  it("syncs at Pro's cadence, and the backfill migration agrees", () => {
+    expect(TRIAL.refreshCadenceHours).toBe(TIER_INFO.pro.refreshCadenceHours);
+    const backfill = readFileSync(
+      path.join(process.cwd(), "supabase", "migrations", "20260926100000_trial_cadence.sql"),
+      "utf8",
+    );
+    expect(backfill).toContain(`set refresh_cadence_hours = ${TRIAL.refreshCadenceHours}`);
+    expect(backfill).toContain("s.status = 'trialing'");
+    expect(refreshCadenceHoursFor({ tier: "pro", status: "trialing" })).toBe(6);
+  });
+
+  it("is pitched one way, from one constant", () => {
+    expect(TRIAL_PITCH).toBe("Try every Pro feature free for 14 days");
+  });
+
+  it("never says 'full Pro access' anywhere in the product", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = path.join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (
+          /\.(tsx?|mdx)$/.test(name) &&
+          /full pro (access|plan)/i.test(readFileSync(full, "utf8"))
+        ) {
+          offenders.push(path.relative(process.cwd(), full));
+        }
+      }
+    };
+    for (const dir of ["app", "components", "content", "lib"]) walk(path.join(process.cwd(), dir));
+    expect(offenders).toEqual([]);
   });
 });

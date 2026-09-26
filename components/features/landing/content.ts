@@ -3,6 +3,8 @@
 // Monetization.md-correct credit line, real shipped changelog entries, and
 // Mac's final founder copy). Edit copy here -- components only render it.
 
+import { TRIAL_PITCH } from "@/lib/billing/plans";
+
 export const SEO = {
   title: "YTNiches — Niche research to content for faceless creators",
   description:
@@ -393,7 +395,7 @@ export const VS = {
 
 export const FINAL_CTA = {
   headline: "The last niche research tool you’ll switch to.",
-  subhead: "14-day trial. Full Pro access. No credit card.",
+  subhead: `${TRIAL_PITCH}. No credit card.`,
   primaryCta: "Sign up free",
   reassurance: "No card. Cancel anytime. Your data is yours.",
 };

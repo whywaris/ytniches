@@ -53,7 +53,8 @@ export const TIER_INFO = {
     monthlyCredits: 1000,
     trackedChannels: 50,
     refreshCadenceHours: 6,
-    extras: ["Priority AI generation", "Email digests"],
+    // No "Priority AI generation": there is no priority queue (D-060).
+    extras: ["Email digests"],
   }),
   team: withFeatures({
     label: "Team",
@@ -77,12 +78,16 @@ export const TIERS: Tier[] = ["starter", "pro", "team"];
 // Monetization.md §1: every new account gets one trial of Pro. It's
 // granted at onboarding (lib/services/onboarding.ts activateTrial) with no
 // billing step, which is what makes "no card" true. Trial channels sync
-// on the slowest (Starter) cadence to keep unpaid YouTube quota low.
-export const TRIAL = { days: 14, tier: "pro", refreshCadenceHours: 24 } as const satisfies {
-  days: number;
-  tier: Tier;
-  refreshCadenceHours: number;
-};
+// at Pro's cadence: the trial is every Pro feature (D-060).
+export const TRIAL = {
+  days: 14,
+  tier: "pro",
+  refreshCadenceHours: TIER_INFO.pro.refreshCadenceHours,
+} as const satisfies { days: number; tier: Tier; refreshCadenceHours: number };
+
+// The one way the trial is marketed (pricing, landing, VS pages, help):
+// "Try every Pro feature free for 14 days", the only trial wording.
+export const TRIAL_PITCH = `Try every ${TIER_INFO[TRIAL.tier].label} feature free for ${TRIAL.days} days`;
 
 export function trialSummary(): string {
   return `${TRIAL.days} days of ${TIER_INFO[TRIAL.tier].label}, no card`;

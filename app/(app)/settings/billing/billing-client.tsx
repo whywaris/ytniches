@@ -12,7 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Tag } from "@/components/ui/tag";
 import { useToast } from "@/components/ui/toast-provider";
-import { TIER_INFO } from "@/lib/billing/plans";
+import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
 import { UpgradeModal } from "@/components/features/billing/upgrade-modal";
 
 export interface BillingClientProps {
@@ -105,7 +105,7 @@ function BillingClient({ subscription, creditsBalance }: BillingClientProps) {
               <p className="text-h3 text-text-primary">{TIER_INFO[subscription.tier].label}</p>
               {subscription.accountState === "trialing" ||
               subscription.accountState === "expired_trial" ? (
-                <p className="text-body-sm text-text-secondary">Free 14-day trial</p>
+                <p className="text-body-sm text-text-secondary">Free {TRIAL.days}-day trial</p>
               ) : (
                 <p className="text-body-sm text-text-secondary">
                   ${TIER_INFO[subscription.tier].monthlyPrice}/

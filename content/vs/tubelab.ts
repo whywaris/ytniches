@@ -1,3 +1,4 @@
+import { TRIAL_PITCH } from "@/lib/billing/plans";
 import type { CompetitorPage } from "@/content/vs/types";
 
 const PRICING = "https://tubelab.net/pricing";
@@ -81,6 +82,6 @@ export const TUBELAB: CompetitorPage = {
     "You want a content calendar to plan what ships each week.",
     "You work with a team and want to assign tasks in the same tool as your research.",
     "A cheaper way in: our Starter plan is $19/month, $10 less than their Starter.",
-    "You want to try first: 14 days of Pro, no card.",
+    `${TRIAL_PITCH}, no card needed.`,
   ],
 };

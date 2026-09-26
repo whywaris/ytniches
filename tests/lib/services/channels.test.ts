@@ -499,7 +499,7 @@ describe("saveChannelToTracking sync cadence (pricing promise)", () => {
     [{ tier: "starter", status: "active" }, 24],
     [{ tier: "pro", status: "active" }, 6],
     [{ tier: "team", status: "active" }, 1],
-    [{ tier: "pro", status: "trialing" }, 24],
+    [{ tier: "pro", status: "trialing" }, 6],
     [{ tier: "pro", status: "cancelled" }, 24],
     [null, 24],
   ])("subscription %o -> syncs every %i h", async (subscription, hours) => {

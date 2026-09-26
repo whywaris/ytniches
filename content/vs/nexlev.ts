@@ -1,3 +1,4 @@
+import { TRIAL_PITCH } from "@/lib/billing/plans";
 import type { CompetitorPage } from "@/content/vs/types";
 
 const PRICING = "https://www.nexlev.io/pricing";
@@ -89,6 +90,6 @@ export const NEXLEV: CompetitorPage = {
     "You already have a niche and want to know what to make next.",
     "You want outliers turned into titles, hooks and script outlines.",
     "You want a content calendar and team tasks next to your research.",
-    "You'd rather try the full Pro plan for 14 days with no card.",
+    `${TRIAL_PITCH}, no card needed.`,
   ],
 };

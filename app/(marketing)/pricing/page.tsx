@@ -1,3 +1,4 @@
+import { TRIAL_PITCH } from "@/lib/billing/plans";
 import { PricingClient } from "@/app/(marketing)/pricing/pricing-client";
 
 import type { Metadata } from "next";
@@ -14,7 +15,7 @@ export default function PricingPage() {
       <div className="text-center">
         <h1 className="text-h1 font-semibold text-text-primary">Pricing</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Start with a 14-day free trial of Pro. No credit card required.
+          {TRIAL_PITCH}. No credit card required.
         </p>
       </div>
       <PricingClient />

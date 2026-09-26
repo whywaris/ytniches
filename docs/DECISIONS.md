@@ -698,3 +698,12 @@ Decisions that still need to close before their dependent docs / features can be
 - **Status:** Open. **Blocks launch.**
 - **Finding:** There are no Terms, Privacy or Refunds pages (`/legal/terms`, `/privacy`, `/refunds`; the footer shows them as "Soon"). We take payments, so they're legally required, and Creem will likely expect them. Until then the help center's Refunds article is the only public statement of the refund policy (Monetization.md §6.2).
 - **Needed:** proper drafts, ideally written or at least reviewed by a lawyer.
+
+### D-060: Trial wording and cadence; no "Priority AI generation"
+
+- **Status:** Resolved (2026-09-26)
+- **Final call:**
+  - **Trial = Pro's sync cadence (6h).** `TRIAL.refreshCadenceHours` now reads Pro's value from `lib/billing/plans.ts`. A migration moved channels on active trials from 24h to 6h.
+  - **One trial pitch:** "Try every Pro feature free for 14 days" (`TRIAL_PITCH`, built from `TRIAL`), used on pricing, landing and VS pages, and in the help center. "Full Pro access" is gone, and a test fails if "full Pro access" or "full Pro plan" reappears anywhere in `app/`, `components/`, `content/` or `lib/`.
+  - **"Priority AI generation" removed from the Pro card.** There's no priority queue. Put it back only when one exists.
+- **Impacts:** `lib/billing/plans.ts`, landing `FINAL_CTA`, `/pricing`, `content/vs/*`, `/settings/billing`, migration `20260926100000_trial_cadence.sql`.
