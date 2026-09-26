@@ -1,5 +1,6 @@
 import {
   Building2,
+  Plus,
   Calendar,
   CheckSquare,
   Flame,
@@ -76,6 +77,13 @@ export function activeNavHref(pathname: string, items: NavItem[]): string | null
     .sort((a, b) => b.href.length - a.href.length);
   return matches[0]?.href ?? null;
 }
+
+// Shown instead of the Plan group to a Team owner who has no workspace yet.
+export const CREATE_WORKSPACE_NAV: NavItem = {
+  href: "/workspace",
+  label: "Create workspace",
+  icon: Plus,
+};
 
 // The public help center (PRD.md §10.4), opened in the same tab.
 export const HELP_NAV: NavItem = { href: "/help", label: "Help", icon: LifeBuoy };

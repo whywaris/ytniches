@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { getRequestContext } from "@/lib/context";
 import { getProfileSummary } from "@/lib/services/onboarding";
-import { listMyWorkspaceMemberships } from "@/lib/services/workspace";
+import { hasOwnTeamPlan, listMyWorkspaceMemberships } from "@/lib/services/workspace";
 import { getTrackedChannelCount } from "@/lib/services/tracking";
 import { getPromptCount } from "@/lib/services/prompts";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -26,11 +26,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     getTrackedChannelCount(ctx),
     getPromptCount(ctx),
   ]);
+  // Only asked when it matters: Team owners with no workspace yet.
+  const canCreateWorkspace = memberships.length === 0 && (await hasOwnTeamPlan(ctx));
 
   return (
     <ThemeProvider>
       <AppShell
         hasWorkspace={memberships.length > 0}
+        canCreateWorkspace={canCreateWorkspace}
         trackedChannelCount={trackedChannelCount}
         promptCount={promptCount}
         profileName={profile.name}

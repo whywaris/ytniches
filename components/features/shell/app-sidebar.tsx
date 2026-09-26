@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar, SidebarSection, useSidebar } from "@/components/ui/sidebar";
 import { SidebarItem } from "@/components/ui/sidebar-item";
 import {
+  CREATE_WORKSPACE_NAV,
   DASHBOARD_NAV,
   HELP_NAV,
   NAV_GROUPS,
@@ -18,6 +19,7 @@ import {
 
 export interface AppSidebarProps {
   hasWorkspace: boolean;
+  canCreateWorkspace?: boolean;
   trackedChannelCount: number;
   promptCount: number;
   onOpenSearch: () => void;
@@ -78,6 +80,7 @@ function SidebarHeader({ onOpenSearch }: { onOpenSearch: () => void }) {
 // badges on the page's own item, not duplicate "library" links.
 function AppSidebar({
   hasWorkspace,
+  canCreateWorkspace = false,
   trackedChannelCount,
   promptCount,
   onOpenSearch,
@@ -87,6 +90,7 @@ function AppSidebar({
   const active = activeNavHref(pathname, [
     DASHBOARD_NAV,
     ...groups.flatMap((group) => group.items),
+    ...(canCreateWorkspace ? [CREATE_WORKSPACE_NAV] : []),
   ]);
   const counts = { trackedChannels: trackedChannelCount, prompts: promptCount };
 
@@ -108,6 +112,11 @@ function AppSidebar({
           ))}
         </SidebarSection>
       ))}
+      {canCreateWorkspace && !hasWorkspace ? (
+        <SidebarSection title="Plan">
+          <NavLink item={CREATE_WORKSPACE_NAV} active={active === CREATE_WORKSPACE_NAV.href} />
+        </SidebarSection>
+      ) : null}
       <SidebarSection>
         <NavLink item={HELP_NAV} active={false} />
       </SidebarSection>

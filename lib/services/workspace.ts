@@ -95,6 +95,12 @@ async function requireOwnTeamPlan(userId: string): Promise<Result<true, NotTeamT
   return data?.tier === "team" && live ? ok(true) : err({ type: "not_team_tier" });
 }
 
+// The sidebar's "Create workspace" entry: a Team owner with no workspace
+// yet otherwise had no way to find /workspace.
+export async function hasOwnTeamPlan(ctx: RequestContext): Promise<boolean> {
+  return (await requireOwnTeamPlan(ctx.userId)).ok;
+}
+
 function slugify(name: string): string {
   const base = name
     .toLowerCase()

@@ -90,3 +90,28 @@ describe("AppSidebar", () => {
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("AppSidebar: Create workspace", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    pathname = "/dashboard";
+  });
+
+  it("shows Create workspace to a Team owner with no workspace", () => {
+    renderSidebar({ canCreateWorkspace: true });
+    expect(screen.getByRole("link", { name: /create workspace/i })).toHaveAttribute(
+      "href",
+      "/workspace",
+    );
+  });
+
+  it("hides it once they have a workspace, and for everyone else", () => {
+    renderSidebar({ canCreateWorkspace: true, hasWorkspace: true });
+    expect(screen.queryByRole("link", { name: /create workspace/i })).not.toBeInTheDocument();
+  });
+
+  it("is hidden by default", () => {
+    renderSidebar();
+    expect(screen.queryByRole("link", { name: /create workspace/i })).not.toBeInTheDocument();
+  });
+});

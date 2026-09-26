@@ -21,6 +21,7 @@ import { saveDetectedTimeZoneAction } from "@/app/(app)/actions";
 
 export interface AppShellProps {
   hasWorkspace: boolean;
+  canCreateWorkspace: boolean;
   trackedChannelCount: number;
   promptCount: number;
   profileName: string | null;
@@ -35,6 +36,7 @@ export interface AppShellProps {
 
 function AppShell({
   hasWorkspace,
+  canCreateWorkspace,
   trackedChannelCount,
   promptCount,
   profileName,
@@ -132,6 +134,7 @@ function AppShell({
     <div className="flex h-screen">
       <AppSidebar
         hasWorkspace={hasWorkspace}
+        canCreateWorkspace={canCreateWorkspace}
         trackedChannelCount={trackedChannelCount}
         promptCount={promptCount}
         onOpenSearch={() => setPaletteOpen(true)}
