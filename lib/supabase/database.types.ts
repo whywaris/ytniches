@@ -133,65 +133,125 @@ export type Database = {
       channels: {
         Row: {
           avatar_url: string | null;
+          avg_views_recent: number | null;
           banner_url: string | null;
+          classification_confidence: number | null;
+          classified_at: string | null;
           country: string | null;
           created_at: string;
           description: string | null;
+          discovered_at: string | null;
+          discovered_via_seed: string | null;
+          enriched_at: string | null;
+          first_upload_at: string | null;
           handle: string | null;
+          has_shorts: boolean | null;
           id: string;
+          is_faceless: boolean | null;
           is_monetized: boolean | null;
           language: string | null;
           last_synced_at: string;
+          likely_monetized: boolean | null;
+          made_for_kids: boolean | null;
           name: string;
+          niche_id: string | null;
+          outlier_score: number | null;
+          refresh_tier: string;
           subscriber_count: number;
           total_view_count: number;
           unavailable_since: string | null;
           updated_at: string;
+          uploads_playlist_id: string | null;
           video_count: number;
           youtube_channel_id: string;
           youtube_created_at: string;
         };
         Insert: {
           avatar_url?: string | null;
+          avg_views_recent?: number | null;
           banner_url?: string | null;
+          classification_confidence?: number | null;
+          classified_at?: string | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
+          discovered_at?: string | null;
+          discovered_via_seed?: string | null;
+          enriched_at?: string | null;
+          first_upload_at?: string | null;
           handle?: string | null;
+          has_shorts?: boolean | null;
           id?: string;
+          is_faceless?: boolean | null;
           is_monetized?: boolean | null;
           language?: string | null;
           last_synced_at?: string;
+          likely_monetized?: boolean | null;
+          made_for_kids?: boolean | null;
           name: string;
+          niche_id?: string | null;
+          outlier_score?: number | null;
+          refresh_tier?: string;
           subscriber_count?: number;
           total_view_count?: number;
           unavailable_since?: string | null;
           updated_at?: string;
+          uploads_playlist_id?: string | null;
           video_count?: number;
           youtube_channel_id: string;
           youtube_created_at: string;
         };
         Update: {
           avatar_url?: string | null;
+          avg_views_recent?: number | null;
           banner_url?: string | null;
+          classification_confidence?: number | null;
+          classified_at?: string | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
+          discovered_at?: string | null;
+          discovered_via_seed?: string | null;
+          enriched_at?: string | null;
+          first_upload_at?: string | null;
           handle?: string | null;
+          has_shorts?: boolean | null;
           id?: string;
+          is_faceless?: boolean | null;
           is_monetized?: boolean | null;
           language?: string | null;
           last_synced_at?: string;
+          likely_monetized?: boolean | null;
+          made_for_kids?: boolean | null;
           name?: string;
+          niche_id?: string | null;
+          outlier_score?: number | null;
+          refresh_tier?: string;
           subscriber_count?: number;
           total_view_count?: number;
           unavailable_since?: string | null;
           updated_at?: string;
+          uploads_playlist_id?: string | null;
           video_count?: number;
           youtube_channel_id?: string;
           youtube_created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "channels_discovered_via_seed_fkey";
+            columns: ["discovered_via_seed"];
+            isOneToOne: false;
+            referencedRelation: "discovery_seeds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "channels_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       credit_allocations: {
         Row: {
@@ -283,6 +343,122 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      discovery_seeds: {
+        Row: {
+          created_at: string;
+          id: string;
+          keyword: string;
+          last_run_at: string | null;
+          priority: number;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          keyword: string;
+          last_run_at?: string | null;
+          priority?: number;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          keyword?: string;
+          last_run_at?: string | null;
+          priority?: number;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      niche_snapshots: {
+        Row: {
+          accessibility: number | null;
+          channel_count: number;
+          created_at: string;
+          demand: number | null;
+          median_views: number | null;
+          momentum: number | null;
+          new_channels_30d: number;
+          niche_id: string;
+          opportunity_score: number;
+          outlier_density: number | null;
+          snapshot_date: string;
+          supply: number | null;
+        };
+        Insert: {
+          accessibility?: number | null;
+          channel_count?: number;
+          created_at?: string;
+          demand?: number | null;
+          median_views?: number | null;
+          momentum?: number | null;
+          new_channels_30d?: number;
+          niche_id: string;
+          opportunity_score: number;
+          outlier_density?: number | null;
+          snapshot_date: string;
+          supply?: number | null;
+        };
+        Update: {
+          accessibility?: number | null;
+          channel_count?: number;
+          created_at?: string;
+          demand?: number | null;
+          median_views?: number | null;
+          momentum?: number | null;
+          new_channels_30d?: number;
+          niche_id?: string;
+          opportunity_score?: number;
+          outlier_density?: number | null;
+          snapshot_date?: string;
+          supply?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "niche_snapshots_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      niches: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          embedding: string | null;
+          id: string;
+          name: string;
+          slug: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          embedding?: string | null;
+          id?: string;
+          name: string;
+          slug: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          embedding?: string | null;
+          id?: string;
+          name?: string;
+          slug?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       notification_channel_overrides: {
         Row: {
@@ -425,6 +601,58 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      outliers_feed: {
+        Row: {
+          channel_id: string;
+          created_at: string;
+          detected_at: string;
+          niche_id: string | null;
+          outlier_multiple: number;
+          updated_at: string;
+          video_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          created_at?: string;
+          detected_at?: string;
+          niche_id?: string | null;
+          outlier_multiple: number;
+          updated_at?: string;
+          video_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          created_at?: string;
+          detected_at?: string;
+          niche_id?: string | null;
+          outlier_multiple?: number;
+          updated_at?: string;
+          video_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "outliers_feed_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "outliers_feed_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "outliers_feed_video_id_fkey";
+            columns: ["video_id"];
+            isOneToOne: true;
+            referencedRelation: "videos";
             referencedColumns: ["id"];
           },
         ];
@@ -850,6 +1078,7 @@ export type Database = {
           language: string | null;
           last_synced_at: string;
           like_count: number | null;
+          outlier_multiple: number | null;
           published_at: string;
           tags: string[];
           thumbnail_url: string;
@@ -870,6 +1099,7 @@ export type Database = {
           language?: string | null;
           last_synced_at?: string;
           like_count?: number | null;
+          outlier_multiple?: number | null;
           published_at: string;
           tags?: string[];
           thumbnail_url: string;
@@ -890,6 +1120,7 @@ export type Database = {
           language?: string | null;
           last_synced_at?: string;
           like_count?: number | null;
+          outlier_multiple?: number | null;
           published_at?: string;
           tags?: string[];
           thumbnail_url?: string;
@@ -1142,6 +1373,12 @@ export type Database = {
           channel_id: string;
         }[];
       };
+      find_due_enrichment_channel_ids: {
+        Args: { p_cold_days: number; p_hot_days: number; p_limit: number; p_warm_days: number };
+        Returns: {
+          channel_id: string;
+        }[];
+      };
       find_due_digest_user_ids: {
         Args: never;
         Returns: {
@@ -1185,6 +1422,37 @@ export type Database = {
         }[];
       };
       touch_last_active: { Args: never; Returns: undefined };
+      match_niche: {
+        Args: { p_embedding: string; p_min_similarity: number };
+        Returns: {
+          niche_id: string;
+          similarity: number;
+        }[];
+      };
+      niche_signal_inputs: {
+        Args: {
+          p_min_avg_views: number;
+          p_new_channel_months: number;
+          p_outlier_multiple: number;
+          p_small_channel_subs: number;
+        };
+        Returns: {
+          channel_count: number;
+          median_views_90d: number | null;
+          new_channels_30d: number;
+          new_performing_count: number;
+          niche_id: string;
+          outlier_video_count: number;
+          performing_count: number;
+          recent_video_count: number;
+          small_performing_count: number;
+          uploads_30d: number;
+        }[];
+      };
+      purge_stale_youtube_data: {
+        Args: { p_keep_videos: number; p_snapshot_days: number; p_stale_days: number };
+        Returns: Json;
+      };
       shares_workspace_with: {
         Args: { target_user_id: string };
         Returns: boolean;

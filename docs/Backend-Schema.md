@@ -171,7 +171,7 @@ Cached YouTube channel data. Shared across users — not user-scoped.
 | `last_synced_at`     | `timestamptz`          | When we last refreshed from API    |
 | `unavailable_since`  | `timestamptz` nullable | If channel deleted / suspended     |
 
-**Discovery columns (D-069):** `avg_views_recent`, `outlier_score`, `first_upload_at`, `uploads_playlist_id`, `has_shorts`, `made_for_kids`, `likely_monetized` (estimate), `is_faceless`, `niche_id` → `niches`, `classification_confidence`, `classified_at`, `refresh_tier` (`hot`/`warm`/`cold`), `discovered_at`, `discovered_via_seed` → `discovery_seeds`. Full definitions are in `Niche-Discovery-Engine.md` §5.1.
+**Discovery columns (D-069):** `avg_views_recent`, `outlier_score`, `first_upload_at`, `uploads_playlist_id`, `has_shorts`, `made_for_kids`, `likely_monetized` (estimate), `is_faceless`, `niche_id` → `niches`, `classification_confidence`, `classified_at`, `refresh_tier` (`hot`/`warm`/`cold`), `enriched_at`, `discovered_at`, `discovered_via_seed` → `discovery_seeds`. Full definitions are in `Niche-Discovery-Engine.md` §5.1.
 
 ### 3.2 videos
 
@@ -202,12 +202,12 @@ Cached YouTube video data. Shared across users.
 
 The full DDL is in `Niche-Discovery-Engine.md` §5.3.
 
-| Table | Purpose | RLS |
-| --- | --- | --- |
-| `discovery_seeds` | Keywords the crawler searches (`manual` / `user_search` / `expansion`) | Service-role only (zero policies) |
-| `niches` | AI niche clusters. `embedding vector(1536)` (pgvector); `status` is one of `active` / `rising` / `saturated` / `declining` | `anyone_read_niches` |
-| `niche_snapshots` | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)` | `anyone_read_niche_snapshots` |
-| `outliers_feed` | Global outlier feed: one row per video ≥ 3× | `anyone_read_outliers_feed` |
+| Table             | Purpose                                                                                                                    | RLS                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `discovery_seeds` | Keywords the crawler searches (`manual` / `user_search` / `expansion`)                                                     | Service-role only (zero policies) |
+| `niches`          | AI niche clusters. `embedding vector(1536)` (pgvector); `status` is one of `active` / `rising` / `saturated` / `declining` | `anyone_read_niches`              |
+| `niche_snapshots` | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)`                                           | `anyone_read_niche_snapshots`     |
+| `outliers_feed`   | Global outlier feed: one row per video ≥ 3×                                                                                | `anyone_read_outliers_feed`       |
 
 ### 3.3 video\_transcripts\_cache (unused since D-067, emptied)
 
@@ -507,6 +507,8 @@ Essential indexes for MVP:
 | `channels`         | `(outlier_score DESC)`                | Channels feed sort         |
 | `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
 | `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
+
+Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`, `purge_stale_youtube_data`. Migration `20260928100004`.
 
 ### 6.3 Audit tables
 

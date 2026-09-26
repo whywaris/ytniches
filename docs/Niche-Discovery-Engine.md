@@ -67,27 +67,28 @@ Writes come from server-only Inngest workers and `lib/services/discovery/*` thro
 
 ### 5.1 New columns on `channels`
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `avg_views_recent` | `numeric` nullable | Avg views of the latest ≤ 30 long-form uploads |
-| `outlier_score` | `numeric` nullable | `avg_views_recent ÷ subscriber_count` |
-| `first_upload_at` | `timestamptz` nullable | Oldest upload we have seen |
-| `uploads_playlist_id` | `text` nullable | From `contentDetails` |
-| `has_shorts` | `boolean` nullable | Any upload ≤ 60 s |
-| `made_for_kids` | `boolean` nullable | `status.madeForKids` |
-| `likely_monetized` | `boolean` nullable | **Estimate.** Never shown as verified. |
-| `is_faceless` | `boolean` nullable | AI classification |
-| `niche_id` | `uuid` nullable | FK → `niches.id`, `on delete set null` |
-| `classification_confidence` | `numeric` nullable | 0–1 |
-| `classified_at` | `timestamptz` nullable | |
-| `refresh_tier` | `text` | Check constraint: `hot` / `warm` / `cold`; default `warm` |
-| `discovered_at` | `timestamptz` nullable | When the engine first found it (null = came from search/tracking) |
-| `discovered_via_seed` | `uuid` nullable | FK → `discovery_seeds.id`, `on delete set null` |
+| Column                      | Type                   | Notes                                                                                                                                                                           |
+| --------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `avg_views_recent`          | `numeric` nullable     | Avg views of the latest ≤ 30 long-form uploads                                                                                                                                  |
+| `outlier_score`             | `numeric` nullable     | `avg_views_recent ÷ subscriber_count`                                                                                                                                           |
+| `first_upload_at`           | `timestamptz` nullable | Oldest upload we have seen                                                                                                                                                      |
+| `uploads_playlist_id`       | `text` nullable        | From `contentDetails`                                                                                                                                                           |
+| `has_shorts`                | `boolean` nullable     | Any upload ≤ 60 s                                                                                                                                                               |
+| `made_for_kids`             | `boolean` nullable     | `status.madeForKids`                                                                                                                                                            |
+| `likely_monetized`          | `boolean` nullable     | **Estimate.** Never shown as verified.                                                                                                                                          |
+| `is_faceless`               | `boolean` nullable     | AI classification                                                                                                                                                               |
+| `niche_id`                  | `uuid` nullable        | FK → `niches.id`, `on delete set null`                                                                                                                                          |
+| `classification_confidence` | `numeric` nullable     | 0–1                                                                                                                                                                             |
+| `classified_at`             | `timestamptz` nullable |                                                                                                                                                                                 |
+| `refresh_tier`              | `text`                 | Check constraint: `hot` / `warm` / `cold`; default `warm`                                                                                                                       |
+| `enriched_at`               | `timestamptz` nullable | Last enrichment run. Separate from `last_synced_at`, because channel-sync refreshes tracked channels without computing these metrics. Enrichment due-ness keys off this column. |
+| `discovered_at`             | `timestamptz` nullable | When the engine first found it (null = came from search/tracking)                                                                                                               |
+| `discovered_via_seed`       | `uuid` nullable        | FK → `discovery_seeds.id`, `on delete set null`                                                                                                                                 |
 
 ### 5.2 New column on `videos`
 
-| Column | Type | Notes |
-| --- | --- | --- |
+| Column             | Type               | Notes                         |
+| ------------------ | ------------------ | ----------------------------- |
 | `outlier_multiple` | `numeric` nullable | Views ÷ baseline (D-054 rule) |
 
 ### 5.3 New tables
@@ -160,23 +161,23 @@ create table outliers_feed (
 
 Crons are written in UTC. PKT = UTC+5.
 
-| Function | Schedule | What it does | Quota |
-| --- | --- | --- | --- |
-| `discovery-run` | `0 20 * * *` (01:00 PKT) | Picks ~30 seeds: highest priority first, then longest since `last_run_at`. For each it runs `search.list` (type=video, publishedAfter=7d, order=viewCount), collects new channel IDs, qualifies them (§6.2) and upserts them. Qualified IDs go to enrichment. | ~3,000 |
-| `enrichment-cron` → `enrichment-batch` | `0 */2 * * *` | Picks channels that are due by tier (§6.1), in batches of 50. For each batch: `channels.list` → uploads `playlistItems.list` → `videos.list`. Computes averages, multiples and tier, and writes `outliers_feed`. | ~6,500/day |
-| `classify-run` | `0 22 * * *` | Takes unclassified channels plus channels classified more than 30 days ago. gpt-4o-mini reads their titles and description and returns niche label, faceless, language, confidence and related keywords. The label is embedded and matched to an existing niche (cosine ≥ 0.85); otherwise a new niche is created. | $0 YouTube |
-| `niches-snapshot` | `0 1 * * *` (06:00 PKT) | Computes five signals + Opportunity Score per niche, writes today's snapshot, sets status, warms the Upstash cache and sends niche notifications (§11). | $0 YouTube |
-| `retention-purge` | `0 3 * * *` | `purge_stale_youtube_data()` | $0 |
+| Function                               | Schedule                 | What it does                                                                                                                                                                                                                                                                                                       | Quota      |
+| -------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| `discovery-run`                        | `0 20 * * *` (01:00 PKT) | Picks ~30 seeds: highest priority first, then longest since `last_run_at`. For each it runs `search.list` (type=video, publishedAfter=7d, order=viewCount), collects new channel IDs, qualifies them (§6.2) and upserts them. Qualified IDs go to enrichment.                                                      | ~3,000     |
+| `enrichment-cron` → `enrichment-batch` | `0 */2 * * *`            | Picks channels that are due by tier (§6.1), in batches of 50. For each batch: `channels.list` → uploads `playlistItems.list` → `videos.list`. Computes averages, multiples and tier, and writes `outliers_feed`.                                                                                                   | ~6,500/day |
+| `classify-run`                         | `0 22 * * *`             | Takes unclassified channels plus channels classified more than 30 days ago. gpt-4o-mini reads their titles and description and returns niche label, faceless, language, confidence and related keywords. The label is embedded and matched to an existing niche (cosine ≥ 0.85); otherwise a new niche is created. | $0 YouTube |
+| `niches-snapshot`                      | `0 1 * * *` (06:00 PKT)  | Computes five signals + Opportunity Score per niche, writes today's snapshot, sets status, warms the Upstash cache and sends niche notifications (§11).                                                                                                                                                            | $0 YouTube |
+| `retention-purge`                      | `0 3 * * *`              | `purge_stale_youtube_data()`                                                                                                                                                                                                                                                                                       | $0         |
 
 The existing `channel-sync` (tracked channels) keeps running. It also writes `outliers_feed` rows when it detects an outlier, so tracked outliers show up in the global feed.
 
 ### 6.1 Refresh tiers
 
-| Tier | Interval | Rule |
-| --- | --- | --- |
-| `hot` | 2 days | Tracked by any user, OR has an outlier in the last 14 days, OR created < 6 months ago |
-| `warm` | 7 days | Everything else that qualifies |
-| `cold` | 25 days | No longer qualifies (§6.2), but has not expired yet. This keeps every row inside the 30-day rule. |
+| Tier   | Interval | Rule                                                                                              |
+| ------ | -------- | ------------------------------------------------------------------------------------------------- |
+| `hot`  | 2 days   | Tracked by any user, OR has an outlier in the last 14 days, OR created < 6 months ago             |
+| `warm` | 7 days   | Everything else that qualifies                                                                    |
+| `cold` | 25 days  | No longer qualifies (§6.2), but has not expired yet. This keeps every row inside the 30-day rule. |
 
 Tracked channels are also refreshed by `channel-sync` at the plan cadence (D-013). Enrichment skips a channel whose `last_synced_at` is within its interval.
 
@@ -205,13 +206,13 @@ Channels that fail are not stored. Channels found through live search or trackin
 
 ## 7. Quota budget (default 10,000 units/day)
 
-| Call | Units | Calls/day | Total |
-| --- | --- | --- | --- |
-| search.list | 100 | 30 | 3,000 |
-| playlistItems.list | 1 | 2,000 | 2,000 |
-| videos.list (50 IDs) | 1 | 3,000 | 3,000 |
-| channels.list (50 IDs) | 1 | 1,500 | 1,500 |
-| Buffer (live user searches) | — | — | 500 |
+| Call                        | Units | Calls/day | Total |
+| --------------------------- | ----- | --------- | ----- |
+| search.list                 | 100   | 30        | 3,000 |
+| playlistItems.list          | 1     | 2,000     | 2,000 |
+| videos.list (50 IDs)        | 1     | 3,000     | 3,000 |
+| channels.list (50 IDs)      | 1     | 1,500     | 1,500 |
+| Buffer (live user searches) | —     | —         | 500   |
 
 > ⚠️ At the default quota this budget leaves about 5 live searches per day for everyone. It is realistic only after the **D-036** quota extension. Until then, lower `DISCOVERY_DAILY_BUDGET` (env) to trade engine coverage for search headroom. The D-036 audit form must disclose the derived metrics (outlier multiple, Opportunity Score) under "Analytics & Reporting".
 
@@ -219,15 +220,15 @@ Channels that fail are not stored. Channels found through live search or trackin
 
 ## 8. Scoring (D-071, v1)
 
-**Opportunity Score (0–100) per niche.** It is computed from the niche's *performing* channels: those with `avg_views_recent ≥ 5,000`.
+**Opportunity Score (0–100) per niche.** It is computed from the niche's _performing_ channels: those with `avg_views_recent ≥ 5,000`.
 
-| Signal | Weight | Definition |
-| --- | --- | --- |
-| Accessibility | 30 | % of performing channels with < 10k subscribers |
-| Demand | 25 | Median views of niche videos published in the last 90 days |
-| Momentum | 20 | % of performing channels created in the last 12 months |
-| Outlier density | 15 | Share of niche videos from the last 90 days with multiple ≥ 3× |
-| Supply (inverse) | 10 | Niche uploads in the last 30 days (fewer = better) |
+| Signal           | Weight | Definition                                                     |
+| ---------------- | ------ | -------------------------------------------------------------- |
+| Accessibility    | 30     | % of performing channels with < 10k subscribers                |
+| Demand           | 25     | Median views of niche videos published in the last 90 days     |
+| Momentum         | 20     | % of performing channels created in the last 12 months         |
+| Outlier density  | 15     | Share of niche videos from the last 90 days with multiple ≥ 3× |
+| Supply (inverse) | 10     | Niche uploads in the last 30 days (fewer = better)             |
 
 **How the score is built:**
 
@@ -239,12 +240,12 @@ Channels that fail are not stored. Channels found through live search or trackin
 
 **Status:**
 
-| Status | Rule |
-| --- | --- |
-| `rising` | Trend ≥ +10 or momentum ≥ 50% |
-| `declining` | Trend ≤ −10 |
+| Status      | Rule                                   |
+| ----------- | -------------------------------------- |
+| `rising`    | Trend ≥ +10 or momentum ≥ 50%          |
+| `declining` | Trend ≤ −10                            |
 | `saturated` | Score < 35 and supply percentile ≥ 0.8 |
-| `active` | Otherwise |
+| `active`    | Otherwise                              |
 
 **Minimum sample:** a niche with fewer than 3 performing channels gets no score and is hidden from the feed.
 
@@ -299,11 +300,11 @@ A paid live search runs on page load only when `tab=search` **and** `q` is prese
 
 Filters sit in a left panel on desktop and a bottom sheet on mobile. All of them live in the URL query string, so a filtered view can be shared.
 
-| Tab | Filters |
-| --- | --- |
-| Niches | Score range, status, sort (score / trend / newest) |
+| Tab      | Filters                                                                                                                                                                                                                                       |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Niches   | Score range, status, sort (score / trend / newest)                                                                                                                                                                                            |
 | Channels | Niche, first upload after/before, subscribers range, avg views range, outlier score min. Toggles: faceless only, exclude kids content, has shorts, likely monetized (est.). Language. Sort: outlier score / avg views / newest / subscribers. |
-| Outliers | Niche, min multiple, published within 7/30/90 days |
+| Outliers | Niche, min multiple, published within 7/30/90 days                                                                                                                                                                                            |
 
 ### 9.5 Niche detail page: `/niches/[slug]`
 
@@ -340,11 +341,11 @@ These notifications are in-app notification rows, which go through the existing 
 
 ## 12. Cost estimate (approx.)
 
-| Stage | Data | Monthly |
-| --- | --- | --- |
-| Launch | ~20k channels / 600k videos (~1 GB) | ~$27–35 |
-| Growth | ~100k channels / 3M videos (~3–4 GB) | ~$40–50 |
-| Scale | ~500k channels / 15M videos (~15–20 GB) | ~$100–150 |
+| Stage  | Data                                    | Monthly   |
+| ------ | --------------------------------------- | --------- |
+| Launch | ~20k channels / 600k videos (~1 GB)     | ~$27–35   |
+| Growth | ~100k channels / 3M videos (~3–4 GB)    | ~$40–50   |
+| Scale  | ~500k channels / 15M videos (~15–20 GB) | ~$100–150 |
 
 YouTube API usage is free. gpt-4o-mini tagging costs about $5–10 one-time per 100k channels, then about $1–3 per month.
 
