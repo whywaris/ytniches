@@ -773,3 +773,10 @@ Decisions that still need to close before their dependent docs / features can be
 - **Final call:** Niche Finder caches a search's full channel list (not just ids) for `SEARCH_RESULTS_CACHE_HOURS` (24), keyed on the filters minus `page` and `sort`. Paging and re-sorting within that window read the cache: no credit, no search.list, no channels.list. Changing a filter or the keyword is a new search. The cache is shared, as before: an identical search by anyone within the window is free.
 - **Finding:** `getCachedSearchResult` keys the cache on all filters, including `page` and sort. YouTube's `search.list` only uses the keyword. So moving to page 2, re-sorting, or changing a post-filter misses the cache, runs another YouTube search, and charges another credit.
 - **Needed:** key the YouTube cache on the keyword alone, and apply page, sort and post-filters to the cached channel list. Charge once per new keyword search. Until then, the help center just says "a search costs N credits" and doesn't describe paging.
+
+### D-066: Workspace ownership transfer
+
+- **Status:** Deferred (logged 2026-09-27)
+- **Context:** PRD.md §8.1 says the owner can't leave without transferring ownership or deleting the workspace. `leaveWorkspace` blocks the owner (`must_transfer_or_delete`), but there's no transfer. So an owner's only way out is deleting the workspace for everyone. The help center's Workspace roles article says so.
+- **Why deferred:** a transfer is also a billing change. Members inherit Team from the owner's subscription (D-059), so moving ownership means either moving the subscription, or the new owner buying Team before the old one's lapses. That depends on how D-051 (plan changes) gets fixed.
+- **Needed when picked up:** an admin-only "Transfer ownership" action that sets `workspaces.owner_id` to another Admin who has their own live Team plan. Run `reapplyPlanEffects` for everyone affected, and update the help article.
