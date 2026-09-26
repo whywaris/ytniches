@@ -17,6 +17,11 @@ import {
   sendViewSpikeEmail,
 } from "@/lib/email/notifications";
 import { isInQuietHours } from "@/lib/notifications/quiet-hours";
+import {
+  CADENCE_CHANGE_THRESHOLD_PER_WEEK,
+  CADENCE_WINDOW_WEEKS,
+  VIEW_MILESTONES,
+} from "@/lib/tracking/thresholds";
 import { isEmailEligibleTier } from "@/lib/billing";
 import { getEffectivePlans } from "@/lib/billing/effective-plan";
 import type { YouTubeVideoItem } from "@/lib/youtube/schemas";
@@ -38,7 +43,6 @@ export interface DetectedEvent {
 // Phase 2). Only the *highest* newly-crossed milestone fires per video per
 // sync, not one event per milestone, so a video that jumps from 500 to 2M
 // views in one sync gets a single "crossed 1M" event, not four.
-const VIEW_MILESTONES = [1_000, 10_000, 100_000, 1_000_000, 10_000_000];
 
 function highestCrossedMilestone(oldViews: number, newViews: number): number | null {
   let crossed: number | null = null;
@@ -50,16 +54,15 @@ function highestCrossedMilestone(oldViews: number, newViews: number): number | n
   return crossed;
 }
 
-const FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000;
+const CADENCE_WINDOW_MS = CADENCE_WINDOW_WEEKS * 7 * 24 * 60 * 60 * 1000;
 // Minimum delta to treat as a real cadence change, not sync-to-sync noise
 // (e.g. 2.0 -> 2.25 videos/week from one extra upload isn't a "change").
-const CADENCE_CHANGE_THRESHOLD_PER_WEEK = 1;
 
 function computeCadence(publishedAtList: string[], now: number): number {
   const recentCount = publishedAtList.filter(
-    (iso) => now - new Date(iso).getTime() <= FOUR_WEEKS_MS,
+    (iso) => now - new Date(iso).getTime() <= CADENCE_WINDOW_MS,
   ).length;
-  return recentCount / 4;
+  return recentCount / CADENCE_WINDOW_WEEKS;
 }
 
 function parseIso8601Duration(duration: string): number {

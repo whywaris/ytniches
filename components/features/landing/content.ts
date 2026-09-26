@@ -421,7 +421,7 @@ export const FOOTER = {
         { label: "Tutorials", href: null },
         { label: "VS pages", href: "/#compare" },
         { label: "Templates", href: "/#templates" },
-        { label: "Help center", href: null },
+        { label: "Help center", href: "/help" },
       ],
     },
     {

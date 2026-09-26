@@ -4,6 +4,7 @@ import * as React from "react";
 
 import Image from "next/image";
 
+import { CREDIT_COSTS } from "@/lib/credits/costs";
 import {
   generateThumbnailIdeasAction,
   regenerateThumbnailIdeasAction,
@@ -90,7 +91,9 @@ function ThumbnailIdeasModal({ open, onOpenChange, video }: ThumbnailIdeasModalP
         </div>
 
         {state.status === "idle" ? (
-          <Button onClick={handleGenerate}>Generate thumbnail ideas &middot; Uses 5 credits</Button>
+          <Button onClick={handleGenerate}>
+            Generate thumbnail ideas &middot; Uses {CREDIT_COSTS.thumbnailIdeas} credits
+          </Button>
         ) : null}
 
         {state.status === "generating" ? (
@@ -134,7 +137,7 @@ function ThumbnailIdeasModal({ open, onOpenChange, video }: ThumbnailIdeasModalP
               ))}
             </div>
             <Button variant="secondary" onClick={handleRegenerate} className="self-start">
-              Generate another &middot; Uses 5 credits
+              Generate another &middot; Uses {CREDIT_COSTS.thumbnailIdeasRegenerate} credits
             </Button>
           </>
         ) : null}

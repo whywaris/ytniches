@@ -3,6 +3,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import { refreshCadenceHoursFor, TIER_INFO, trackedChannelsLimitFor } from "@/lib/billing/plans";
 import { getRedis } from "@/lib/cache/redis";
+import { CREDIT_COSTS, FAIR_USE } from "@/lib/credits/costs";
 import { consume, getBalance } from "@/lib/credits";
 import { getCachedSearchResult } from "@/lib/youtube/cache";
 import { getChannelsByIds, searchChannelIds, type YouTubeError } from "@/lib/youtube";
@@ -14,7 +15,7 @@ import type { NicheSearchInput } from "@/lib/services/channels.schema";
 import type { YouTubeChannelItem } from "@/lib/youtube/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 
-const SEARCH_CREDIT_COST = 1;
+const SEARCH_CREDIT_COST = CREDIT_COSTS.nicheSearch;
 // Exported for other server-side consumers. The client component can't
 // import it directly (this module is server-only — service-role client,
 // env vars — and any value import would pull it into the client bundle),
@@ -23,7 +24,7 @@ export const RESULTS_PER_PAGE = 20;
 
 // Monetization.md §3.6 fair-use cap: 60 niche searches/hour, same for every
 // tier (this is abuse protection, not a tier gate).
-const SEARCH_RATE_LIMIT = Ratelimit.slidingWindow(60, "1 h");
+const SEARCH_RATE_LIMIT = Ratelimit.slidingWindow(FAIR_USE.nicheSearchesPerHour, "1 h");
 let rateLimiter: Ratelimit | undefined;
 function getSearchRateLimiter(): Ratelimit {
   if (!rateLimiter) {

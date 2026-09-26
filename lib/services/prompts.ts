@@ -8,12 +8,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import type { InsufficientCreditsError } from "@/lib/credits";
+import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Monetization.md §3.1.
-const GENERATE_COST = 5;
-const REGENERATE_COST = 3;
+const GENERATE_COST = CREDIT_COSTS.promptGenerate;
+const REGENERATE_COST = CREDIT_COSTS.promptRegenerate;
 
 export type Tone = "neutral" | "casual" | "educational" | "dramatic" | "clickbait_lite";
 

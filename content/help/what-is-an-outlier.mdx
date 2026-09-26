@@ -1,0 +1,32 @@
+---
+title: What an outlier is
+slug: what-is-an-outlier
+category: outliers
+order: 1
+excerpt: The rule YTNiches uses to call a video an outlier, and how the Outliers page ranks them.
+popular: true
+---
+
+An outlier is a video that did far better than its own channel usually does. Those videos tell you what an audience wants right now.
+
+## The rule
+
+YTNiches takes the average views of the channel's previous <Fact k="outliers.baselineWindow" unit="video" />. That's the channel's baseline. A video that reaches <Fact k="outliers.multiplier" /> that baseline is an outlier.
+
+Because the baseline is the channel's own, a small channel can have outliers too. A video with modest views can still be a huge hit for that channel.
+
+## Where outliers come from
+
+Only from channels you track. Track more channels in a niche and you'll see more of its outliers.
+
+## The Outliers page
+
+- **Feed** lists outliers as they're found, newest first.
+- **Grid** ranks the top outliers over the date range you pick.
+- **Trending** ranks outliers found in the last <Fact k="outliers.trendingDays" unit="day" />.
+
+Rankings favour recent outliers. An outlier's score fades over <Fact k="outliers.decayDays" unit="day" />, down to a floor, so older ones rank lower.
+
+## What to do with one
+
+Every outlier card has **Extract prompts**, which opens AI Prompts for that video, and **Get thumbnail ideas**.

@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { CATEGORY_SLUGS, type CategorySlug } from "@/lib/blog/categories";
+import { parseMdxFile } from "@/lib/content/mdx-file";
 
 // PRD.md §10.2 / D-006: MDX files in git, authors as YAML. Everything here
 // runs at build time (and per request in `next dev`). Frontmatter is a
@@ -50,7 +51,6 @@ export interface Post extends PostFrontmatter {
 // The card/search shape: no MDX body, safe to hand to client components.
 export type PostSummary = Omit<Post, "body">;
 
-const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 const WORDS_PER_MINUTE = 230;
 
 export function readingMinutes(body: string): number {
@@ -59,17 +59,8 @@ export function readingMinutes(body: string): number {
 }
 
 export function parsePostFile(fileName: string, raw: string): Post {
-  const match = FRONTMATTER.exec(raw);
-  if (!match) throw new Error(`${fileName}: missing --- frontmatter --- block`);
-  const parsed = FrontmatterSchema.safeParse(parseYaml(match[1]));
-  if (!parsed.success) {
-    throw new Error(`${fileName}: invalid frontmatter\n${z.prettifyError(parsed.error)}`);
-  }
-  if (`${parsed.data.slug}.mdx` !== fileName) {
-    throw new Error(`${fileName}: slug "${parsed.data.slug}" must match the file name`);
-  }
-  const body = raw.slice(match[0].length);
-  return { ...parsed.data, body, readingMinutes: readingMinutes(body) };
+  const { data, body } = parseMdxFile(fileName, raw, FrontmatterSchema);
+  return { ...data, body, readingMinutes: readingMinutes(body) };
 }
 
 export function parseAuthorFile(fileName: string, raw: string): Author {

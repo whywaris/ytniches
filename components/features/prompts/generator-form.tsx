@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { CheckCircle2, Circle } from "lucide-react";
 
+import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { Result } from "@/lib/result";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -320,7 +321,7 @@ function GeneratorForm({
         disabled={!canGenerate}
         onClick={() => void handleGenerate()}
       >
-        Generate prompts &middot; Uses 5 credits
+        Generate prompts &middot; Uses {CREDIT_COSTS.promptGenerate} credits
       </Button>
     </Card>
   );

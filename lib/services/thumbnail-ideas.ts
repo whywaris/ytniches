@@ -3,6 +3,7 @@ import { consume, refund } from "@/lib/credits";
 import { createClient } from "@/lib/supabase/server";
 import { err, ok, type Result } from "@/lib/result";
 import type { InsufficientCreditsError } from "@/lib/credits";
+import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -10,7 +11,7 @@ import type { Database } from "@/lib/supabase/database.types";
 // "Generate another" -- no cheaper-regeneration discount like prompts'
 // own REGENERATE_COST (this feature has no feedback step to make a
 // regeneration partial-reuse).
-const GENERATE_COST = 5;
+const GENERATE_COST = CREDIT_COSTS.thumbnailIdeas;
 
 export type NotFoundError = { type: "not_found" };
 export type GenerationFailedError = { type: "generation_failed"; message: string };

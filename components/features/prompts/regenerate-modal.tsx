@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { Result } from "@/lib/result";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -95,7 +96,7 @@ function RegenerateModal({
             Cancel
           </Button>
           <Button loading={pending} onClick={() => void handleRegenerate()}>
-            Regenerate &middot; Uses 3 credits
+            Regenerate &middot; Uses {CREDIT_COSTS.promptRegenerate} credits
           </Button>
         </>
       }

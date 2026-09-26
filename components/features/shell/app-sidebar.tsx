@@ -10,6 +10,7 @@ import { Sidebar, SidebarSection, useSidebar } from "@/components/ui/sidebar";
 import { SidebarItem } from "@/components/ui/sidebar-item";
 import {
   DASHBOARD_NAV,
+  HELP_NAV,
   NAV_GROUPS,
   activeNavHref,
   type NavItem,
@@ -107,6 +108,9 @@ function AppSidebar({
           ))}
         </SidebarSection>
       ))}
+      <SidebarSection>
+        <NavLink item={HELP_NAV} active={false} />
+      </SidebarSection>
     </Sidebar>
   );
 }

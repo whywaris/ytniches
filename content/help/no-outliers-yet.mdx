@@ -1,0 +1,24 @@
+---
+title: Why a channel shows no outliers yet
+slug: no-outliers-yet
+category: outliers
+order: 2
+excerpt: The usual reasons a tracked channel has no outliers, and what to do about each.
+popular: false
+---
+
+## The channel was only just added
+
+Outliers are found when a channel syncs. Give it until the next sync. See [How often channels sync](/help/sync-frequency).
+
+## Not enough history
+
+A baseline needs at least <Fact k="outliers.minPrior" unit="video" /> earlier videos. Before that, YTNiches can't tell what's normal for the channel, so it doesn't call anything an outlier.
+
+## Nothing has broken out
+
+Plenty of channels are steady. If no video has reached <Fact k="outliers.multiplier" /> the channel's baseline, there's no outlier to show. That's a finding too: the channel is consistent, not explosive.
+
+## It's outside your date range
+
+**Grid** and **Trending** only look back so far. Check **Feed** for older outliers.

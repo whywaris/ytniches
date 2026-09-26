@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import { getEffectivePlans, usersAffectedByPlanOf } from "@/lib/billing/effective-plan";
-import { refreshCadenceHoursFor } from "@/lib/billing/plans";
+import { refreshCadenceHoursFor, TRIAL } from "@/lib/billing/plans";
 import { invalidateTierCache } from "@/lib/billing/tier-cache";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
@@ -19,7 +19,7 @@ type ProviderDbStatus = Database["public"]["Enums"]["subscription_status"];
 // §2.5's note). Also the trial's tier limit for tracked channels
 // (lib/services/channels.ts's TRACKED_CHANNELS_LIMIT) -- kept in sync by
 // hand, same as every other cross-file constant in this codebase.
-export const TRIAL_CREDITS = 50;
+export const TRIAL_CREDITS = TRIAL.credits;
 
 export type NoSubscriptionError = { type: "no_subscription" };
 

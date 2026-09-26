@@ -733,3 +733,28 @@ Decisions that still need to close before their dependent docs / features can be
   - Workspace invites are transactional, not a plan feature, so they're unaffected.
 - **Known limit:** "email-eligible" is by plan tier (Pro or Team), not subscription status. An expired trial still has tier Pro. That's the same gap as D-057 and gets fixed with it.
 - **Impacts:** `workers/digest.ts`.
+
+### D-062: Tracking a channel is free (spec says 1 credit)
+
+- **Status:** Open (logged 2026-09-26)
+- **Finding:** Monetization.md §3.1 charges 1 credit to track a channel. The product charges nothing (`CREDIT_COSTS.trackChannel = 0`). The tracked-channel cap is what limits abuse. The help center documents today's behaviour: adding a channel by URL is free. Adding one through the Add channel modal's **Search** tab runs a niche search, so that costs a search credit.
+- **Needed:** decide which is right, then update the losing side (Monetization.md §3.1, or `lib/credits/costs.ts` plus the help articles, which read the constant).
+
+### D-063: Credits never reset, and annual plans get one allocation per year
+
+- **Status:** Open (logged 2026-09-26). Money path.
+- **Finding:** Monetization.md §3 says unused credits reset at cycle end, and that Team can roll over up to 500 for one cycle. In code, credits are a ledger that only grows. Nothing writes `expiration` events, so every unused credit carries over forever. Also, `allocateCycleCredits` runs once per paid billing cycle. On an annual plan that's once a year, so a yearly Pro user gets one month's allowance for twelve months.
+- **Help center:** says "credits each month" (from `TIER_INFO`) and deliberately says nothing about rollover or reset until this is decided.
+- **Needed:** a reset/rollover job to match §3, and a monthly allocation for annual subscribers (a scheduled job keyed on the month, not the Creem cycle).
+
+### D-064: No time zone setting, so digest and quiet hours run on UTC
+
+- **Status:** Open (logged 2026-09-26)
+- **Finding:** `profiles.time_zone` defaults to `'UTC'`, and nothing in the app ever writes it: no settings field, and onboarding doesn't capture the browser zone. The digest ("8 am local") and quiet hours both read it, so they're UTC for everyone. The help center says so plainly.
+- **Needed:** capture the browser's time zone at onboarding (`Intl.DateTimeFormat().resolvedOptions().timeZone`) and add a field under Settings → Notifications. Then update the two help articles.
+
+### D-065: Paging or re-sorting a niche search charges another credit
+
+- **Status:** Open (logged 2026-09-26). Money path.
+- **Finding:** `getCachedSearchResult` keys the cache on all filters, including `page` and sort. YouTube's `search.list` only uses the keyword. So moving to page 2, re-sorting, or changing a post-filter misses the cache, runs another YouTube search, and charges another credit.
+- **Needed:** key the YouTube cache on the keyword alone, and apply page, sort and post-filters to the cached channel list. Charge once per new keyword search. Until then, the help center just says "a search costs N credits" and doesn't describe paging.

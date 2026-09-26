@@ -17,6 +17,9 @@ export const BASELINE_MIN_VIDEOS = 5;
 export const RECENCY_DECAY_DAYS = 90;
 export const RECENCY_FLOOR = 0.1;
 
+// The Outliers page's Trending view: outliers detected within this many days.
+export const TRENDING_WINDOW_DAYS = 7;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function computeRecencyWeight(publishedAt: string, now: number = Date.now()): number {

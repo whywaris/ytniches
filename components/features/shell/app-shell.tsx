@@ -10,7 +10,12 @@ import { useTheme } from "@/components/theme-provider";
 import { CommandPalette, type CommandPaletteGroup } from "@/components/ui/command-palette";
 import { AppSidebar } from "@/components/features/shell/app-sidebar";
 import { AppTopBar } from "@/components/features/shell/app-top-bar";
-import { PRIMARY_NAV, TEAM_NAV, labelForPathname } from "@/components/features/shell/nav-config";
+import {
+  HELP_NAV,
+  PRIMARY_NAV,
+  TEAM_NAV,
+  labelForPathname,
+} from "@/components/features/shell/nav-config";
 import { readRecentRoutes, recordRouteVisit } from "@/lib/client/recent-routes";
 
 export interface AppShellProps {
@@ -45,7 +50,7 @@ function AppShell({
     recordRouteVisit(pathname, labelForPathname(pathname));
   }, [pathname]);
 
-  const navItems = hasWorkspace ? [...PRIMARY_NAV, ...TEAM_NAV] : PRIMARY_NAV;
+  const navItems = [...PRIMARY_NAV, ...(hasWorkspace ? TEAM_NAV : []), HELP_NAV];
 
   // UI-UX-Flow.md §4.3. "Recent" (D-049: localStorage, per-browser) reads
   // fresh at open time rather than being kept in state, since it only

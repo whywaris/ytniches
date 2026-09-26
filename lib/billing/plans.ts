@@ -82,8 +82,10 @@ export const TIERS: Tier[] = ["starter", "pro", "team"];
 export const TRIAL = {
   days: 14,
   tier: "pro",
+  // One-time grant at trial start (Monetization.md §3.2); no refills.
+  credits: 50,
   refreshCadenceHours: TIER_INFO.pro.refreshCadenceHours,
-} as const satisfies { days: number; tier: Tier; refreshCadenceHours: number };
+} as const satisfies { days: number; tier: Tier; credits: number; refreshCadenceHours: number };
 
 // The one way the trial is marketed (pricing, landing, VS pages, help):
 // "Try every Pro feature free for 14 days", the only trial wording.

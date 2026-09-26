@@ -4,6 +4,7 @@ import {
   CheckSquare,
   Flame,
   Home,
+  LifeBuoy,
   Radar,
   Search,
   Settings,
@@ -75,6 +76,9 @@ export function activeNavHref(pathname: string, items: NavItem[]): string | null
     .sort((a, b) => b.href.length - a.href.length);
   return matches[0]?.href ?? null;
 }
+
+// The public help center (PRD.md §10.4), opened in the same tab.
+export const HELP_NAV: NavItem = { href: "/help", label: "Help", icon: LifeBuoy };
 
 export const SETTINGS_NAV: NavItem = {
   href: "/settings/billing",

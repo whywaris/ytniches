@@ -1,4 +1,4 @@
-import { computeRecencyWeight, OUTLIER_SCORE } from "@/lib/outliers/scoring";
+import { computeRecencyWeight, OUTLIER_SCORE, TRENDING_WINDOW_DAYS } from "@/lib/outliers/scoring";
 import { clampLimit, decodeCursor, encodeCursor, type FeedCursor } from "@/lib/services/tracking";
 import { createClient } from "@/lib/supabase/server";
 import { err, ok, type Result } from "@/lib/result";
@@ -15,8 +15,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // ranked by current score": a tight, non-configurable window versus Grid's
 // user-selectable 30/60/90. Documented here rather than in DECISIONS.md --
 // this is an implementation reading of an already-approved gap (§9), not a
-// new open question.
-const TRENDING_WINDOW_DAYS = 7;
+// new open question. TRENDING_WINDOW_DAYS lives in lib/outliers/scoring.ts
+// so the help center can show it.
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const DEFAULT_TOP_LIMIT = 20;

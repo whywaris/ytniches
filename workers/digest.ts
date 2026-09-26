@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isEmailEligibleTier } from "@/lib/billing";
 import { getEffectivePlan } from "@/lib/billing/effective-plan";
+import { DIGEST_ITEM_LIMIT } from "@/lib/notifications/digest-config";
 import { buildOutlierItems } from "@/lib/services/outliers";
 import { sendWeeklyDigestEmail, type WeeklyDigestData } from "@/lib/email/notifications";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -9,7 +10,6 @@ import { inngest } from "@/lib/inngest/client";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DIGEST_ITEM_LIMIT = 5;
 
 export type DigestCadence = "daily" | "weekly";
 
