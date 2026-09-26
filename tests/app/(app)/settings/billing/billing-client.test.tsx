@@ -88,7 +88,12 @@ describe("BillingClient", () => {
     renderClient(ACTIVE);
     expect(screen.getByRole("button", { name: "Manage plan" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel plan" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Change plan" })).toBeInTheDocument();
+    // D-051: no self-serve change for paid plans; support does it.
+    expect(screen.queryByRole("button", { name: "Change plan" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Email us to change plans" })).toHaveAttribute(
+      "href",
+      "mailto:support@ytniches.com?subject=Change%20my%20plan",
+    );
   });
 
   it("hides the Cancel button once already cancelling", () => {

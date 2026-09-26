@@ -14,6 +14,7 @@ import { Tag } from "@/components/ui/tag";
 import { useToast } from "@/components/ui/toast-provider";
 import { isAnnualPeriod } from "@/lib/billing/cycles";
 import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
+import { SUPPORT_EMAIL } from "@/lib/site";
 import { UpgradeModal } from "@/components/features/billing/upgrade-modal";
 
 export interface BillingClientProps {
@@ -135,9 +136,17 @@ function BillingClient({ subscription, creditsBalance }: BillingClientProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setShowUpgrade(true)}>
-                {hasPaidSubscription ? "Change plan" : "Upgrade"}
-              </Button>
+              {/* D-051: a self-serve change opens a second subscription and
+                  bills both, so paid-to-paid changes go through support. */}
+              {hasPaidSubscription ? (
+                <Button asChild>
+                  <a href={`mailto:${SUPPORT_EMAIL}?subject=Change%20my%20plan`}>
+                    Email us to change plans
+                  </a>
+                </Button>
+              ) : (
+                <Button onClick={() => setShowUpgrade(true)}>Upgrade</Button>
+              )}
               {canManage ? (
                 <Button
                   variant="secondary"
