@@ -50,6 +50,7 @@ const planFacts = Object.fromEntries(
 
 export const FACTS: Record<string, string | number> = {
   "credits.nicheSearch": CREDIT_COSTS.nicheSearch,
+  "credits.filteredFeedSearch": CREDIT_COSTS.filteredFeedSearch,
   "credits.promptGenerate": CREDIT_COSTS.promptGenerate,
   "credits.promptRegenerate": CREDIT_COSTS.promptRegenerate,
   "credits.thumbnailIdeas": CREDIT_COSTS.thumbnailIdeas,

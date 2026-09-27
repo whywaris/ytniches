@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("@/components/ui/toast-provider", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
 const { FeedFilterPanel } = await import("@/components/features/niche-finder/feed-filter-panel");
 
@@ -28,13 +29,15 @@ describe("FeedFilterPanel (spec §9.4)", () => {
     await user.click(screen.getAllByRole("switch", { name: "Faceless only" })[0]!);
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
-    expect(push).toHaveBeenCalledWith("/niches?tab=channels&minSubs=1000&faceless=1");
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/niches?tab=channels&minSubs=1000&faceless=1"),
+    );
   });
 
   it("reset clears every filter", async () => {
     render(<FeedFilterPanel tab="niches" fields={FIELDS} values={{ minSubs: "5" }} />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Reset" }));
-    expect(push).toHaveBeenCalledWith("/niches");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/niches"));
   });
 
   it("shows the active filter count on the mobile trigger", () => {

@@ -26,6 +26,9 @@ import {
 } from "@/components/features/niche-finder/feed-filter-panel";
 import { FeedPagination } from "@/components/features/niche-finder/feed-pagination";
 import { OutlierCard } from "@/components/features/outliers/outlier-card";
+import { FilteredViewGate } from "@/components/features/niche-finder/filtered-view-gate";
+import { isFilteredViewUnlocked } from "@/lib/services/feed-credits";
+import { unlockFeedFiltersAction } from "@/app/(app)/niches/actions";
 import { ChannelGrid } from "@/app/(app)/niches/channel-grid";
 import { NicheGrid } from "@/app/(app)/niches/niche-grid";
 import type { RequestContext } from "@/lib/context";
@@ -36,7 +39,15 @@ import type {
 } from "@/lib/services/niche-feed";
 
 // Niche-Discovery-Engine.md §9. Server-rendered tab bodies: each reads only
-// our DB/cache (0 credits, 0 YouTube quota, D-072).
+// our DB/cache (0 YouTube quota). D-072: default views are free; a view with
+// billable filters renders a gate until the user pays 1 credit for it (then
+// free for 24h). Rendering itself never charges.
+
+function definedValues(values: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
+}
 
 function FeedLayout({
   filters,
@@ -80,8 +91,9 @@ export async function NichesSection({
   ctx: RequestContext;
   filters: NicheFeedFilters;
 }) {
-  const page = await listNiches(ctx, filters);
   const values = nicheFiltersToValues(filters);
+  const unlocked = await isFilteredViewUnlocked(ctx, "niches", values);
+  const page = unlocked ? await listNiches(ctx, filters) : null;
   const fields: FilterField[] = [
     { kind: "number", key: "minScore", label: "Min score", min: 0, max: 100 },
     { kind: "number", key: "maxScore", label: "Max score", min: 0, max: 100 },
@@ -98,6 +110,27 @@ export async function NichesSection({
       ],
     },
   ];
+  if (!page) {
+    return (
+      <FeedLayout
+        filters={
+          <FeedFilterPanel
+            key={JSON.stringify(values)}
+            tab="niches"
+            fields={fields}
+            values={values}
+            unlock={unlockFeedFiltersAction}
+          />
+        }
+      >
+        <FilteredViewGate
+          tab="niches"
+          values={definedValues(values)}
+          unlock={unlockFeedFiltersAction}
+        />
+      </FeedLayout>
+    );
+  }
   const lastPage = page.page * page.pageSize >= page.total;
 
   return (
@@ -108,6 +141,7 @@ export async function NichesSection({
           tab="niches"
           fields={fields}
           values={values}
+          unlock={unlockFeedFiltersAction}
         />
       }
     >
@@ -159,9 +193,19 @@ const LANGUAGE_OPTIONS = [
   { value: "ja", label: "Japanese" },
 ];
 
-export async function ChannelsSection({ filters }: { filters: ChannelFeedFilters }) {
-  const [page, nicheOptions] = await Promise.all([listFeedChannels(filters), listNicheOptions()]);
+export async function ChannelsSection({
+  ctx,
+  filters,
+}: {
+  ctx: RequestContext;
+  filters: ChannelFeedFilters;
+}) {
   const values = channelFiltersToValues(filters);
+  const unlocked = await isFilteredViewUnlocked(ctx, "channels", values);
+  const [page, nicheOptions] = await Promise.all([
+    unlocked ? listFeedChannels(filters) : null,
+    listNicheOptions(),
+  ]);
   const nicheSelect = nicheOptions.map((n) => ({ value: n.slug, label: n.name }));
   const fields: FilterField[] = [
     { kind: "select", key: "niche", label: "Niche", options: nicheSelect },
@@ -191,6 +235,28 @@ export async function ChannelsSection({ filters }: { filters: ChannelFeedFilters
     },
   ];
 
+  if (!page) {
+    return (
+      <FeedLayout
+        filters={
+          <FeedFilterPanel
+            key={JSON.stringify(values)}
+            tab="channels"
+            fields={fields}
+            values={values}
+            unlock={unlockFeedFiltersAction}
+          />
+        }
+      >
+        <FilteredViewGate
+          tab="channels"
+          values={definedValues(values)}
+          unlock={unlockFeedFiltersAction}
+        />
+      </FeedLayout>
+    );
+  }
+
   return (
     <FeedLayout
       filters={
@@ -199,6 +265,7 @@ export async function ChannelsSection({ filters }: { filters: ChannelFeedFilters
           tab="channels"
           fields={fields}
           values={values}
+          unlock={unlockFeedFiltersAction}
         />
       }
     >
@@ -220,9 +287,19 @@ export async function ChannelsSection({ filters }: { filters: ChannelFeedFilters
   );
 }
 
-export async function OutliersSection({ filters }: { filters: OutlierFeedFilters }) {
-  const [page, nicheOptions] = await Promise.all([listGlobalOutliers(filters), listNicheOptions()]);
+export async function OutliersSection({
+  ctx,
+  filters,
+}: {
+  ctx: RequestContext;
+  filters: OutlierFeedFilters;
+}) {
   const values = outlierFiltersToValues(filters);
+  const unlocked = await isFilteredViewUnlocked(ctx, "outliers", values);
+  const [page, nicheOptions] = await Promise.all([
+    unlocked ? listGlobalOutliers(filters) : null,
+    listNicheOptions(),
+  ]);
   const fields: FilterField[] = [
     {
       kind: "select",
@@ -244,6 +321,28 @@ export async function OutliersSection({ filters }: { filters: OutlierFeedFilters
     },
   ];
 
+  if (!page) {
+    return (
+      <FeedLayout
+        filters={
+          <FeedFilterPanel
+            key={JSON.stringify(values)}
+            tab="outliers"
+            fields={fields}
+            values={values}
+            unlock={unlockFeedFiltersAction}
+          />
+        }
+      >
+        <FilteredViewGate
+          tab="outliers"
+          values={definedValues(values)}
+          unlock={unlockFeedFiltersAction}
+        />
+      </FeedLayout>
+    );
+  }
+
   return (
     <FeedLayout
       filters={
@@ -252,6 +351,7 @@ export async function OutliersSection({ filters }: { filters: OutlierFeedFilters
           tab="outliers"
           fields={fields}
           values={values}
+          unlock={unlockFeedFiltersAction}
         />
       }
     >

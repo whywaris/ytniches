@@ -855,15 +855,16 @@ Decisions that still need to close before their dependent docs / features can be
   - **Minimum sample:** a niche needs 3 performing channels before it gets a score.
 - **Revisit:** after 2 weeks of beta data. Compare the score with what users actually track.
 
-### D-072: Browsing the discovery feeds is credit-free; Starter/Trial see the top 50 niches
+### D-072: Default discovery feeds are free; a filtered search costs 1 credit; Starter/Trial see the top 50 niches
 
-- **Status:** Resolved (2026-09-26)
+- **Status:** Resolved (2026-09-26). Revised 2026-09-27 (owner): filtered views are charged.
 - **Final call:**
-  - The Niches, Channels and Outliers feeds and `/niches/[slug]` cost 0 credits. They are served from our DB and make no YouTube calls.
+  - **Free:** the default Niches, Channels and Outliers feeds, `/niches/[slug]`, sorting, paging, and a niche-only filter (card badges and niche pages link to it, so it's navigation). None of these make YouTube calls.
+  - **Filtered search, 1 credit** (`CREDIT_COSTS.filteredFeedSearch`): any other filter set on a feed tab (score, status, subs, views, dates, outlier score, toggles, language, min multiple, time window). Re-running or paging the same filters is free for 24h (`SEARCH_RESULTS_CACHE_HOURS`), the same deal as a live search (D-065). Same idempotency pattern too: the client sends a UUID per Apply, and `consume` ignores a repeat.
+  - **Charged only on an explicit action**, never while rendering: the filter panel's Apply, or "Show results (1 credit)" on the gate card that a locked filtered URL (shared link, back button) shows instead of results. Prefetches and refreshes can't spend credits. The 24h unlock is per user (`feed-unlock:{user}:{hash}` in Redis).
   - Live search is still 1 credit (D-065).
-  - Starter and Trial (no plan, or tier `starter`) see the top 50 niches by score, with an upgrade prompt after them. Pro, Team and inherited Team (D-059) see all niches.
-  - Channels and Outliers feeds are uncapped.
-- **Impacts:** Monetization.md §3.1, `lib/services/niche-feed.ts`.
+  - Starter and Trial (no plan, or tier `starter`, or status `trialing`) see the top 50 niches by score, with an upgrade prompt after them. Pro, Team and inherited Team (D-059) see all niches. Channels and Outliers feeds are uncapped.
+- **Impacts:** Monetization.md §3.1, `lib/services/feed-credits.ts`, `lib/services/niche-feed.ts`, UI-UX-Flow §5.0, Niche-Discovery-Engine §10.
 
 ### D-073: 30-day retention for untracked YouTube data
 

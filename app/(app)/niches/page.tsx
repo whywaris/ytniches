@@ -78,9 +78,9 @@ async function TabBody({
     case "niches":
       return <NichesSection ctx={ctx} filters={parseNicheFilters(params)} />;
     case "channels":
-      return <ChannelsSection filters={parseChannelFilters(params)} />;
+      return <ChannelsSection ctx={ctx} filters={parseChannelFilters(params)} />;
     case "outliers":
-      return <OutliersSection filters={parseOutlierFilters(params)} />;
+      return <OutliersSection ctx={ctx} filters={parseOutlierFilters(params)} />;
     case "search":
       return <SearchSection ctx={ctx} params={params} autoSearch={autoSearch} />;
   }

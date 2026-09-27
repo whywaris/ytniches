@@ -150,3 +150,21 @@ export function withPage(
 ): Record<string, string | undefined> {
   return { ...values, page: pageNumber > 1 ? String(pageNumber) : undefined };
 }
+
+export type FilterValues = Record<string, string | undefined>;
+
+// D-072: which filters make a view billable (null = free). Sort and page
+// are presentation, not a new query; a niche on its own is navigation (card
+// badges and niche pages link to it). Expects values from *FiltersToValues
+// above, which already drop defaults. Plain module so the filter panel can
+// tell the user before charging.
+const FREE_KEYS = new Set(["sort", "page", "tab"]);
+
+export function billableFilters(values: FilterValues): FilterValues | null {
+  const kept = Object.entries(values).filter(
+    ([key, value]) => value !== undefined && value !== "" && !FREE_KEYS.has(key),
+  );
+  if (kept.length === 0) return null;
+  if (kept.length === 1 && kept[0]![0] === "niche") return null;
+  return Object.fromEntries(kept.sort(([a], [b]) => a.localeCompare(b)));
+}

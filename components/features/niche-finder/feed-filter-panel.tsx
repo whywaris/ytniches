@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 
 import { SlidersHorizontal } from "lucide-react";
 
-import { buildFeedUrl, type FeedTab } from "@/lib/discovery/feed-url";
+import { billableFilters, buildFeedUrl, type FeedTab } from "@/lib/discovery/feed-url";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { TextInput } from "@/components/ui/text-input";
+import { useToast } from "@/components/ui/toast-provider";
 
 // Niche-Discovery-Engine.md §9.4. Field-driven so each tab declares its own
 // filters server-side. Applying navigates to the new URL (filters live in
@@ -32,12 +33,29 @@ export type FilterField =
 
 export type FilterValues = Record<string, string | undefined>;
 
+export type UnlockFeedFilters = (
+  tab: FeedTab,
+  values: Record<string, string>,
+  idempotencyKey: string,
+) => Promise<{ ok: true; value: { charged: boolean } } | { ok: false; error: { type: string } }>;
+
 export interface FeedFilterPanelProps {
   tab: FeedTab;
   fields: FilterField[];
   /** Current URL values. Render with `key` = these values serialised, so a
    * navigation (back/forward, a niche link) resets the draft. */
   values: FilterValues;
+  /** D-072: charges a filtered view (a Server Action passed from the page).
+   * Without it, Apply just navigates. */
+  unlock?: UnlockFeedFilters;
+}
+
+export const FILTERED_SEARCH_HINT = "Filtered search: 1 credit, then free to re-run for 24h.";
+
+function definedValues(values: FilterValues): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
 }
 
 // Radix Select can't hold an empty value, so "any" stands in for "no filter".
@@ -123,16 +141,34 @@ function FilterForm({
   );
 }
 
-function FeedFilterPanel({ tab, fields, values }: FeedFilterPanelProps) {
+function FeedFilterPanel({ tab, fields, values, unlock }: FeedFilterPanelProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [draft, setDraft] = React.useState<FilterValues>(values);
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [pending, startTransition] = React.useTransition();
   // Page resets on every apply (it isn't in `draft`).
   const buildHref = (next: FilterValues) => buildFeedUrl(tab, next);
+  const billable = billableFilters(draft) !== null;
 
   const apply = () => {
-    setSheetOpen(false);
-    router.push(buildHref(draft));
+    startTransition(async () => {
+      if (unlock && billable) {
+        const result = await unlock(tab, definedValues(draft), crypto.randomUUID());
+        if (!result.ok) {
+          showToast({
+            title:
+              result.error.type === "insufficient_credits"
+                ? "You need 1 credit for a filtered search. Top up or upgrade to continue."
+                : "Couldn't apply these filters.",
+            variant: "error",
+          });
+          return;
+        }
+      }
+      setSheetOpen(false);
+      router.push(buildHref(draft));
+    });
   };
   const reset = () => {
     setDraft({});
@@ -157,13 +193,16 @@ function FeedFilterPanel({ tab, fields, values }: FeedFilterPanelProps) {
               <Button size="sm" variant="ghost" onClick={reset}>
                 Reset
               </Button>
-              <Button size="sm" onClick={apply}>
+              <Button size="sm" onClick={apply} loading={pending}>
                 Apply
               </Button>
             </>
           }
         >
           <FilterForm fields={fields} draft={draft} setDraft={setDraft} idPrefix="sheet" />
+          {unlock && billable ? (
+            <p className="mt-4 text-caption text-text-tertiary">{FILTERED_SEARCH_HINT}</p>
+          ) : null}
         </Modal>
       </div>
 
@@ -184,9 +223,12 @@ function FeedFilterPanel({ tab, fields, values }: FeedFilterPanelProps) {
           }}
         >
           <FilterForm fields={fields} draft={draft} setDraft={setDraft} idPrefix="panel" />
-          <Button type="submit" size="sm" fullWidth className="mt-4">
+          <Button type="submit" size="sm" fullWidth className="mt-4" loading={pending}>
             Apply filters
           </Button>
+          {unlock && billable ? (
+            <p className="mt-2 text-caption text-text-tertiary">{FILTERED_SEARCH_HINT}</p>
+          ) : null}
         </form>
       </aside>
     </>

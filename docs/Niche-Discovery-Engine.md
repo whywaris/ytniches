@@ -329,7 +329,8 @@ Filters sit in a left panel on desktop and a bottom sheet on mobile. All of them
 
 ## 10. Credits and plans (D-072)
 
-- **Browsing** the Niches, Channels and Outliers feeds and the niche detail page costs **0 credits**, because it is served from our DB.
+- **Browsing** the default Niches, Channels and Outliers feeds and the niche detail page costs **0 credits**, because it is served from our DB. Sorting, paging and a niche-only filter are free too.
+- **Filtered search** (any other filter on a feed tab) costs **1 credit**, then re-running or paging it is free for 24h. It is charged on Apply (or on the gate card a locked filtered URL shows), never while a page renders.
 - **Live search** costs 1 credit (unchanged, D-065).
 - **Plan limits on browse depth:**
   - Starter and Trial see the **top 50 niches** by Opportunity Score, plus an upgrade prompt at the end of the list.
