@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import type { FeedTab } from "@/lib/discovery/feed-url";
-import type { UnlockFeedFilters } from "@/components/features/niche-finder/feed-filter-panel";
+import type { UnlockFeedFilters } from "@/components/features/niche-finder/filter-bar/filter-bar";
 
 // D-072: shown instead of results when a URL carries billable filters this
 // user hasn't paid for in the last 24h (a shared link, back button). Page

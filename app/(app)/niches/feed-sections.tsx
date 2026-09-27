@@ -9,25 +9,33 @@ import {
   channelFiltersToValues,
   nicheFiltersToValues,
   outlierFiltersToValues,
+  stripProChannelFilters,
   withPage,
+  type FeedTab,
 } from "@/lib/discovery/feed-url";
+import {
+  CHANNEL_FILTERS,
+  CHANNEL_PRESETS,
+  isProTier,
+  NICHE_FILTERS,
+  OUTLIER_FILTERS,
+  SORT_OPTIONS,
+  withNicheOptions,
+} from "@/lib/discovery/feed-filters";
 import {
   listFeedChannels,
   listGlobalOutliers,
   listNicheOptions,
   listNiches,
 } from "@/lib/services/niche-feed";
+import { isFilteredViewUnlocked } from "@/lib/services/feed-credits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  FeedFilterPanel,
-  type FilterField,
-} from "@/components/features/niche-finder/feed-filter-panel";
 import { FeedPagination } from "@/components/features/niche-finder/feed-pagination";
-import { OutlierCard } from "@/components/features/outliers/outlier-card";
+import { FilterBar } from "@/components/features/niche-finder/filter-bar/filter-bar";
 import { FilteredViewGate } from "@/components/features/niche-finder/filtered-view-gate";
-import { isFilteredViewUnlocked } from "@/lib/services/feed-credits";
+import { OutlierCard } from "@/components/features/outliers/outlier-card";
 import { unlockFeedFiltersAction } from "@/app/(app)/niches/actions";
 import { ChannelGrid } from "@/app/(app)/niches/channel-grid";
 import { NicheGrid } from "@/app/(app)/niches/niche-grid";
@@ -38,10 +46,11 @@ import type {
   OutlierFeedFilters,
 } from "@/lib/services/niche-feed";
 
-// Niche-Discovery-Engine.md §9. Server-rendered tab bodies: each reads only
-// our DB/cache (0 YouTube quota). D-072: default views are free; a view with
-// billable filters renders a gate until the user pays 1 credit for it (then
-// free for 24h). Rendering itself never charges.
+// Niche-Discovery-Engine.md §9, D-077. Server-rendered tab bodies: each
+// reads only our DB/cache (0 YouTube quota). The filter bar sits above
+// full-width results. D-072: default views, niche-only and the presets are
+// free; any other filter set shows a gate until the user pays 1 credit
+// (then free for 24h). Rendering itself never charges.
 
 function definedValues(values: Record<string, string | undefined>): Record<string, string> {
   return Object.fromEntries(
@@ -49,17 +58,11 @@ function definedValues(values: Record<string, string | undefined>): Record<strin
   );
 }
 
-function FeedLayout({
-  filters,
-  children,
-}: {
-  filters: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function FeedLayout({ bar, children }: { bar: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      {filters}
-      <div className="min-w-0 flex-1 space-y-4">{children}</div>
+    <div className="flex flex-col gap-4">
+      {bar}
+      <div className="min-w-0 space-y-4">{children}</div>
     </div>
   );
 }
@@ -77,12 +80,15 @@ function FeedEmpty({ icon, message }: { icon: React.ReactNode; message: string }
   );
 }
 
-const STATUS_OPTIONS = [
-  { value: "rising", label: "Rising" },
-  { value: "active", label: "Active" },
-  { value: "saturated", label: "Saturated" },
-  { value: "declining", label: "Declining" },
-];
+function Gate({ tab, values }: { tab: FeedTab; values: Record<string, string | undefined> }) {
+  return (
+    <FilteredViewGate tab={tab} values={definedValues(values)} unlock={unlockFeedFiltersAction} />
+  );
+}
+
+async function nicheOptions() {
+  return (await listNicheOptions()).map((n) => ({ value: n.slug, label: n.name }));
+}
 
 export async function NichesSection({
   ctx,
@@ -94,57 +100,31 @@ export async function NichesSection({
   const values = nicheFiltersToValues(filters);
   const unlocked = await isFilteredViewUnlocked(ctx, "niches", values);
   const page = unlocked ? await listNiches(ctx, filters) : null;
-  const fields: FilterField[] = [
-    { kind: "number", key: "minScore", label: "Min score", min: 0, max: 100 },
-    { kind: "number", key: "maxScore", label: "Max score", min: 0, max: 100 },
-    { kind: "select", key: "status", label: "Status", options: STATUS_OPTIONS },
-    {
-      kind: "select",
-      key: "sort",
-      label: "Sort by",
-      defaultValue: "score",
-      options: [
-        { value: "score", label: "Opportunity score" },
-        { value: "trend", label: "7-day trend" },
-        { value: "newest", label: "Newest niche" },
-      ],
-    },
-  ];
+  const bar = (
+    <FilterBar
+      key={JSON.stringify(values)}
+      tab="niches"
+      defs={NICHE_FILTERS}
+      values={values}
+      isPro={isProTier(ctx.tier)}
+      unlocked={unlocked}
+      unlock={unlockFeedFiltersAction}
+      sortOptions={SORT_OPTIONS.niches}
+      defaultSort="score"
+    />
+  );
+
   if (!page) {
     return (
-      <FeedLayout
-        filters={
-          <FeedFilterPanel
-            key={JSON.stringify(values)}
-            tab="niches"
-            fields={fields}
-            values={values}
-            unlock={unlockFeedFiltersAction}
-          />
-        }
-      >
-        <FilteredViewGate
-          tab="niches"
-          values={definedValues(values)}
-          unlock={unlockFeedFiltersAction}
-        />
+      <FeedLayout bar={bar}>
+        <Gate tab="niches" values={values} />
       </FeedLayout>
     );
   }
   const lastPage = page.page * page.pageSize >= page.total;
 
   return (
-    <FeedLayout
-      filters={
-        <FeedFilterPanel
-          key={JSON.stringify(values)}
-          tab="niches"
-          fields={fields}
-          values={values}
-          unlock={unlockFeedFiltersAction}
-        />
-      }
-    >
+    <FeedLayout bar={bar}>
       {page.items.length === 0 ? (
         <FeedEmpty
           icon={<Compass />}
@@ -180,95 +160,48 @@ export async function NichesSection({
   );
 }
 
-const LANGUAGE_OPTIONS = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "pt", label: "Portuguese" },
-  { value: "hi", label: "Hindi" },
-  { value: "ur", label: "Urdu" },
-  { value: "ar", label: "Arabic" },
-  { value: "de", label: "German" },
-  { value: "fr", label: "French" },
-  { value: "id", label: "Indonesian" },
-  { value: "ja", label: "Japanese" },
-];
-
 export async function ChannelsSection({
   ctx,
-  filters,
+  filters: requested,
 }: {
   ctx: RequestContext;
   filters: ChannelFeedFilters;
 }) {
+  const isPro = isProTier(ctx.tier);
+  // D-077: Pro filters are locked for Starter, on the server too.
+  const filters = isPro ? requested : stripProChannelFilters(requested);
   const values = channelFiltersToValues(filters);
   const unlocked = await isFilteredViewUnlocked(ctx, "channels", values);
-  const [page, nicheOptions] = await Promise.all([
+  const [page, niches] = await Promise.all([
     unlocked ? listFeedChannels(filters) : null,
-    listNicheOptions(),
+    nicheOptions(),
   ]);
-  const nicheSelect = nicheOptions.map((n) => ({ value: n.slug, label: n.name }));
-  const fields: FilterField[] = [
-    { kind: "select", key: "niche", label: "Niche", options: nicheSelect },
-    { kind: "date", key: "after", label: "Started after" },
-    { kind: "date", key: "before", label: "Started before" },
-    { kind: "number", key: "minSubs", label: "Min subscribers", min: 0 },
-    { kind: "number", key: "maxSubs", label: "Max subscribers", min: 0 },
-    { kind: "number", key: "minViews", label: "Min avg views", min: 0 },
-    { kind: "number", key: "maxViews", label: "Max avg views", min: 0 },
-    { kind: "number", key: "minOutlier", label: "Min outlier score", min: 0, step: 0.1 },
-    { kind: "toggle", key: "faceless", label: "Faceless only" },
-    { kind: "toggle", key: "noKids", label: "Exclude kids content" },
-    { kind: "toggle", key: "shorts", label: "Has Shorts" },
-    { kind: "toggle", key: "monetized", label: "Likely monetized (est.)" },
-    { kind: "select", key: "lang", label: "Language", options: LANGUAGE_OPTIONS },
-    {
-      kind: "select",
-      key: "sort",
-      label: "Sort by",
-      defaultValue: "outlier_score",
-      options: [
-        { value: "outlier_score", label: "Outlier score" },
-        { value: "avg_views", label: "Avg views" },
-        { value: "newest", label: "Newest channel" },
-        { value: "subscribers", label: "Subscribers" },
-      ],
-    },
-  ];
+  const bar = (
+    <FilterBar
+      key={JSON.stringify(values)}
+      tab="channels"
+      defs={withNicheOptions(CHANNEL_FILTERS, niches)}
+      values={values}
+      isPro={isPro}
+      unlocked={unlocked}
+      unlock={unlockFeedFiltersAction}
+      presets={CHANNEL_PRESETS}
+      sortOptions={SORT_OPTIONS.channels}
+      defaultSort="outlier_score"
+      searchKey="q"
+    />
+  );
 
   if (!page) {
     return (
-      <FeedLayout
-        filters={
-          <FeedFilterPanel
-            key={JSON.stringify(values)}
-            tab="channels"
-            fields={fields}
-            values={values}
-            unlock={unlockFeedFiltersAction}
-          />
-        }
-      >
-        <FilteredViewGate
-          tab="channels"
-          values={definedValues(values)}
-          unlock={unlockFeedFiltersAction}
-        />
+      <FeedLayout bar={bar}>
+        <Gate tab="channels" values={values} />
       </FeedLayout>
     );
   }
 
   return (
-    <FeedLayout
-      filters={
-        <FeedFilterPanel
-          key={JSON.stringify(values)}
-          tab="channels"
-          fields={fields}
-          values={values}
-          unlock={unlockFeedFiltersAction}
-        />
-      }
-    >
+    <FeedLayout bar={bar}>
       {page.items.length === 0 ? (
         <FeedEmpty icon={<Users />} message="No discovered channels match these filters yet." />
       ) : (
@@ -296,67 +229,34 @@ export async function OutliersSection({
 }) {
   const values = outlierFiltersToValues(filters);
   const unlocked = await isFilteredViewUnlocked(ctx, "outliers", values);
-  const [page, nicheOptions] = await Promise.all([
+  const [page, niches] = await Promise.all([
     unlocked ? listGlobalOutliers(filters) : null,
-    listNicheOptions(),
+    nicheOptions(),
   ]);
-  const fields: FilterField[] = [
-    {
-      kind: "select",
-      key: "niche",
-      label: "Niche",
-      options: nicheOptions.map((n) => ({ value: n.slug, label: n.name })),
-    },
-    { kind: "number", key: "minMultiple", label: "Min multiple (x)", min: 3, step: 0.5 },
-    {
-      kind: "select",
-      key: "within",
-      label: "Published within",
-      defaultValue: "30",
-      options: [
-        { value: "7", label: "7 days" },
-        { value: "30", label: "30 days" },
-        { value: "90", label: "90 days" },
-      ],
-    },
-  ];
+  const bar = (
+    <FilterBar
+      key={JSON.stringify(values)}
+      tab="outliers"
+      defs={withNicheOptions(OUTLIER_FILTERS, niches)}
+      values={values}
+      isPro={isProTier(ctx.tier)}
+      unlocked={unlocked}
+      unlock={unlockFeedFiltersAction}
+    />
+  );
 
   if (!page) {
     return (
-      <FeedLayout
-        filters={
-          <FeedFilterPanel
-            key={JSON.stringify(values)}
-            tab="outliers"
-            fields={fields}
-            values={values}
-            unlock={unlockFeedFiltersAction}
-          />
-        }
-      >
-        <FilteredViewGate
-          tab="outliers"
-          values={definedValues(values)}
-          unlock={unlockFeedFiltersAction}
-        />
+      <FeedLayout bar={bar}>
+        <Gate tab="outliers" values={values} />
       </FeedLayout>
     );
   }
 
   return (
-    <FeedLayout
-      filters={
-        <FeedFilterPanel
-          key={JSON.stringify(values)}
-          tab="outliers"
-          fields={fields}
-          values={values}
-          unlock={unlockFeedFiltersAction}
-        />
-      }
-    >
+    <FeedLayout bar={bar}>
       {page.items.length === 0 ? (
-        <FeedEmpty icon={<Flame />} message="No outliers match these filters yet." />
+        <FeedEmpty icon={<Flame />} message="No breakout videos match these filters yet." />
       ) : (
         <>
           <ul className="grid gap-3 xl:grid-cols-2">

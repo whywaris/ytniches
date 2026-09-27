@@ -28,9 +28,10 @@ function ChannelGrid({ channels }: { channels: FeedChannel[] }) {
   }
 
   return (
-    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    // D-077: a full-width list, one channel per row.
+    <ul className="flex flex-col gap-4">
       {channels.map((channel) => (
-        <li key={channel.id} className="flex">
+        <li key={channel.id}>
           <DiscoveryChannelCard
             channel={channel}
             onTrack={track}
