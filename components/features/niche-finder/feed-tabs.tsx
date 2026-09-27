@@ -10,10 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // each tab's content is server-rendered for the URL, so switching tabs is a
 // navigation, and only the active tab's content exists.
 
+// D-077: Channels first (the default); the whole-database outlier feed is
+// "Breakout videos", so it never shares a name with the sidebar's "Your
+// outliers" (tracked channels only).
 export const FEED_TAB_LABELS = {
-  niches: "Niches",
   channels: "Channels",
-  outliers: "Outliers",
+  niches: "Niches",
+  outliers: "Breakout videos",
   search: "Search",
 } as const;
 export type FeedTabValue = keyof typeof FEED_TAB_LABELS;

@@ -41,7 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Research",
     items: [
       { href: "/niches", label: "Niche Finder", icon: Search },
-      { href: "/outliers", label: "Outliers", icon: Flame },
+      { href: "/outliers", label: "Your outliers", icon: Flame },
       { href: "/tracking", label: "Competitor Tracking", icon: Radar, count: "trackedChannels" },
     ],
   },

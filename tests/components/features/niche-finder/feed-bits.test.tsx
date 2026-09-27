@@ -23,10 +23,11 @@ describe("FeedTabs", () => {
         <p>Channel feed</p>
       </FeedTabs>,
     );
+    // D-077: Channels first; "Breakout videos" never collides with "Your outliers".
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Niches",
       "Channels",
-      "Outliers",
+      "Niches",
+      "Breakout videos",
       "Search",
     ]);
     expect(screen.getByRole("tab", { name: "Channels" })).toHaveAttribute("aria-selected", "true");
