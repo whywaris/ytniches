@@ -858,6 +858,7 @@ Decisions that still need to close before their dependent docs / features can be
 ### D-072: Default discovery feeds are free; a filtered search costs 1 credit; Starter/Trial see the top 50 niches
 
 - **Status:** Resolved (2026-09-26). Revised 2026-09-27 (owner): filtered views are charged.
+- **Revised again 2026-09-28 (owner, D-077):** the three filter presets (New faceless, Small + breakout, Rising) are **free**, like the default feeds. Any other custom filter set still costs 1 credit.
 - **Final call:**
   - **Free:** the default Niches, Channels and Outliers feeds, `/niches/[slug]`, sorting, paging, and a niche-only filter (card badges and niche pages link to it, so it's navigation). None of these make YouTube calls.
   - **Filtered search, 1 credit** (`CREDIT_COSTS.filteredFeedSearch`): any other filter set on a feed tab (score, status, subs, views, dates, outlier score, toggles, language, min multiple, time window). Re-running or paging the same filters is free for 24h (`SEARCH_RESULTS_CACHE_HOURS`), the same deal as a live search (D-065). Same idempotency pattern too: the client sends a UUID per Apply, and `consume` ignores a repeat.
@@ -912,3 +913,35 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** YouTube resets the daily quota at midnight Pacific. Our counters rolled over at UTC midnight and the jobs were scheduled in PKT, so a "day" of our budget straddled two YouTube quota days.
 - **Final call:** quota counters are keyed by the `America/Los_Angeles` date. Discovery crons use Inngest's `TZ=America/Los_Angeles`: discovery 00:15 (right after the reset), classify 02:00, purge 03:00, snapshot 04:00; enrichment stays every 2h. The first day after deploy has a partial counter (the key changes); harmless.
 - **Impacts:** `lib/youtube/quota.ts`, `workers/discovery.ts`, TRD §4.2/§5.3, Niche-Discovery-Engine §6.
+
+### D-077: Niche Finder redesign: filter bar, channel cards, multi-niche channels
+
+- **Status:** Resolved (2026-09-28, owner)
+- **Context:** Mac's feedback said filters must not be a sidebar. The channel card also needed real, explainable signals.
+- **Final call:**
+  - **Filters:** a horizontal bar above full-width results.
+    - Basic chips: Niche, Subscribers, Avg views, Channel age, Language, Country, Content type.
+    - "+ More filters" (Pro): outlier score, faceless only, exclude kids, likely monetized (est.), exact date ranges. Starter sees these locked with an upgrade prompt, never hidden; the trial counts as Pro.
+    - Presets row, active-filter chips and a single "Show results · 1 credit / · free" button.
+    - Mobile: a "Filters" button opens a bottom sheet.
+    - Score on the Niches tab: 70+ Hot / 50–69 Good / Any.
+  - **Presets are free** (D-072 revised).
+  - **"Status" becomes "Trend":** Rising / Steady / Crowded / Cooling (from rising / active / saturated / declining), with a tooltip per rule.
+  - **Tabs:** Channels (default), Niches, Breakout videos, Search. The sidebar's Outliers becomes **"Your outliers"** (tracked channels only), so the two never share a name.
+  - **Channel card (full-width list row):**
+    - Subscribers; "Views on uploads from the last 30 days"; active since; total videos; typical views (median); language; content type; spotted.
+    - Top 3 videos with the shared 3× outlier badge.
+    - Insight chips from real data, each with a tooltip:
+      - Breakout: an upload at 3× baseline or more in the last 30 days.
+      - New channel: first upload within 12 months.
+      - Consistent uploads: at least one upload in each of the last 4 weeks.
+      - Engaged audience: median (likes + comments) ÷ views of at least 4%.
+      - Faceless (est.).
+    - No revenue, RPM or profitability claims.
+    - Niche tags (up to 3), views-vs-subs badge, Similar channels (niche filter, free), Analyze niche, Track, Generate prompts.
+    - No bookmark: Track is the save action.
+  - **Schema:**
+    - `channel_niches` holds up to 3 niches per channel. Tags and filtering use all of them; niche **scores** count the primary only (`channels.niche_id` still mirrors it).
+    - `channels.median_views_recent`, `content_type` and `views_last_30d`, computed at enrichment.
+    - `channel_view_snapshots`: a daily total-views reading kept 30 days back, inside the YouTube limit. The card switches to a true "Views (30 days)" once a reading from 28–30 days ago exists. The purge expires the readings.
+  - **New primitives:** Popover, Tooltip, Sheet (Design-System.md §5.14–5.16).

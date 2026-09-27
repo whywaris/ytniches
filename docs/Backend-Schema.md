@@ -202,12 +202,16 @@ Cached YouTube video data. Shared across users.
 
 The full DDL is in `Niche-Discovery-Engine.md` §5.3.
 
-| Table             | Purpose                                                                                                                    | RLS                               |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `discovery_seeds` | Keywords the crawler searches (`manual` / `user_search` / `expansion`)                                                     | Service-role only (zero policies) |
-| `niches`          | AI niche clusters. `embedding vector(1536)` (pgvector); `status` is one of `active` / `rising` / `saturated` / `declining` | `anyone_read_niches`              |
-| `niche_snapshots` | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)`                                           | `anyone_read_niche_snapshots`     |
-| `outliers_feed`   | Global outlier feed: one row per video ≥ 3×                                                                                | `anyone_read_outliers_feed`       |
+| Table                    | Purpose                                                                                                                                                                                   | RLS                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `discovery_seeds`        | Keywords the crawler searches (`manual` / `user_search` / `expansion`)                                                                                                                    | Service-role only (zero policies)    |
+| `niches`                 | AI niche clusters. `embedding vector(1536)` (pgvector); `status` is one of `active` / `rising` / `saturated` / `declining`                                                                | `anyone_read_niches`                 |
+| `niche_snapshots`        | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)`                                                                                                          | `anyone_read_niche_snapshots`        |
+| `outliers_feed`          | Global outlier feed: one row per video ≥ 3×                                                                                                                                               | `anyone_read_outliers_feed`          |
+| `channel_niches`         | D-077: up to 3 niches per channel (`confidence`, `is_primary`; one primary per channel). Tags + filtering; niche **scores** count the primary only, still mirrored in `channels.niche_id` | `anyone_read_channel_niches`         |
+| `channel_view_snapshots` | D-077: one `total_view_count` reading per channel per day it's refreshed, PK `(channel_id, snapshot_date)`, kept 30 days back (purge) for a true 30-day views difference                  | `anyone_read_channel_view_snapshots` |
+
+`channels` also gains (D-077, computed at enrichment from the kept recent uploads): `median_views_recent`, `content_type` (`long` / `shorts` / `mixed`: Shorts are ≤ 180 s; ≥ 80% Shorts = `shorts`, ≤ 20% = `long`), and `views_last_30d` (views on uploads from the last 30 days). The purge empties all three with the rest of a stale channel's YouTube fields.
 
 ### 3.3 video\_transcripts\_cache (unused since D-067, emptied)
 

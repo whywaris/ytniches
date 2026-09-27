@@ -130,6 +130,71 @@ export type Database = {
           },
         ];
       };
+      channel_niches: {
+        Row: {
+          channel_id: string;
+          confidence: number;
+          created_at: string;
+          is_primary: boolean;
+          niche_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          confidence: number;
+          created_at?: string;
+          is_primary?: boolean;
+          niche_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          confidence?: number;
+          created_at?: string;
+          is_primary?: boolean;
+          niche_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_niches_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "channel_niches_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      channel_view_snapshots: {
+        Row: {
+          channel_id: string;
+          snapshot_date: string;
+          total_view_count: number;
+        };
+        Insert: {
+          channel_id: string;
+          snapshot_date: string;
+          total_view_count: number;
+        };
+        Update: {
+          channel_id?: string;
+          snapshot_date?: string;
+          total_view_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_view_snapshots_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       channels: {
         Row: {
           avatar_url: string | null;
@@ -137,6 +202,9 @@ export type Database = {
           banner_url: string | null;
           classification_confidence: number | null;
           classified_at: string | null;
+          content_type: string | null;
+          median_views_recent: number | null;
+          views_last_30d: number | null;
           country: string | null;
           created_at: string;
           description: string | null;
@@ -172,6 +240,9 @@ export type Database = {
           banner_url?: string | null;
           classification_confidence?: number | null;
           classified_at?: string | null;
+          content_type?: string | null;
+          median_views_recent?: number | null;
+          views_last_30d?: number | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
@@ -207,6 +278,9 @@ export type Database = {
           banner_url?: string | null;
           classification_confidence?: number | null;
           classified_at?: string | null;
+          content_type?: string | null;
+          median_views_recent?: number | null;
+          views_last_30d?: number | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
@@ -1417,7 +1491,7 @@ export type Database = {
         Returns: boolean;
       };
       purge_stale_youtube_data: {
-        Args: { p_max_age_days: number; p_snapshot_days?: number };
+        Args: { p_max_age_days: number; p_snapshot_days?: number; p_view_snapshot_days?: number };
         Returns: {
           channels_deleted: number;
           channels_emptied: number;
@@ -1427,6 +1501,7 @@ export type Database = {
           snapshots_deleted: number;
           videos_deleted: number;
           videos_emptied: number;
+          view_snapshots_deleted: number;
         }[];
       };
       touch_last_active: { Args: never; Returns: undefined };

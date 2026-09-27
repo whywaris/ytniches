@@ -2,7 +2,7 @@ import { captureException } from "@sentry/nextjs";
 
 import { inngest } from "@/lib/inngest/client";
 import { createServiceClient } from "@/lib/supabase/service";
-import { SNAPSHOT_DAILY_RETENTION_DAYS } from "@/lib/discovery/config";
+import { CHANNEL_VIEW_SNAPSHOT_DAYS, SNAPSHOT_DAILY_RETENTION_DAYS } from "@/lib/discovery/config";
 import { YOUTUBE_DATA_MAX_AGE_DAYS, YOUTUBE_RETENTION_EVENT } from "@/lib/youtube/retention";
 
 // D-067b / YouTube Developer Policies III.E.4.d: daily purge of YouTube
@@ -36,6 +36,7 @@ export async function purgeStaleYouTubeData() {
   const { data, error } = await createServiceClient().rpc("purge_stale_youtube_data", {
     p_max_age_days: YOUTUBE_DATA_MAX_AGE_DAYS,
     p_snapshot_days: SNAPSHOT_DAILY_RETENTION_DAYS,
+    p_view_snapshot_days: CHANNEL_VIEW_SNAPSHOT_DAYS,
   });
   if (error) {
     const pgCode = error.code || null;

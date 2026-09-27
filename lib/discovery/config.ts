@@ -91,6 +91,11 @@ export function isValidNicheSlug(slug: string): boolean {
 // daily before the purge rolls them up to weekly.
 export const SNAPSHOT_DAILY_RETENTION_DAYS = 90;
 
+// D-077: per-channel total-views readings (channel_view_snapshots). Kept
+// this many days back from today (so today + 30 dated rows), inside the
+// 30-day YouTube data limit; enough for a true 30-day views difference.
+export const CHANNEL_VIEW_SNAPSHOT_DAYS = 30;
+
 // --- Browse (D-072) --------------------------------------------------------
 export const CAPPED_PLAN_NICHE_LIMIT = 50;
 export const FEED_PAGE_SIZE = 24;

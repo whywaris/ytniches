@@ -29,6 +29,7 @@ describe("purgeStaleYouTubeData", () => {
     expect(rpc).toHaveBeenCalledWith("purge_stale_youtube_data", {
       p_max_age_days: 30,
       p_snapshot_days: 90,
+      p_view_snapshot_days: 30,
     });
   });
 
