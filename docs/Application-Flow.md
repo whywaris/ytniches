@@ -211,8 +211,8 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> idle
   idle --> analyzing: submit video
-  analyzing --> generating: metadata + transcript loaded
-  analyzing --> unsupported: no transcript or private
+  analyzing --> generating: metadata loaded
+  analyzing --> unsupported: private or deleted
   generating --> results: generation complete
   generating --> failed: generation error, credit refunded
   generating --> insufficient_credits: mid-flow rare check

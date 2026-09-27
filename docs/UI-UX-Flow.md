@@ -531,7 +531,6 @@ Turn a winning video into ready-to-use prompts. URL: `/prompts`.
 - Header: "Analyzing \[video title\]…"
 - Progress items (checked one at a time as the pipeline completes):
   - [ ] Fetching video metadata
-  - [ ] Reading transcript
   - [ ] Analyzing title pattern
   - [ ] Analyzing thumbnail style
   - [ ] Generating variants

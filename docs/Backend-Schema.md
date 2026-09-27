@@ -194,7 +194,7 @@ Cached YouTube video data. Shared across users.
 | `last_synced_at`    | `timestamptz`          |                       |
 | `unavailable_since` | `timestamptz` nullable |                       |
 
-### 3.3 video\_transcripts\_cache
+### 3.3 video\_transcripts\_cache (unused since D-067, emptied)
 
 Separate table because transcripts are large and only fetched on demand (for AI Prompts generation).
 
@@ -515,16 +515,17 @@ Essential indexes for MVP:
 
 Background job (nightly) enforces:
 
-| Data                               | Retention                  | Action after                                                                                    |
-| ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| Soft-deleted user accounts         | 30 days                    | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
-| Soft-deleted prompts / notes       | 30 days                    | Hard-delete                                                                                     |
-| `auth_events`                      | 90 days                    | Delete                                                                                          |
-| `tracked_events`                   | 365 days                   | Delete (aggregates preserved in a monthly rollup)                                               |
-| `notifications` (read + dismissed) | 90 days                    | Delete                                                                                          |
-| Failed webhook events              | 30 days                    | Delete after review                                                                             |
-| `video_transcripts_cache`          | 180 days since last access | Delete (re-fetchable)                                                                           |
+| Data                                | Retention               | Action after                                                                                    |
+| ----------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
+| Soft-deleted user accounts          | 30 days                 | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
+| Soft-deleted prompts / notes        | 30 days                 | Hard-delete                                                                                     |
+| `auth_events`                       | 90 days                 | Delete                                                                                          |
+| `tracked_events`                    | 30 days                 | Delete (YouTube Developer Policies III.E.4.d, D-067)                                            |
+| `channels` / `videos` not refreshed | 30 days since last sync | Delete; empty the YouTube fields if a prompt or tracker still references it (D-067)             |
+| `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                         |
+| Failed webhook events               | 30 days                 | Delete after review                                                                             |
+| `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                      |
 
-**GDPR data export:** endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
+**GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 
 **GDPR data deletion:** `/api/user/delete` soft-deletes account; hard-delete after 30 days per retention above.

@@ -211,23 +211,24 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 
 ### 4.2 Job catalog
 
-| Job                        | Trigger            | Cadence                     | What it does                                                                 |
-| -------------------------- | ------------------ | --------------------------- | ---------------------------------------------------------------------------- |
-| `channel.sync`             | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events                 |
-| `outlier.scan`             | Scheduled          | Daily (Phase 2)             | Recompute baselines, flag outliers on all tracked channels                   |
-| `digest.email`             | Scheduled          | Daily 8am user local        | Send email digest to users with digest enabled                               |
-| `credit.expire`            | Scheduled          | Nightly                     | Expire unused credits per allocation rollover rules                          |
-| `retention.enforce`        | Scheduled          | Nightly                     | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4) |
-| `webhook.retry`            | Event-driven       | On webhook failure          | Exponential backoff retry (max 3), then manual queue                         |
-| `prompt.generate`          | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
-| `youtube.transcript.fetch` | Event-driven       | On demand                   | Cache transcript on first prompt generation for a video                      |
+| Job                            | Trigger            | Cadence                     | What it does                                                                 |
+| ------------------------------ | ------------------ | --------------------------- | ---------------------------------------------------------------------------- |
+| `channel.sync`                 | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events                 |
+| `outlier.scan`                 | Scheduled          | Daily (Phase 2)             | Recompute baselines, flag outliers on all tracked channels                   |
+| `digest.email`                 | Scheduled          | Daily 8am user local        | Send email digest to users with digest enabled                               |
+| `credit.expire`                | Scheduled          | Nightly                     | Expire unused credits per allocation rollover rules                          |
+| `retention.enforce`            | Scheduled          | Nightly                     | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4) |
+| `webhook.retry`                | Event-driven       | On webhook failure          | Exponential backoff retry (max 3), then manual queue                         |
+| `prompt.generate`              | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
+| ~~`youtube.transcript.fetch`~~ | Removed (D-067)    | —                           | No transcripts: YouTube Developer Policies forbid the unofficial endpoint    |
+| `youtube-retention-cron`       | Daily              | 03:15 UTC                   | Purge YouTube data not refreshed in 30 days (III.E.4.d, D-067)               |
 
 ### 4.3 Job execution guarantees
 
 - **At-least-once delivery** — all handlers must be idempotent (see §3.4)
 - **Deduplication** — events with same key within a window collapse to one job
 - **Retries** — 3 attempts with exponential backoff; failures land in dead-letter queue (visible in admin)
-- **Timeouts** — 30s soft, 60s hard; long jobs (transcript fetch) explicitly opt into extended timeout
+- **Timeouts** — 30s soft, 60s hard; long jobs explicitly opt into extended timeout
 
 ### 4.4 Scheduling model
 
@@ -258,7 +259,7 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 youtube:channel:{youtube_channel_id}              # TTL 6h (stats + metadata)
 youtube:channel:{youtube_channel_id}:videos       # TTL 6h (recent video list)
 youtube:video:{youtube_video_id}                  # TTL 12h (video metadata)
-youtube:transcript:{youtube_video_id}             # TTL 180d (rare change)
+# (youtube:transcript:* removed, D-067; no YouTube data cached > 24h)
 
 ratelimit:signup:{ip}                             # 5/hour window
 ratelimit:login:{ip}                              # 5/15min window
@@ -312,7 +313,7 @@ Every integration goes through a wrapper module in `lib/` so provider swaps are 
 - Auth: API key (server-side only, never exposed to client)
 - Quota tracking + rate limiting per §5.3
 - Endpoints used: `channels.list`, `videos.list`, `search.list`, `commentThreads.list` (Phase 2 for insights)
-- Transcript fetching: YouTube auto-captions where available, Whisper fallback (Phase 2, on demand)
+- Transcript fetching: removed (D-067). YouTube's policies forbid the unofficial captions endpoint, and the official one needs the video owner's consent.
 
 ### 6.2 AI provider
 

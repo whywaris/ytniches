@@ -38,11 +38,11 @@ That "left at the front door" moment is YTNiches' entire reason to exist.
 
 **Named competitors and where they stop:**
 
-| Competitor | Focus | What they don't do |
-| --- | --- | --- |
-| Nexlev | Niche finding + outliers | No AI prompts, no content calendar, no team workspace |
-| OutlierKit | Outlier detection | No niche research beyond outliers, no execution layer |
-| TubeLab | Niche finding + competitor data | No AI prompts, no content planning |
+| Competitor | Focus                           | What they don't do                                    |
+| ---------- | ------------------------------- | ----------------------------------------------------- |
+| Nexlev     | Niche finding + outliers        | No AI prompts, no content calendar, no team workspace |
+| OutlierKit | Outlier detection               | No niche research beyond outliers, no execution layer |
+| TubeLab    | Niche finding + competitor data | No AI prompts, no content planning                    |
 
 All three focus on **niche finding and outliers**. None extends into what the founder story identifies as the real pain — competitor spying, prompt generation, content calendar, team collaboration.
 
@@ -78,12 +78,12 @@ Steps 1–2 are what competitors cover. Steps 3–7 are YTNiches' moat.
 
 **Sub-personas:**
 
-| Persona | Situation | What they need most |
-| --- | --- | --- |
-| **The Explorer** | New to YouTube, no channel yet, trying to pick a niche | Niche Finder + confidence that the niche has real demand |
-| **The Stuck** | Has a channel + niche, growth is flat, doesn't know why | Outlier Finder + Competitor Spy + AI Prompts |
-| **The Grower** | Channel is growing, needs to systematize output | Content Calendar + AI Prompts |
-| **The Operator** | Runs multiple channels or manages a small team | Workspace + Tasks + Calendar |
+| Persona          | Situation                                               | What they need most                                      |
+| ---------------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| **The Explorer** | New to YouTube, no channel yet, trying to pick a niche  | Niche Finder + confidence that the niche has real demand |
+| **The Stuck**    | Has a channel + niche, growth is flat, doesn't know why | Outlier Finder + Competitor Spy + AI Prompts             |
+| **The Grower**   | Channel is growing, needs to systematize output         | Content Calendar + AI Prompts                            |
+| **The Operator** | Runs multiple channels or manages a small team          | Workspace + Tasks + Calendar                             |
 
 **Jobs to Be Done:**
 
@@ -120,15 +120,15 @@ flowchart LR
 
 **Feature mapping:**
 
-| Step | User action | Feature that covers it |
-| --- | --- | --- |
-| 1. Search | Set criteria — keyword, sub range, upload frequency, language, country | Niche Finder |
-| 2. Discover | Browse matching channels with preview stats | Niche Finder results view |
-| 3. Track | Save channels to a watchlist | Competitor Tracking |
-| 4. Monitor | See new videos, view spikes, cadence changes on tracked channels | Competitor Tracking dashboard + Notifications |
-| 5. Extract | Detect outliers, generate AI prompts from winning videos | Outlier Finder + AI Prompts |
-| 6. Plan | Turn extracted ideas into a 30–90 day schedule | Content Calendar |
-| 7. Execute | Assign tasks, collaborate, ship | Workspace + Tasks |
+| Step        | User action                                                            | Feature that covers it                        |
+| ----------- | ---------------------------------------------------------------------- | --------------------------------------------- |
+| 1. Search   | Set criteria — keyword, sub range, upload frequency, language, country | Niche Finder                                  |
+| 2. Discover | Browse matching channels with preview stats                            | Niche Finder results view                     |
+| 3. Track    | Save channels to a watchlist                                           | Competitor Tracking                           |
+| 4. Monitor  | See new videos, view spikes, cadence changes on tracked channels       | Competitor Tracking dashboard + Notifications |
+| 5. Extract  | Detect outliers, generate AI prompts from winning videos               | Outlier Finder + AI Prompts                   |
+| 6. Plan     | Turn extracted ideas into a 30–90 day schedule                         | Content Calendar                              |
+| 7. Execute  | Assign tasks, collaborate, ship                                        | Workspace + Tasks                             |
 
 **Key insight:** The loop is not one-way. Users can enter at any step and cycle back. A creator with an existing channel might skip step 1–2 and start at step 3 (track known competitors). A researcher exploring adjacent niches might loop back from step 5 to step 1. The UI should not force a linear path.
 
@@ -234,8 +234,8 @@ Phase 1 covers steps 1–4 of the product loop plus partial step 5 (prompt extra
 
 **System behavior:**
 
-- Fetch video metadata: title, description, thumbnail, tags, transcript (when available)
-- Analyze: title pattern, thumbnail style, hook structure (first 30 seconds of transcript), script structure
+- Fetch video metadata: title, description, thumbnail, tags. No transcripts (D-067: the only way to get them for others' videos is an undocumented endpoint YouTube's policies forbid)
+- Analyze: title pattern, thumbnail style, hook structure and script structure, inferred from the metadata above
 - Generate prompts across five categories
 
 **Generated prompt categories:**
@@ -300,7 +300,7 @@ Phase 2 adds features that drive weekly return visits. Once users are hooked on 
 - Per-channel outlier list
 - One-click "extract prompts from this outlier" → routes to AI Prompts
 
-**Views:** Feed (chronological), Grid (top-scoring past 30/60/90 days), Trending (outliers gaining momentum right now).
+**Views:** Feed (chronological), Grid (top-scoring past 7/14/30 days; capped by the 30-day YouTube data limit, D-067), Trending (outliers gaining momentum right now).
 
 ---
 
@@ -583,16 +583,16 @@ Features explicitly deferred so scope stays honest and the MVP ships on time.
 
 Decisions that must resolve before build starts on affected features. Cross-referenced in DECISIONS.md (to be created).
 
-| Decision | Options | Impacts | Priority |
-| --- | --- | --- | --- |
-| Billing provider | Lemon Squeezy | Backend integration, tax handling, checkout UX | Blocks Monetization spec |
-| Pricing tiers | Free / Starter / Pro / Team (structure TBD) | Landing pricing section, credit system, feature gating | Blocks Monetization + Landing |
-| Credit costs per action | Niche search, prompt gen, competitor add — credits per unit | Backend, UI credit displays, pricing pages | Blocks Monetization |
-| Refresh cadence per tier | Free = X, Starter = Y, Pro = Z (hours or days) | YouTube API cost model, backend jobs, feature gating | Blocks Backend-Schema + TRD |
-| Free tools access | Gated (require signup) / Open (no signup) | SEO strategy, funnel conversion | Blocks marketing site build |
-| OAuth as primary | Google-only / Google + email+password | Onboarding UX, backend auth spec | Blocks Onboarding spec |
-| Admin module 6 | Support / Broadcast / Announcements / Feature flags / other | Admin panel spec | Blocks admin build |
-| Blog author scope | Solo (Mac only, day 1) / Multi-contributor from launch | Blog schema, content workflow | Blocks Blog spec |
+| Decision                 | Options                                                     | Impacts                                                | Priority                      |
+| ------------------------ | ----------------------------------------------------------- | ------------------------------------------------------ | ----------------------------- |
+| Billing provider         | Lemon Squeezy                                               | Backend integration, tax handling, checkout UX         | Blocks Monetization spec      |
+| Pricing tiers            | Free / Starter / Pro / Team (structure TBD)                 | Landing pricing section, credit system, feature gating | Blocks Monetization + Landing |
+| Credit costs per action  | Niche search, prompt gen, competitor add — credits per unit | Backend, UI credit displays, pricing pages             | Blocks Monetization           |
+| Refresh cadence per tier | Free = X, Starter = Y, Pro = Z (hours or days)              | YouTube API cost model, backend jobs, feature gating   | Blocks Backend-Schema + TRD   |
+| Free tools access        | Gated (require signup) / Open (no signup)                   | SEO strategy, funnel conversion                        | Blocks marketing site build   |
+| OAuth as primary         | Google-only / Google + email+password                       | Onboarding UX, backend auth spec                       | Blocks Onboarding spec        |
+| Admin module 6           | Support / Broadcast / Announcements / Feature flags / other | Admin panel spec                                       | Blocks admin build            |
+| Blog author scope        | Solo (Mac only, day 1) / Multi-contributor from launch      | Blog schema, content workflow                          | Blocks Blog spec              |
 
 **Decisions locked so far (out of open list):**
 
@@ -624,23 +624,23 @@ Decisions that must resolve before build starts on affected features. Cross-refe
 
 **Related docs (to be created):**
 
-| Doc | Purpose | Depends on |
-| --- | --- | --- |
-| DECISIONS.md | Log of every open decision + resolution | This PRD |
-| Monetization.md | Pricing tiers, credits system, billing spec | DECISIONS (pricing + billing) |
-| Design-System.md | Colors, typography, components, dark mode tokens | This PRD |
-| UI-UX-Flow.md | Screen-by-screen user flows for each feature | PRD + Design-System |
-| Application-Flow.md | State transitions, routing, auth flow | UI-UX-Flow |
-| Backend-Schema.md | DB tables, relationships, indexes, RLS policies | PRD + Monetization |
-| TRD.md | APIs, jobs, caching, integrations, rate limits | Backend-Schema |
-| Security.md | Auth, RLS, PII, API keys, rate limiting, admin access | TRD |
-| Landing-Page-Spec.md | Full landing spec (sections, behavior, breakpoints) | PRD + Landing-Copy |
-| Landing-Copy.md | Every headline, subhead, body line, CTA | Founder voice discovery complete |
-| Illustration-Brief.md | Style guide + list of illustrations needed | Landing-Copy |
-| Interaction-Spec.md | Drag, hover, toggle animations with references | Landing-Page-Spec |
-| Hero-Video-Script.md | 60–90 second video script + storyboard | Landing-Copy |
-| Implementation-Plan.md | Phased build order + checkpoints | All specs |
-| CLAUDE.md | Meta-file for AI assistants working in the repo | Everything above |
+| Doc                    | Purpose                                               | Depends on                       |
+| ---------------------- | ----------------------------------------------------- | -------------------------------- |
+| DECISIONS.md           | Log of every open decision + resolution               | This PRD                         |
+| Monetization.md        | Pricing tiers, credits system, billing spec           | DECISIONS (pricing + billing)    |
+| Design-System.md       | Colors, typography, components, dark mode tokens      | This PRD                         |
+| UI-UX-Flow.md          | Screen-by-screen user flows for each feature          | PRD + Design-System              |
+| Application-Flow.md    | State transitions, routing, auth flow                 | UI-UX-Flow                       |
+| Backend-Schema.md      | DB tables, relationships, indexes, RLS policies       | PRD + Monetization               |
+| TRD.md                 | APIs, jobs, caching, integrations, rate limits        | Backend-Schema                   |
+| Security.md            | Auth, RLS, PII, API keys, rate limiting, admin access | TRD                              |
+| Landing-Page-Spec.md   | Full landing spec (sections, behavior, breakpoints)   | PRD + Landing-Copy               |
+| Landing-Copy.md        | Every headline, subhead, body line, CTA               | Founder voice discovery complete |
+| Illustration-Brief.md  | Style guide + list of illustrations needed            | Landing-Copy                     |
+| Interaction-Spec.md    | Drag, hover, toggle animations with references        | Landing-Page-Spec                |
+| Hero-Video-Script.md   | 60–90 second video script + storyboard                | Landing-Copy                     |
+| Implementation-Plan.md | Phased build order + checkpoints                      | All specs                        |
+| CLAUDE.md              | Meta-file for AI assistants working in the repo       | Everything above                 |
 
 **Handoff:**
 
