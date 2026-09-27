@@ -2,6 +2,7 @@ import { getAuthors, getPublishedPosts, getTags } from "@/lib/blog";
 import { CATEGORIES } from "@/lib/blog/categories";
 import { COMPETITOR_PAGES } from "@/content/vs";
 import { getHelpArticles } from "@/lib/help";
+import { getLegalPages } from "@/lib/legal";
 import { TOOLS } from "@/lib/tools/registry";
 import { SITE_URL } from "@/lib/site";
 
@@ -23,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry("/pricing"),
     entry("/tools"),
     ...TOOLS.map((tool) => entry(`/${tool.slug}`)),
+    ...getLegalPages().map((page) => entry(`/legal/${page.slug}`, page.lastUpdated)),
     entry("/help"),
     ...getHelpArticles().map((article) => entry(`/help/${article.slug}`)),
     ...COMPETITOR_PAGES.map((page) => entry(`/vs/${page.id}`, page.checkedOn)),

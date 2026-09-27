@@ -696,7 +696,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-058: Pre-launch blocker — legal pages missing
 
-- **Status:** Open. **Blocks launch.**
+- **Status:** Resolved (2026-09-27) by D-067f: `/legal/terms`, `/legal/privacy`, `/legal/refunds` and `/legal/cookies` are live, in the sitemap and linked from the footer. Still open before launch: the visible [NEEDS MAC INPUT] markers (business address, courts city), listed by `tests/content/legal.test.ts`. Legal review is still recommended. Originally blocked launch.
 - **Finding:** There are no Terms, Privacy or Refunds pages (`/legal/terms`, `/privacy`, `/refunds`; the footer shows them as "Soon"). We take payments, so they're legally required, and Creem will likely expect them. Until then the help center's Refunds article is the only public statement of the refund policy (Monetization.md §6.2).
 - **Needed:** proper drafts, ideally written or at least reviewed by a lawyer.
 
@@ -784,7 +784,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-067: YouTube API Services compliance before launch
 
-- **Status:** In progress (logged 2026-09-27)
+- **Status:** Resolved (2026-09-27). All six parts shipped. In-app export/deletion is deferred (below).
 - **Context:** Payment providers and a Google API audit both need a compliant product plus legal pages (D-058). Checked against [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies). We only hold Non-Authorized Data: sign-in is openid/email/profile, and all YouTube data is public, fetched with our API key.
 - **Parts:**
   - a. Stop fetching transcripts. The timedtext endpoint breaks III.D.7, III.E.6 and III.I.14. Prompts now use title, description and tags only, and `video_transcripts_cache` is emptied. **Done.**
@@ -795,8 +795,8 @@ Decisions that still need to close before their dependent docs / features can be
     - Tracked, syncing channels stay fresh and are untouched.
     - The Outliers Grid ranges become 7/14/30 days.
     - **Effect on D-057:** an expired user's channels stop syncing, so their YouTube data stays viewable only until this purge empties it, 30 days after their last sync.
-  - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2).
-  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a).
-  - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner.
-  - f. Legal pages: terms, privacy, refunds, cookies (D-058).
+  - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2). **Done** (login and signup).
+  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a). **Done:** it's in the app shell, plus the six free tools that show YouTube data. **Open risk:** it's a text link. III.F.2.a says "displaying YouTube Brand Features", which may mean the official YouTube logo. If a reviewer asks for it, swap in the official asset under YouTube's branding guidelines. We have no logo files yet.
+  - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner. **Done** (checked in the browser).
+  - f. Legal pages: terms, privacy, refunds, cookies (D-058). **Done.** Numbers come from constants via `<Fact>`, and no payment provider is named. Every processor is named in the privacy policy. Business facts live in `lib/legal/policy.ts`: sole proprietor, Pakistan law, minimum age 16, liability cap of 12 months' fees, 30 days for data requests.
 - **Deferred:** in-app data export and account deletion buttons (`/settings/danger`, UI-UX-Flow.md §8.1.6). Until then, requests go by email and are done within 30 days.

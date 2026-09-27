@@ -1,0 +1,133 @@
+---
+title: Privacy Policy
+slug: privacy
+description: What data YTNiches collects, why, who we share it with, and your choices.
+order: 2
+lastUpdated: 2026-09-27
+---
+
+This policy explains what personal data YTNiches collects, how we use it, and the choices you have. We keep it in plain language. If something isn't clear, email <SupportLink />.
+
+## Who's responsible
+
+<Fact k="legal.entity" /> runs YTNiches and is responsible for your data (the "controller" under the
+GDPR and UK GDPR). Address: <NeedsInput>business address, or confirm none is published</NeedsInput>.
+Contact: <SupportLink />.
+
+## The short version
+
+- You sign in with Google. We get your name, email and profile picture, and nothing from your YouTube account.
+- The YouTube data we show is public data about channels and videos. We keep it for <Fact k="youtube.maxAgeDays" unit="day" /> at most.
+- We never see your card details. Our payment processor handles payments.
+- We don't sell your data, and we don't use advertising cookies.
+- You can ask us to export or delete your data at any time.
+
+## What we collect
+
+**When you sign in with Google:** your name, email address and profile picture. We don't ask for access to your YouTube account, your Google Drive, or anything else.
+
+**Your profile:** your time zone (read from your browser the first time you open the app, or chosen in Settings), your onboarding answers, your theme, and, if you add one, your own YouTube channel.
+
+**What you do in YTNiches:** the channels you track, notification settings and quiet hours, the prompts and thumbnail ideas you generate (including the audience, tone and feedback you enter), workspace membership and invitations (the email addresses you invite), tasks and calendar entries, your credit history, and in-app notifications.
+
+**Billing:** your plan, its status and dates, and the IDs our payment processor uses for your subscription. We also keep the billing notifications the processor sends us, which include your name and email. We never receive or store your card or bank details.
+
+**Usage and device data:**
+
+- **Product analytics (PostHog):** pages you view, clicks, and events like "ran a first search", linked to your account once you've signed in. It runs without cookies (see the [Cookie Policy](/legal/cookies)).
+- **Error reports (Sentry):** when something breaks, a report of the error, your browser and the page. We turn off Sentry's collection of personal data, and we strip secrets before sending.
+- **IP address:** used briefly to rate-limit the free tools, the newsletter form and searches, then discarded.
+
+**Email:** if you subscribe to our newsletter, your email address. Transactional emails (invites, digests, notifications) go to your account email.
+
+## YouTube API Services
+
+YTNiches uses **YouTube API Services** to show data about YouTube channels and videos. By using YTNiches you agree to the [YouTube Terms of Service](https://www.youtube.com/t/terms), and Google's handling of that data is covered by the [Google Privacy Policy](http://www.google.com/policies/privacy).
+
+- **What we access:** public channel and video data. That means names, descriptions, thumbnails, tags, publish dates, and view, subscriber and video counts. We fetch it with our own API key, not through your YouTube account.
+- **What we store:** the channels and videos you search for or track, and the events we detect for them (new videos, view milestones, outliers).
+- **How we use it:** to run Niche Finder, Competitor Tracking, Outliers and AI Prompts for you. When you generate prompts, a video's title, description and tags are sent to our AI provider (see below).
+- **Sharing:** we don't sell YouTube data or share it with anyone beyond the service providers listed below.
+- **How long:** we refresh or delete stored YouTube data within <Fact k="youtube.maxAgeDays" unit="day" />. Channels you track are refreshed on a schedule. Everything else is deleted, or emptied if one of your saved prompts still points at it.
+- **Revoking access:** you can remove YTNiches' access to your Google account at any time from [Google's security settings](https://security.google.com/settings/security/permissions). When you do, you'll be signed out and can ask us to delete your data.
+
+## How we use your data, and why
+
+Each use has a legal basis under the GDPR and UK GDPR:
+
+- **Running your account and the features you use:** to perform our contract with you.
+- **Taking payments and keeping billing records:** our contract, and our legal obligations for tax and accounting.
+- **Sending digests and notifications you turned on:** our contract. You can turn them off at any time.
+- **Sending the newsletter:** your consent. Unsubscribe at any time.
+- **Measuring how the product is used, and fixing errors:** our legitimate interest in a working, improving product.
+- **Preventing abuse (rate limits, fraud checks):** our legitimate interest in keeping the service safe.
+
+We don't sell your personal data, we don't use it for advertising, and we don't make decisions about you based solely on automated processing.
+
+## AI processing
+
+AI Prompts and Thumbnail ideas are generated by **OpenAI**. For each request we send the video's title, description and tags, plus what you entered: target audience, tone and feedback. We don't send your name or email. Under OpenAI's API terms, it doesn't use this data to train its models by default.
+
+## Who we share data with
+
+We use these providers to run YTNiches. Each processes data only to provide its service to us.
+
+- **[Google](http://www.google.com/policies/privacy):** sign-in, and YouTube API Services.
+- **[Vercel](https://vercel.com/legal/privacy-policy):** hosting the website and app.
+- **[Supabase](https://supabase.com/privacy):** our database and sign-in sessions.
+- **[Upstash](https://upstash.com/trust/privacy.pdf):** short-lived caching and rate limiting.
+- **[Inngest](https://www.inngest.com/privacy):** running background jobs, like channel syncs and digests.
+- **[Resend](https://resend.com/legal/privacy-policy):** sending email.
+- **[PostHog](https://posthog.com/privacy):** product analytics.
+- **[Sentry](https://sentry.io/privacy/):** error reports.
+- **[OpenAI](https://openai.com/policies/privacy-policy):** AI Prompts and Thumbnail ideas.
+- **Our payment processor:** taking payments as Merchant of Record. Its privacy policy is linked at checkout.
+
+**People you work with:** if you join a workspace, its members see your name, profile picture, and the tasks and calendar entries you share there.
+
+**The law:** we disclose data if the law requires it, or to protect our users or our rights.
+
+## Cookies
+
+We use only the cookies needed to keep you signed in. There are no analytics or advertising cookies. The [Cookie Policy](/legal/cookies) has the details.
+
+## How long we keep data
+
+- **Your account and what you create:** until you delete your account. We then delete it within <Fact k="legal.dataRequestDays" unit="day" />.
+- **YouTube data:** refreshed or deleted within <Fact k="youtube.maxAgeDays" unit="day" /> (see above).
+- **Activity-feed items and YouTube notifications:** <Fact k="youtube.maxAgeDays" unit="day" />.
+- **Billing records:** as long as tax and accounting law requires.
+- **Error reports and analytics:** as long as each provider's retention setting keeps them.
+
+## Your rights
+
+Wherever you live, you can:
+
+- **Get a copy** of your data (export).
+- **Correct** data that's wrong.
+- **Delete** your account and data.
+- **Object** to our use of your data for analytics, or **restrict** it.
+- **Withdraw consent**, for example by unsubscribing from the newsletter.
+- **Revoke Google access** at [Google's security settings](https://security.google.com/settings/security/permissions).
+
+To export, correct or delete your data, email <SupportLink /> from your account email. We'll complete the request within <Fact k="legal.dataRequestDays" unit="day" />. If you're in the EU or UK and unhappy with how we handle your data, you can complain to your local data protection authority.
+
+## Security
+
+Data is encrypted in transit (HTTPS). Our database uses row-level security, so each account can only read its own data, and admin tools are limited to us. No system is perfectly secure; if a breach affects you, we'll tell you as the law requires.
+
+## International transfers
+
+Our providers may process data outside your country, including in the United States. Where the GDPR or UK GDPR applies, we rely on the safeguards our providers offer, such as the European Commission's Standard Contractual Clauses.
+
+## Children
+
+YTNiches isn't for anyone under <Fact k="legal.minimumAge" />. If you think a child has given us data, email us and we'll delete it.
+
+## Changes to this policy
+
+If we make a change that matters, we'll tell you by email or in the app before it takes effect. The date at the top shows the latest version.
+
+## Contact
+
+Questions or complaints about privacy? Email <SupportLink />.

@@ -429,9 +429,10 @@ export const FOOTER = {
       links: [
         { label: "About", href: null },
         { label: "Contact", href: null },
-        { label: "Privacy", href: null },
-        { label: "Terms", href: null },
-        { label: "Refunds", href: null },
+        { label: "Privacy", href: "/legal/privacy" },
+        { label: "Terms", href: "/legal/terms" },
+        { label: "Refunds", href: "/legal/refunds" },
+        { label: "Cookies", href: "/legal/cookies" },
       ],
     },
   ] satisfies { heading: string; links: NavLinkItem[] }[],

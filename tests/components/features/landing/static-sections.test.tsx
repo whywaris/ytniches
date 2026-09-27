@@ -56,7 +56,17 @@ describe("Footer", () => {
     ];
     const routeExists = (href: string) => {
       const route = href.split("#")[0].replace(/^\//, "");
-      return roots.some((root) => existsSync(path.join(root, route, "page.tsx")));
+      // Also matches a dynamic segment, e.g. /legal/terms -> legal/[slug]/page.tsx.
+      const parent = path.dirname(route);
+      return roots.some(
+        (root) =>
+          existsSync(path.join(root, route, "page.tsx")) ||
+          (existsSync(path.join(root, parent)) &&
+            readdirSync(path.join(root, parent)).some(
+              (entry) =>
+                entry.startsWith("[") && existsSync(path.join(root, parent, entry, "page.tsx")),
+            )),
+      );
     };
 
     render(<Footer blogLive={false} />);

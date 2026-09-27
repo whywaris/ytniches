@@ -1,5 +1,6 @@
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
+import { LEGAL } from "@/lib/legal/policy";
 import { CREDIT_COSTS, FAIR_USE, SEARCH_RESULTS_CACHE_HOURS } from "@/lib/credits/costs";
 import { DIGEST_ITEM_LIMIT, DIGEST_LOCAL_HOUR } from "@/lib/notifications/digest-config";
 import {
@@ -87,6 +88,13 @@ export const FACTS: Record<string, string | number> = {
 
   "support.email": SUPPORT_EMAIL,
   "youtube.maxAgeDays": YOUTUBE_DATA_MAX_AGE_DAYS,
+
+  "legal.operator": LEGAL.operator,
+  "legal.entity": LEGAL.entity,
+  "legal.governingLaw": LEGAL.governingLaw,
+  "legal.minimumAge": LEGAL.minimumAge,
+  "legal.dataRequestDays": LEGAL.dataRequestDays,
+  "legal.liabilityCapMonths": LEGAL.liabilityCapMonths,
 };
 
 // "1 credit", "5 credits". Strings (prices, lists, sentences) pass through.
