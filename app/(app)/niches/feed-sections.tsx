@@ -35,6 +35,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FeedPagination } from "@/components/features/niche-finder/feed-pagination";
 import { FilterBar } from "@/components/features/niche-finder/filter-bar/filter-bar";
 import { FilteredViewGate } from "@/components/features/niche-finder/filtered-view-gate";
+import { PresetProNote } from "@/components/features/niche-finder/preset-pro-note";
 import { OutlierCard } from "@/components/features/outliers/outlier-card";
 import { unlockFeedFiltersAction } from "@/app/(app)/niches/actions";
 import { ChannelGrid } from "@/app/(app)/niches/channel-grid";
@@ -206,6 +207,7 @@ export async function ChannelsSection({
         <FeedEmpty icon={<Users />} message="No discovered channels match these filters yet." />
       ) : (
         <>
+          {!isPro && filters.preset === "new-faceless" ? <PresetProNote /> : null}
           <p className="text-caption text-text-tertiary">{page.total.toLocaleString()} channels</p>
           <ChannelGrid channels={page.items} />
           <FeedPagination
