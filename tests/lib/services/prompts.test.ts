@@ -294,6 +294,37 @@ describe("regeneratePrompts", () => {
     }
   });
 
+  it("refreshes a source video emptied by the 30-day purge before regenerating", async () => {
+    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null }));
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: { ...VIDEO_ROW, title: "", thumbnail_url: "" }, error: null }),
+    );
+    resolveVideoUrl.mockReturnValueOnce({ ok: true, value: "yt-vid-1" });
+    getVideoById.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        id: "yt-vid-1",
+        snippet: { title: "Fresh title", description: "Desc", tags: [], channelId: "yt-chan-1" },
+      },
+    });
+    getChannelById.mockResolvedValueOnce({ ok: true, value: { id: "yt-chan-1" } });
+    upsertChannels.mockResolvedValueOnce(new Map([["yt-chan-1", "chan-internal-1"]]));
+    upsertVideos.mockResolvedValueOnce(new Map([["yt-vid-1", "vid-internal-1"]]));
+    consume.mockResolvedValueOnce({ ok: true, value: undefined });
+    generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: promptRow({ regeneration_of: "prompt-1" }), error: null }),
+    );
+
+    const result = await regeneratePrompts(ctx, "prompt-1", { tags: [], freeText: null }, "k");
+
+    expect(resolveVideoUrl).toHaveBeenCalledWith("https://www.youtube.com/watch?v=yt-vid-1");
+    expect(generatePromptOutput).toHaveBeenCalledWith(
+      expect.objectContaining({ videoTitle: "Fresh title" }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("returns not_found when the prompt doesn't belong to this user (or doesn't exist)", async () => {
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
 

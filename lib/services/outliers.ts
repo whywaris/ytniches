@@ -13,7 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // video gets exactly one outlier_detected snapshot, ever, per Phase OA's
 // fire-once rule), so Trending is approximated as "recently detected,
 // ranked by current score": a tight, non-configurable window versus Grid's
-// user-selectable 30/60/90. Documented here rather than in DECISIONS.md --
+// user-selectable 7/14/30. Documented here rather than in DECISIONS.md --
 // this is an implementation reading of an already-approved gap (§9), not a
 // new open question. TRENDING_WINDOW_DAYS lives in lib/outliers/scoring.ts
 // so the help center can show it.
@@ -200,12 +200,14 @@ export async function listOutlierFeed(
 }
 
 export type OutlierView = "grid" | "trending";
-export type OutlierRange = 30 | 60 | 90;
+// Capped by the 30-day YouTube data window (D-067b): outlier events older
+// than that are purged, so a longer range would show the same results.
+export type OutlierRange = 7 | 14 | 30;
 
 // PRD.md §7.1 "Grid (top-scoring past 30/60/90 days)" and "Trending
 // (outliers gaining momentum right now)" -- both rank by the *same* live
 // OUTLIER_SCORE, just over a different detected_at window (grid: caller's
-// choice of 30/60/90; trending: a fixed, tight TRENDING_WINDOW_DAYS). A
+// choice of 7/14/30 (D-067b cap); trending: a fixed, tight TRENDING_WINDOW_DAYS). A
 // ranked top-N list, not a cursor feed -- PRD frames these as bounded
 // "top-scoring" views, unlike Feed's explicit infinite scroll.
 export async function listTopOutliers(

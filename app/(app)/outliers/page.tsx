@@ -17,7 +17,7 @@ function parseView(raw: string | undefined): OutlierViewTab {
 }
 
 function parseRange(raw: string | undefined): OutlierRange {
-  return raw === "60" ? 60 : raw === "90" ? 90 : 30;
+  return raw === "7" ? 7 : raw === "14" ? 14 : 30;
 }
 
 function getParam(

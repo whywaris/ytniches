@@ -27,9 +27,9 @@ export interface OutliersClientProps {
 
 const FEED_PAGE_SIZE = 20;
 const RANGE_OPTIONS: { value: OutlierRange; label: string }[] = [
+  { value: 7, label: "7d" },
+  { value: 14, label: "14d" },
   { value: 30, label: "30d" },
-  { value: 60, label: "60d" },
-  { value: 90, label: "90d" },
 ];
 
 function buildOutliersUrl(pathname: string, view: OutlierViewTab, range: OutlierRange): string {

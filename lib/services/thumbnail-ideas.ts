@@ -6,6 +6,7 @@ import type { InsufficientCreditsError } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
+import { EXPIRED_VIDEO_TITLE } from "@/lib/youtube/retention";
 
 // Monetization.md §3.1: same flat cost for a first generation and
 // "Generate another" -- no cheaper-regeneration discount like prompts'
@@ -91,7 +92,7 @@ function toThumbnailIdeaSet(
   const output = row.output as unknown as ThumbnailIdeaOutputJson;
   return {
     id: row.id,
-    sourceVideo,
+    sourceVideo: { ...sourceVideo, title: sourceVideo.title || EXPIRED_VIDEO_TITLE },
     ideas: output.ideas,
     regenerationOf: row.regeneration_of,
     createdAt: row.created_at,
@@ -209,7 +210,8 @@ export async function regenerateThumbnailIdeas(
   }
 
   const video = await getVideoRow(original.source_video_id);
-  if (!video) {
+  // An emptied video (30-day purge, D-067b) has nothing to generate from.
+  if (!video || !video.title) {
     return err({ type: "not_found" });
   }
 

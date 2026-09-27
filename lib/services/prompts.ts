@@ -9,6 +9,7 @@ import type { InsufficientCreditsError } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/credits/costs";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
+import { EXPIRED_VIDEO_TITLE } from "@/lib/youtube/retention";
 
 // Monetization.md §3.1.
 const GENERATE_COST = CREDIT_COSTS.promptGenerate;
@@ -161,7 +162,8 @@ function toPrompt(
 ): Prompt {
   return {
     id: row.id,
-    sourceVideo,
+    // An empty title means the 30-day purge emptied the video (D-067b).
+    sourceVideo: { ...sourceVideo, title: sourceVideo.title || EXPIRED_VIDEO_TITLE },
     createdAt: row.created_at,
     targetAudience: row.target_audience,
     tone: row.tone as Tone,
@@ -287,10 +289,19 @@ export async function regeneratePrompts(
     return err({ type: "not_found" });
   }
 
-  const video = await getVideoRow(original.source_video_id);
-  if (!video) {
+  const stored = await getVideoRow(original.source_video_id);
+  if (!stored) {
     return err({ type: "not_found" });
   }
+  // Emptied by the 30-day purge (D-067b): refresh it from YouTube first
+  // rather than regenerate from a blank title.
+  const refreshed = stored.title
+    ? ok(stored)
+    : await resolveAndCacheVideoFromUrl(`https://www.youtube.com/watch?v=${stored.youtubeVideoId}`);
+  if (!refreshed.ok) {
+    return err({ type: "not_found" });
+  }
+  const video = refreshed.value;
 
   const consumeResult = await consume(ctx, REGENERATE_COST, "Prompt regeneration", idempotencyKey);
   if (!consumeResult.ok) {
@@ -392,7 +403,7 @@ export async function listPrompts(
       id: row.id,
       sourceVideo: {
         id: row.source_video_id,
-        title: video?.title ?? "Unknown video",
+        title: video ? video.title || EXPIRED_VIDEO_TITLE : "Unknown video",
         thumbnailUrl: video?.thumbnail_url ?? "",
       },
       createdAt: row.created_at,

@@ -10,6 +10,7 @@ import {
   TRENDING_WINDOW_DAYS,
 } from "@/lib/outliers/scoring";
 import { SUPPORT_EMAIL } from "@/lib/site";
+import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 import {
   CADENCE_CHANGE_THRESHOLD_PER_WEEK,
   CADENCE_WINDOW_WEEKS,
@@ -85,6 +86,7 @@ export const FACTS: Record<string, string | number> = {
   "refunds.annualWindowDays": REFUND_POLICY.annualProRataWindowDays,
 
   "support.email": SUPPORT_EMAIL,
+  "youtube.maxAgeDays": YOUTUBE_DATA_MAX_AGE_DAYS,
 };
 
 // "1 credit", "5 credits". Strings (prices, lists, sentences) pass through.

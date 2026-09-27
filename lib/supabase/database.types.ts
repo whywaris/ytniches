@@ -1173,6 +1173,17 @@ export type Database = {
         Args: { target_workspace_id: string };
         Returns: boolean;
       };
+      purge_stale_youtube_data: {
+        Args: { p_max_age_days: number };
+        Returns: {
+          channels_deleted: number;
+          channels_emptied: number;
+          events_deleted: number;
+          notifications_deleted: number;
+          videos_deleted: number;
+          videos_emptied: number;
+        }[];
+      };
       touch_last_active: { Args: never; Returns: undefined };
       shares_workspace_with: {
         Args: { target_user_id: string };

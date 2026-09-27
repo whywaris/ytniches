@@ -692,6 +692,7 @@ Decisions that still need to close before their dependent docs / features can be
 - **Status:** Open. **Blocks launch** (with D-051).
 - **Finding:** Monetization.md §5.3 says an expired trial becomes read-only. In code, the trial's subscription keeps `tier = 'pro'`, and nothing checks `trial_ends_at` outside the Billing page. Trial users keep Pro access indefinitely (tracked-channel cap, email notifications, outlier feeds, sync); only the 50 credits stop refilling. That's a revenue leak.
 - **Needed:** enforce the expired-trial state (read-only) wherever tier-gated features are checked, and stop background work (sync, email) for expired trials.
+- **Constraint (D-067b, 2026-09-27):** "read-only" can't mean "forever". Once sync stops, the 30-day YouTube purge empties those channels and videos. The expired state must show that data as expired (like prompts' "Video details expired"), and the help must say so.
 
 ### D-058: Pre-launch blocker — legal pages missing
 
@@ -787,7 +788,13 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** Payment providers and a Google API audit both need a compliant product plus legal pages (D-058). Checked against [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies). We only hold Non-Authorized Data: sign-in is openid/email/profile, and all YouTube data is public, fetched with our API key.
 - **Parts:**
   - a. Stop fetching transcripts. The timedtext endpoint breaks III.D.7, III.E.6 and III.I.14. Prompts now use title, description and tags only, and `video_transcripts_cache` is emptied. **Done.**
-  - b. A daily purge of YouTube data not refreshed in 30 days (III.E.4.d).
+  - b. A daily purge of YouTube data not refreshed in 30 days (III.E.4.d). **Done.** `purge_stale_youtube_data(30)` runs daily via `workers/youtube-retention.ts`:
+    - Old tracked events and YouTube notifications are deleted.
+    - Stale videos are deleted, or emptied if a saved prompt uses them, because prompts cascade from videos.
+    - Stale channels are deleted, or emptied down to their YouTube id if they're tracked or have emptied videos.
+    - Tracked, syncing channels stay fresh and are untouched.
+    - The Outliers Grid ranges become 7/14/30 days.
+    - **Effect on D-057:** an expired user's channels stop syncing, so their YouTube data stays viewable only until this purge empties it, 30 days after their last sync.
   - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2).
   - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a).
   - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner.
