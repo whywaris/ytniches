@@ -338,6 +338,29 @@ Added during the App Shell build (D-037) for the top-bar account menu — no pri
 - **Item:** icon + label row, `hover`/`highlighted` background; a `destructive` variant (red text) for actions like "Log out"
 - **Keyboard/focus-trap:** native Radix `DropdownMenu` behavior, same as §5.6/§5.12's Radix-backed primitives
 
+### 5.14 Popover
+
+Added for the Niche Finder filter bar (D-077). Use it when a trigger opens a **control** (a range, presets, a list), not a menu of actions (that's §5.13).
+
+- **Trigger:** any element via `asChild`; Radix sets `aria-expanded`/`aria-controls`
+- **Content:** `elev-2`, `bg-surface-1`, `border-default`, `w-72`, `p-4`; aligned to the trigger's start edge, 6px offset
+- **Close:** Esc, outside click, or a `PopoverClose` inside the content; focus returns to the trigger
+
+### 5.15 Tooltip
+
+Short explanations on **hover and keyboard focus** (Radix wires `aria-describedby`). A tooltip explains; it never carries the only copy of important information.
+
+- **Content:** `elev-2`, `bg-surface-2`, `text-caption`, `max-w-64`, 200ms delay
+- **Trigger:** must be focusable. Wrap a chip or text in `<button type="button">`
+- **Use:** insight chips' rules, the views-vs-subs badge, Trend definitions
+
+### 5.16 Sheet
+
+A bottom sheet: the Modal's dialog behaviour (§5.7: focus trap, Esc, backdrop close, `aria-modal`) anchored to the bottom edge, for mobile surfaces.
+
+- **Layout:** full width, `rounded-t-lg`, `max-h-[85vh]`; header (title + close) and footer pinned, body scrolls
+- **Use:** the Niche Finder's mobile "Filters" sheet; prefer Modal on desktop
+
 ## 6. Data Visualization & Accessibility
 
 ### 6.1 Data visualization
