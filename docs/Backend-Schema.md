@@ -231,7 +231,7 @@ User-owned. Each row is one generation output tied to a source video — either 
 | `id`              | `uuid`                 |                                                                                                                                                                                 |
 | `user_id`         | `uuid`                 | FK to `profiles.id`                                                                                                                                                             |
 | `workspace_id`    | `uuid` nullable        | FK to `workspaces.id` (Phase 3)                                                                                                                                                 |
-| `source_video_id` | `uuid`                 | FK to `videos.id`                                                                                                                                                               |
+| `source_video_id` | `uuid`                 | FK to `videos.id`, ON DELETE RESTRICT (D-073)                                                                                                                                   |
 | `kind`            | `text`                 | 'prompt' (default) / 'thumbnail_ideas' (Phase 2 Task 3). `listPrompts` filters to 'prompt' so thumbnail-ideas rows don't appear in the AI Prompts library.                      |
 | `target_audience` | `text` nullable        | User-provided context                                                                                                                                                           |
 | `tone`            | `text`                 | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite' -- always 'neutral' for a `thumbnail_ideas` row                                                           |
@@ -508,7 +508,7 @@ Essential indexes for MVP:
 | `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
 | `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
 
-Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`. Migration `20260928100004`. The 30-day purge is main's `purge_stale_youtube_data` (D-067b), extended to `outliers_feed`, the discovery columns and `niche_snapshots` in `20260928100006` (D-073); `channels(discovered_via_seed)` is indexed in `20260928100005`.
+Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`. Migration `20260928100004`. The 30-day purge is main's `purge_stale_youtube_data` (D-067b), extended to `outliers_feed`, the discovery columns and `niche_snapshots` in `20260928100006` (D-073); `20260928100007` stops it deleting any channel a user row references and makes `prompts.source_video_id` ON DELETE RESTRICT; `channels(discovered_via_seed)` is indexed in `20260928100005`.
 
 ### 6.3 Audit tables
 
@@ -538,17 +538,17 @@ Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`,
 
 Background job (nightly) enforces:
 
-| Data                                | Retention               | Action after                                                                                    |
-| ----------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
-| Soft-deleted user accounts          | 30 days                 | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
-| Soft-deleted prompts / notes        | 30 days                 | Hard-delete                                                                                     |
-| `auth_events`                       | 90 days                 | Delete                                                                                          |
-| `tracked_events`                    | 30 days                 | Delete (YouTube Developer Policies III.E.4.d, D-067)                                            |
-| `channels` / `videos` not refreshed | 30 days since last sync | Delete; empty the YouTube fields if a prompt or tracker still references it (D-067)             |
-| `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                         |
-| Failed webhook events               | 30 days                 | Delete after review                                                                             |
-| `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                      |
-| `niche_snapshots`                   | 90 days daily           | Roll up to one row per week                                                                     |
+| Data                                | Retention               | Action after                                                                                                                                           |
+| ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Soft-deleted user accounts          | 30 days                 | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived                                                        |
+| Soft-deleted prompts / notes        | 30 days                 | Hard-delete                                                                                                                                            |
+| `auth_events`                       | 90 days                 | Delete                                                                                                                                                 |
+| `tracked_events`                    | 30 days                 | Delete (YouTube Developer Policies III.E.4.d, D-067)                                                                                                   |
+| `channels` / `videos` not refreshed | 30 days since last sync | Delete; empty the YouTube fields if a prompt, tracker, calendar entry, notification override or channel-linked task still references it (D-067, D-073) |
+| `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                                                                                |
+| Failed webhook events               | 30 days                 | Delete after review                                                                                                                                    |
+| `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                                                                             |
+| `niche_snapshots`                   | 90 days daily           | Roll up to one row per week                                                                                                                            |
 
 **GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 

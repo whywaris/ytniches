@@ -48,3 +48,25 @@ jobs:
       - run: pnpm test
       # Catches what tsc can't: server/client boundary errors, prerender failures.
       - run: pnpm build
+
+  # D-073: the purge must never delete user rows. These tests run the real
+  # migrations on a throwaway Postgres; no Supabase project is involved.
+  sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/test-sql.sh

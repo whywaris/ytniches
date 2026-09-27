@@ -243,6 +243,40 @@ describe("enrichChannels", () => {
     expect(deleted).toBe(true);
   });
 
+  it.each([
+    ["calendar_entries", { channel_id: "c1" }],
+    ["notification_channel_overrides", { channel_id: "c1" }],
+    ["tasks", { linked_id: "c1" }],
+  ])("never drops a channel a user's %s row points at (D-073)", async (table, row) => {
+    fake.on("channels", {
+      data: [
+        {
+          id: "c1",
+          youtube_channel_id: "UC1",
+          niche_id: null,
+          discovered_at: daysAgo(0),
+          enriched_at: null,
+        },
+      ],
+    });
+    fetchChannelsFresh.mockResolvedValue({ ok: true, value: [channel()] });
+    fetchUploadIdsFresh.mockResolvedValue({ ok: true, value: ["a", "b"] });
+    fetchVideosFresh.mockResolvedValue({
+      ok: true,
+      value: [video("a", 100, 10), video("b", 200, 5)],
+    });
+    fake.on("tracked_channels", { data: [] }, { data: [] });
+    fake.on(table, { data: [row] });
+
+    const result = await enrichChannels(["c1"], NOW);
+
+    expect(result).toMatchObject({ dropped: 0 });
+    const deleted = fake
+      .queriesFor("channels")
+      .some((q) => q.calls.some((c) => c.method === "delete"));
+    expect(deleted).toBe(false);
+  });
+
   it("marks channels YouTube no longer returns as unavailable", async () => {
     fake.on("channels", {
       data: [

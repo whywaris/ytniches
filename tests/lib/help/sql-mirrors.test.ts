@@ -44,6 +44,14 @@ describe("TS constants mirror the SQL", () => {
     expect(Number(days?.[1])).toBe(SNAPSHOT_DAILY_RETENTION_DAYS);
   });
 
+  it("the purge never deletes a channel a user row points at (D-073)", () => {
+    const sql = migration("20260928100007_purge_keeps_user_references.sql");
+    expect(sql).toContain("from public.calendar_entries ce where ce.channel_id = c.id");
+    expect(sql).toContain("from public.notification_channel_overrides o where o.channel_id = c.id");
+    expect(sql).toContain("t.linked_type = 'channel' and t.linked_id = c.id");
+    expect(sql).toMatch(/references public\.videos \(id\) on delete restrict/);
+  });
+
   it("EMBEDDING_DIMENSIONS matches niches.embedding", () => {
     const sql = migration("20260928100002_create_discovery_tables.sql");
     const dims = /embedding extensions\.vector\((\d+)\)/.exec(sql);

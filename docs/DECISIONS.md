@@ -875,6 +875,7 @@ Decisions that still need to close before their dependent docs / features can be
   - Blanked videos lose `outlier_multiple`; emptied channels lose every YouTube-derived discovery column (`niche_id`, `enriched_at`, etc.).
   - `niche_snapshots` keep 90 days daily, then one row per week.
 - **Superseded (2026-09-27):** the branch's own `retention-purge` job and 3-argument `purge_stale_youtube_data` (trim to the latest 30 videos, protect calendar/tracked-event channels) were dropped. Admin → Discovery "Run YouTube data purge" sends `youtube/retention.requested` to main's job.
+- **User rows are never deleted (2026-09-27, pre-merge FK audit):** the purge and `dropUnqualified` delete a channel only if no user row points at it: not tracked, no prompt on its videos, no calendar entry (soft-deleted ones too), no notification override, no channel-linked task. Otherwise the channel is emptied, so the calendar link survives and shows "Channel details expired". `prompts.source_video_id` is ON DELETE RESTRICT (was CASCADE), so any other path that deletes a prompted video fails instead of deleting prompts. `calendar_entries.channel_id` stays SET NULL as the last backstop. Covered by `supabase/tests/purge_keeps_user_data.test.sql` (CI job `sql`). Migration `20260928100007`.
 - **Impacts:** Backend-Schema §6.4, TRD §4.2.
 
 ### D-074: gpt-4o-mini + text-embedding-3-small for niche classification

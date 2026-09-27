@@ -164,20 +164,49 @@ async function loadTrackedIds(channelIds: string[]): Promise<Set<string>> {
 
 // Spec §6.2 "everything else is dropped": a channel the engine itself
 // discovered that fails qualification on its very first enrichment is
-// deleted, not kept as cold -- unless someone started tracking it or
-// generated a prompt from one of its videos in the meantime.
-async function dropUnqualified(channelIds: string[]): Promise<number> {
-  if (channelIds.length === 0) return 0;
+// deleted, not kept as cold -- unless a user row points at it in the
+// meantime: tracking, a prompt from one of its videos, a calendar entry, a
+// per-channel notification setting, or a task linked to it. User-created
+// rows are never removed or orphaned by a deletion here (D-073).
+async function loadUserReferencedIds(channelIds: string[]): Promise<Set<string>> {
   const supabase = createServiceClient();
-  const [tracked, prompted] = await Promise.all([
+  const [tracked, prompted, calendar, overrides, tasks] = await Promise.all([
     loadTrackedIds(channelIds),
     supabase.from("prompts").select("videos!inner(channel_id)").in("videos.channel_id", channelIds),
+    supabase.from("calendar_entries").select("channel_id").in("channel_id", channelIds),
+    supabase
+      .from("notification_channel_overrides")
+      .select("channel_id")
+      .in("channel_id", channelIds),
+    supabase
+      .from("tasks")
+      .select("linked_id")
+      .eq("linked_type", "channel")
+      .in("linked_id", channelIds),
   ]);
-  if (prompted.error) throw new Error(`dropUnqualified prompts failed: ${prompted.error.message}`);
-  const referenced = new Set(prompted.data.map((row) => row.videos.channel_id));
-  const doomed = channelIds.filter((id) => !tracked.has(id) && !referenced.has(id));
+  for (const [name, result] of [
+    ["prompts", prompted],
+    ["calendar_entries", calendar],
+    ["notification_channel_overrides", overrides],
+    ["tasks", tasks],
+  ] as const) {
+    if (result.error) throw new Error(`dropUnqualified ${name} failed: ${result.error.message}`);
+  }
+  return new Set<string>([
+    ...tracked,
+    ...(prompted.data ?? []).map((row) => row.videos.channel_id),
+    ...(calendar.data ?? []).flatMap((row) => (row.channel_id ? [row.channel_id] : [])),
+    ...(overrides.data ?? []).map((row) => row.channel_id),
+    ...(tasks.data ?? []).flatMap((row) => (row.linked_id ? [row.linked_id] : [])),
+  ]);
+}
+
+async function dropUnqualified(channelIds: string[]): Promise<number> {
+  if (channelIds.length === 0) return 0;
+  const referenced = await loadUserReferencedIds(channelIds);
+  const doomed = channelIds.filter((id) => !referenced.has(id));
   if (doomed.length === 0) return 0;
-  const { error } = await supabase.from("channels").delete().in("id", doomed);
+  const { error } = await createServiceClient().from("channels").delete().in("id", doomed);
   if (error) throw new Error(`dropUnqualified delete failed: ${error.message}`);
   return doomed.length;
 }
