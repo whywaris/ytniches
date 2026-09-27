@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import { SMALL_CHANNEL_SUBS } from "@/lib/discovery/config";
+import {
+  CHANNEL_AGE_MONTHS,
+  CHANNEL_PRESETS,
+  CONTENT_TYPES,
+  SCORE_BANDS,
+  TREND_TO_STATUS,
+  type ChannelAge,
+  type ChannelPresetId,
+} from "@/lib/discovery/feed-filters";
 import type {
   ChannelFeedFilters,
   NicheFeedFilters,
@@ -11,7 +21,9 @@ import type {
 // or hand-edited param is dropped, never an error page. Plain module (no
 // "use client") so the server page and the client filter panels share it.
 
-export const FEED_TABS = ["niches", "channels", "outliers", "search"] as const;
+// D-077: Channels first and the default (niche scores need weeks of data).
+export const FEED_TABS = ["channels", "niches", "outliers", "search"] as const;
+export const DEFAULT_FEED_TAB = "channels" satisfies (typeof FEED_TABS)[number];
 export type FeedTab = (typeof FEED_TABS)[number];
 
 export type SearchParams = Record<string, string | string[] | undefined>;
@@ -28,7 +40,6 @@ function pick<T>(schema: z.ZodType<T>, value: string | undefined): T | undefined
 }
 
 const count = z.coerce.number().int().min(0).max(10_000_000_000);
-const score = z.coerce.number().int().min(0).max(100);
 const page = z.coerce.number().int().min(1).max(500);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const slug = z.string().regex(/^[a-z0-9-]{1,80}$/);
@@ -38,18 +49,56 @@ export function parseTab(params: SearchParams): FeedTab | undefined {
   return pick(z.enum(FEED_TABS), first(params, "tab"));
 }
 
+const TREND_KEYS = Object.keys(TREND_TO_STATUS) as (keyof typeof TREND_TO_STATUS)[];
+
 export function parseNicheFilters(params: SearchParams): NicheFeedFilters {
+  // D-077: score chips (70+ Hot / 50-69 Good) and a named Trend.
+  const band = pick(z.enum(["hot", "good"]), first(params, "score"));
+  const trend = pick(z.enum(TREND_KEYS as [string, ...string[]]), first(params, "trend"));
   return {
-    minScore: pick(score, first(params, "minScore")),
-    maxScore: pick(score, first(params, "maxScore")),
-    status: pick(z.enum(["active", "rising", "saturated", "declining"]), first(params, "status")),
+    minScore: band ? SCORE_BANDS[band].min : undefined,
+    maxScore: band === "good" ? SCORE_BANDS.good.max : undefined,
+    status: trend ? TREND_TO_STATUS[trend as keyof typeof TREND_TO_STATUS] : undefined,
     sort: pick(z.enum(["score", "trend", "newest"]), first(params, "sort")) ?? "score",
     page: pick(page, first(params, "page")) ?? 1,
   };
 }
 
+const PRESET_IDS = CHANNEL_PRESETS.map((preset) => preset.id) as [
+  ChannelPresetId,
+  ...ChannelPresetId[],
+];
+
+// The filters behind each free preset (D-077).
+function presetFilters(preset: ChannelPresetId): Partial<ChannelFeedFilters> {
+  switch (preset) {
+    case "new-faceless":
+      return { maxAgeMonths: CHANNEL_AGE_MONTHS["12m"], faceless: true };
+    case "small-breakout":
+      return { maxSubs: SMALL_CHANNEL_SUBS, breakout: true };
+    case "rising":
+      return { risingNiche: true };
+  }
+}
+
 export function parseChannelFilters(params: SearchParams): ChannelFeedFilters {
+  const sort =
+    pick(z.enum(["outlier_score", "avg_views", "newest", "subscribers"]), first(params, "sort")) ??
+    "outlier_score";
+  const pageNumber = pick(page, first(params, "page")) ?? 1;
+  // A preset is a whole filter set on its own: other params are ignored.
+  const preset = pick(z.enum(PRESET_IDS), first(params, "preset"));
+  if (preset) return { ...presetFilters(preset), preset, sort, page: pageNumber };
+
+  const age = pick(
+    z.enum(Object.keys(CHANNEL_AGE_MONTHS) as [ChannelAge, ...ChannelAge[]]),
+    first(params, "age"),
+  );
   return {
+    q: pick(z.string().trim().min(1).max(80), first(params, "q")),
+    maxAgeMonths: age ? CHANNEL_AGE_MONTHS[age] : undefined,
+    country: pick(z.string().regex(/^[A-Z]{2}$/), first(params, "country")),
+    contentType: pick(z.enum(CONTENT_TYPES), first(params, "content")),
     niche: pick(slug, first(params, "niche")),
     createdAfter: pick(date, first(params, "after")),
     createdBefore: pick(date, first(params, "before")),
@@ -60,15 +109,25 @@ export function parseChannelFilters(params: SearchParams): ChannelFeedFilters {
     minOutlierScore: pick(z.coerce.number().min(0).max(1_000), first(params, "minOutlier")),
     faceless: pick(flag, first(params, "faceless")),
     excludeKids: pick(flag, first(params, "noKids")),
-    hasShorts: pick(flag, first(params, "shorts")),
     likelyMonetized: pick(flag, first(params, "monetized")),
     language: pick(z.string().regex(/^[a-z]{2}$/), first(params, "lang")),
-    sort:
-      pick(
-        z.enum(["outlier_score", "avg_views", "newest", "subscribers"]),
-        first(params, "sort"),
-      ) ?? "outlier_score",
-    page: pick(page, first(params, "page")) ?? 1,
+    sort,
+    page: pageNumber,
+  };
+}
+
+// D-077: Pro filters are locked (never hidden) for Starter; a hand-made URL
+// can't get round it. Presets are exempt: they're free for everyone.
+export function stripProChannelFilters(filters: ChannelFeedFilters): ChannelFeedFilters {
+  if (filters.preset) return filters;
+  return {
+    ...filters,
+    createdAfter: undefined,
+    createdBefore: undefined,
+    minOutlierScore: undefined,
+    faceless: undefined,
+    excludeKids: undefined,
+    likelyMonetized: undefined,
   };
 }
 
@@ -86,7 +145,7 @@ export function parseOutlierFilters(params: SearchParams): OutlierFeedFilters {
 // short and a default view has a clean URL.
 export function buildFeedUrl(tab: FeedTab, values: Record<string, string | undefined>): string {
   const params = new URLSearchParams();
-  if (tab !== "niches") params.set("tab", tab);
+  if (tab !== DEFAULT_FEED_TAB) params.set("tab", tab);
   for (const [key, value] of Object.entries(values)) {
     if (value !== undefined && value !== "") params.set(key, value);
   }
@@ -105,10 +164,16 @@ const DEFAULT_SORT: Record<FeedTab, string> = {
 export function nicheFiltersToValues(
   filters: NicheFeedFilters,
 ): Record<string, string | undefined> {
+  const band =
+    filters.minScore === SCORE_BANDS.hot.min
+      ? "hot"
+      : filters.minScore === SCORE_BANDS.good.min
+        ? "good"
+        : undefined;
+  const trend = TREND_KEYS.find((key) => TREND_TO_STATUS[key] === filters.status);
   return {
-    minScore: filters.minScore?.toString(),
-    maxScore: filters.maxScore?.toString(),
-    status: filters.status,
+    score: band,
+    trend,
     sort: filters.sort === DEFAULT_SORT.niches ? undefined : filters.sort,
   };
 }
@@ -116,7 +181,16 @@ export function nicheFiltersToValues(
 export function channelFiltersToValues(
   filters: ChannelFeedFilters,
 ): Record<string, string | undefined> {
+  const sort = filters.sort === DEFAULT_SORT.channels ? undefined : filters.sort;
+  if (filters.preset) return { preset: filters.preset, sort };
+  const age = (Object.keys(CHANNEL_AGE_MONTHS) as ChannelAge[]).find(
+    (key) => CHANNEL_AGE_MONTHS[key] === filters.maxAgeMonths,
+  );
   return {
+    q: filters.q,
+    age,
+    country: filters.country,
+    content: filters.contentType,
     niche: filters.niche,
     after: filters.createdAfter,
     before: filters.createdBefore,
@@ -127,10 +201,9 @@ export function channelFiltersToValues(
     minOutlier: filters.minOutlierScore?.toString(),
     faceless: filters.faceless ? "1" : undefined,
     noKids: filters.excludeKids ? "1" : undefined,
-    shorts: filters.hasShorts ? "1" : undefined,
     monetized: filters.likelyMonetized ? "1" : undefined,
     lang: filters.language,
-    sort: filters.sort === DEFAULT_SORT.channels ? undefined : filters.sort,
+    sort,
   };
 }
 
@@ -158,7 +231,8 @@ export type FilterValues = Record<string, string | undefined>;
 // badges and niche pages link to it). Expects values from *FiltersToValues
 // above, which already drop defaults. Plain module so the filter panel can
 // tell the user before charging.
-const FREE_KEYS = new Set(["sort", "page", "tab"]);
+// "preset": the three presets are free (D-077, D-072 revised).
+const FREE_KEYS = new Set(["sort", "page", "tab", "preset"]);
 
 export function billableFilters(values: FilterValues): FilterValues | null {
   const kept = Object.entries(values).filter(

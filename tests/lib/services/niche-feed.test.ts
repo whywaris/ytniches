@@ -178,53 +178,70 @@ describe("listNiches", () => {
 });
 
 describe("listFeedChannels", () => {
-  it("applies filters, only shows enriched hot/warm channels, and attaches 4 popular videos", async () => {
+  const channelRow = {
+    id: "c1",
+    youtube_channel_id: "UC1",
+    name: "Mafia Tales",
+    avatar_url: null,
+    subscriber_count: 8_000,
+    video_count: 40,
+    total_view_count: 2_000_000,
+    avg_views_recent: 37_600,
+    median_views_recent: 160_000,
+    outlier_score: 4.7,
+    youtube_created_at: new Date(Date.now() - 100 * 86_400_000).toISOString(),
+    first_upload_at: null,
+    discovered_at: "2026-09-20T00:00:00Z",
+    is_faceless: true,
+    likely_monetized: true,
+    content_type: "long",
+    language: "en",
+    country: "US",
+    views_last_30d: 90_000,
+    tags: [
+      { is_primary: false, niches: { slug: "true-crime", name: "True Crime" } },
+      { is_primary: true, niches: { slug: "mafia-history", name: "Mafia History" } },
+    ],
+  };
+  const recentVideos = Array.from({ length: 6 }, (_, i) => ({
+    id: `vid-${i}`,
+    channel_id: "c1",
+    youtube_video_id: `v${i}`,
+    title: `Video ${i}`,
+    thumbnail_url: "t",
+    view_count: 1_000 - i * 100,
+    like_count: 10,
+    comment_count: 1,
+    published_at: new Date(Date.now() - (i + 1) * 86_400_000).toISOString(),
+    outlier_multiple: i === 0 ? 5 : 1,
+  }));
+
+  it("applies filters (niche via channel_niches), hot/warm only, and builds the card data", async () => {
     fake.on("niches", { data: { id: "n1" } });
-    fake.on("channels", {
-      data: [
-        {
-          id: "c1",
-          youtube_channel_id: "UC1",
-          name: "Mafia Tales",
-          avatar_url: null,
-          subscriber_count: 8_000,
-          video_count: 40,
-          avg_views_recent: 37_600,
-          outlier_score: 4.7,
-          youtube_created_at: new Date(Date.now() - 100 * 86_400_000).toISOString(),
-          is_faceless: true,
-          likely_monetized: true,
-          has_shorts: false,
-          language: "en",
-          niches: { slug: "mafia-history", name: "Mafia History" },
-        },
-      ],
-      count: 1,
-    });
-    fake.on("videos", {
-      data: Array.from({ length: 6 }, (_, i) => ({
-        channel_id: "c1",
-        youtube_video_id: `v${i}`,
-        title: `Video ${i}`,
-        thumbnail_url: "t",
-        view_count: 1_000 - i,
-        published_at: "2026-09-01T00:00:00Z",
-      })),
-    });
+    fake.on("channels", { data: [channelRow], count: 1 });
+    fake.on("videos", { data: recentVideos });
+    fake.on("channel_view_snapshots", { data: [] });
 
     const page = await listFeedChannels({
       niche: "mafia-history",
       faceless: true,
       excludeKids: true,
       minSubs: 1_000,
+      country: "US",
+      contentType: "long",
+      q: "50%_off",
       sort: "avg_views",
       page: 2,
     });
 
     const query = fake.queriesFor("channels")[0];
     expect(callsOf(query, "in")).toContainEqual(["refresh_tier", ["hot", "warm"]]);
-    expect(callsOf(query, "in")).toContainEqual(["niche_id", ["n1"]]);
+    // A join, not an id list: any of the channel's niches (D-077).
+    expect(callsOf(query, "in")).toContainEqual(["match.niche_id", ["n1"]]);
     expect(callsOf(query, "eq")).toContainEqual(["is_faceless", true]);
+    expect(callsOf(query, "eq")).toContainEqual(["country", "US"]);
+    expect(callsOf(query, "eq")).toContainEqual(["content_type", "long"]);
+    expect(callsOf(query, "ilike")).toContainEqual(["name", "%50\\%\\_off%"]);
     expect(callsOf(query, "or")).toContainEqual(["made_for_kids.is.null,made_for_kids.eq.false"]);
     expect(callsOf(query, "gte")).toContainEqual(["subscriber_count", 1_000]);
     expect(callsOf(query, "order")[0]).toEqual([
@@ -233,13 +250,29 @@ describe("listFeedChannels", () => {
     ]);
     expect(callsOf(query, "range")).toEqual([[24, 47]]);
 
-    expect(page.items[0]).toMatchObject({ outlierScore: 4.7, daysSinceStart: 100 });
-    expect(page.items[0]?.popularVideos.map((v) => v.youtubeVideoId)).toEqual([
-      "v0",
-      "v1",
-      "v2",
-      "v3",
-    ]);
+    const channel = page.items[0]!;
+    expect(channel).toMatchObject({
+      outlierScore: 4.7,
+      daysSinceStart: 100,
+      medianViewsRecent: 160_000,
+      contentType: "long",
+      viewsToSubs: 20,
+      views30d: { kind: "uploads", value: 90_000 },
+    });
+    expect(channel.niches.map((n) => n.slug)).toEqual(["mafia-history", "true-crime"]);
+    expect(channel.topVideos.map((v) => v.youtubeVideoId)).toEqual(["v0", "v1", "v2"]);
+    expect(channel.topVideos.map((v) => v.isOutlier)).toEqual([true, false, false]);
+    expect(channel.insights.map((i) => i.id)).toContain("breakout");
+  });
+
+  it("switches to true 30-day views once a month-old reading exists", async () => {
+    fake.on("channels", { data: [channelRow], count: 1 });
+    fake.on("videos", { data: recentVideos });
+    fake.on("channel_view_snapshots", {
+      data: [{ channel_id: "c1", snapshot_date: "2026-08-29", total_view_count: 1_600_000 }],
+    });
+    const page = await listFeedChannels({ sort: "outlier_score", page: 1 });
+    expect(page.items[0]?.views30d).toEqual({ kind: "true", value: 400_000 });
   });
 
   it("returns nothing for an unknown niche slug", async () => {

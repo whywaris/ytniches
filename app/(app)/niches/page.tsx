@@ -4,6 +4,7 @@ import {
   parseNicheFilters,
   parseOutlierFilters,
   parseTab,
+  DEFAULT_FEED_TAB,
   type FeedTab,
   type SearchParams,
 } from "@/lib/discovery/feed-url";
@@ -30,8 +31,8 @@ export const metadata: Metadata = {
 };
 
 const TAB_HREFS: Record<FeedTab, string> = {
-  niches: "/niches",
-  channels: "/niches?tab=channels",
+  channels: "/niches",
+  niches: "/niches?tab=niches",
   outliers: "/niches?tab=outliers",
   search: "/niches?tab=search",
 };
@@ -47,7 +48,7 @@ export default async function NichesPage({
 }) {
   const params = await searchParams;
   const explicitTab = parseTab(params);
-  const tab: FeedTab = explicitTab ?? (hasAnyFilterParam(params) ? "search" : "niches");
+  const tab: FeedTab = explicitTab ?? (hasAnyFilterParam(params) ? "search" : DEFAULT_FEED_TAB);
   const [ctx, freshness] = await Promise.all([getRequestContext(), getFeedFreshness()]);
 
   return (

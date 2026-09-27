@@ -108,6 +108,14 @@ export const CHANNEL_VIEW_SNAPSHOT_DAYS = 30;
 export const MAX_NICHES_PER_CHANNEL = 3;
 export const SECONDARY_NICHE_MIN_CONFIDENCE = 0.6;
 
+// D-077 channel-card insight chips (lib/discovery/insights.ts).
+export const BREAKOUT_WINDOW_DAYS = 30;
+export const CONSISTENT_UPLOAD_WEEKS = 4;
+export const ENGAGED_MIN_RATE = 0.04;
+export const ENGAGED_MIN_VIDEOS = 3;
+// "Views (30 days)" switches to a true difference once a reading this old exists.
+export const TRUE_VIEWS_MIN_READING_AGE_DAYS = 28;
+
 // --- Browse (D-072) --------------------------------------------------------
 export const CAPPED_PLAN_NICHE_LIMIT = 50;
 export const FEED_PAGE_SIZE = 24;

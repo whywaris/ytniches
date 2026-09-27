@@ -1,11 +1,18 @@
 import { getRedis } from "@/lib/cache/redis";
 import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import {
+  BREAKOUT_WINDOW_DAYS,
   CAPPED_PLAN_NICHE_LIMIT,
+  CHANNEL_VIEW_SNAPSHOT_DAYS,
   DAY_MS,
   FEED_PAGE_SIZE,
   OUTLIER_FEED_MIN_MULTIPLE,
+  TRUE_VIEWS_MIN_READING_AGE_DAYS,
 } from "@/lib/discovery/config";
+import { channelInsights, viewsToSubsRatio, type Insight } from "@/lib/discovery/insights";
+import type { ChannelPresetId } from "@/lib/discovery/feed-filters";
+import type { ContentType } from "@/lib/services/discovery/enrich";
+import { OUTLIER_THRESHOLD_MULTIPLIER } from "@/lib/outliers/scoring";
 import { competitionLabel, type CompetitionLabel, type NicheStatus } from "@/lib/discovery/scoring";
 import {
   FEED_VERSION_KEY,
@@ -268,29 +275,42 @@ export async function listNiches(
 export type ChannelFeedSort = "outlier_score" | "avg_views" | "newest" | "subscribers";
 
 export interface ChannelFeedFilters {
-  niche?: string; // slug
-  createdAfter?: string; // YYYY-MM-DD
-  createdBefore?: string;
+  /** One of the free presets (D-077); its filters are filled in by the parser. */
+  preset?: ChannelPresetId;
+  q?: string; // channel name contains
+  niche?: string; // slug, any of the channel's niches (channel_niches)
+  maxAgeMonths?: number;
+  createdAfter?: string; // YYYY-MM-DD (Pro)
+  createdBefore?: string; // (Pro)
   minSubs?: number;
   maxSubs?: number;
   minAvgViews?: number;
   maxAvgViews?: number;
-  minOutlierScore?: number;
-  faceless?: boolean;
-  excludeKids?: boolean;
-  hasShorts?: boolean;
-  likelyMonetized?: boolean;
+  minOutlierScore?: number; // (Pro)
+  faceless?: boolean; // (Pro, and the New faceless preset)
+  excludeKids?: boolean; // (Pro)
+  likelyMonetized?: boolean; // (Pro)
   language?: string;
+  country?: string;
+  contentType?: ContentType;
+  /** An upload at 3x baseline in the last BREAKOUT_WINDOW_DAYS (preset). */
+  breakout?: boolean;
+  /** Primary niche is Rising (preset). */
+  risingNiche?: boolean;
   sort: ChannelFeedSort;
   page: number;
 }
 
-export interface PopularVideo {
+export interface TopVideo {
+  /** Internal ids, for "Generate prompts" (/prompts?channelId&videoId). */
+  videoId: string;
   youtubeVideoId: string;
   title: string;
   thumbnailUrl: string;
   viewCount: number;
   publishedAt: string;
+  isOutlier: boolean;
+  outlierMultiple: number | null;
 }
 
 export interface FeedChannel {
@@ -301,15 +321,30 @@ export interface FeedChannel {
   subscriberCount: number;
   videoCount: number;
   avgViewsRecent: number | null;
+  /** Typical views: the median of recent uploads (D-077). */
+  medianViewsRecent: number | null;
   outlierScore: number | null;
   youtubeCreatedAt: string;
+  /** "Active since": the first upload when we know it, else channel creation. */
+  activeSince: string;
   daysSinceStart: number;
+  discoveredAt: string | null;
   isFaceless: boolean | null;
   likelyMonetized: boolean | null;
-  hasShorts: boolean | null;
+  contentType: ContentType | null;
   language: string | null;
-  niche: { slug: string; name: string } | null;
-  popularVideos: PopularVideo[];
+  country: string | null;
+  /**
+   * "true": total views gained over ~30 days, from daily readings (D-077).
+   * "uploads": views on uploads published in the last 30 days, until 30 days
+   * of readings exist. The card labels each honestly.
+   */
+  views30d: { kind: "true" | "uploads"; value: number | null };
+  /** Primary first, then the rest (up to 3). */
+  niches: { slug: string; name: string; isPrimary: boolean }[];
+  topVideos: TopVideo[];
+  insights: Insight[];
+  viewsToSubs: number | null;
 }
 
 export interface ChannelFeedPage {
@@ -326,39 +361,85 @@ const CHANNEL_SORT_COLUMN: Record<ChannelFeedSort, string> = {
   subscribers: "subscriber_count",
 };
 
-async function popularVideosFor(
-  supabase: Supabase,
-  channelIds: string[],
-  perChannel: number,
-): Promise<Map<string, PopularVideo[]>> {
-  const result = new Map<string, PopularVideo[]>();
-  if (channelIds.length === 0) return result;
-  const { data, error } = await supabase
-    .from("videos")
-    .select("channel_id, youtube_video_id, title, thumbnail_url, view_count, published_at")
-    .in("channel_id", channelIds)
-    .order("view_count", { ascending: false })
-    .limit(1000);
-  if (error) throw new Error(`popularVideosFor failed: ${error.message}`);
-  for (const row of data) {
-    const list = result.get(row.channel_id) ?? [];
-    if (list.length >= perChannel) continue;
-    list.push({
-      youtubeVideoId: row.youtube_video_id,
-      title: row.title,
-      thumbnailUrl: row.thumbnail_url,
-      viewCount: row.view_count,
-      publishedAt: row.published_at,
-    });
-    result.set(row.channel_id, list);
-  }
-  return result;
-}
+const RECENT_VIDEOS_PER_CHANNEL = 30;
+const TOP_VIDEOS_PER_CARD = 3;
 
 async function nicheIdForSlug(supabase: Supabase, slug: string): Promise<string | null> {
   const { data, error } = await supabase.from("niches").select("id").eq("slug", slug).maybeSingle();
   if (error) throw new Error(`nicheIdForSlug failed: ${error.message}`);
   return data?.id ?? null;
+}
+
+interface RecentVideoRow {
+  id: string;
+  channel_id: string;
+  youtube_video_id: string;
+  title: string;
+  thumbnail_url: string;
+  view_count: number;
+  like_count: number | null;
+  comment_count: number | null;
+  published_at: string;
+  outlier_multiple: number | null;
+}
+
+// The kept recent uploads per channel: top videos and insight inputs.
+async function recentVideosFor(
+  supabase: Supabase,
+  channelIds: string[],
+): Promise<Map<string, RecentVideoRow[]>> {
+  const result = new Map<string, RecentVideoRow[]>();
+  if (channelIds.length === 0) return result;
+  const { data, error } = await supabase
+    .from("videos")
+    .select(
+      "id, channel_id, youtube_video_id, title, thumbnail_url, view_count, like_count, comment_count, published_at, outlier_multiple",
+    )
+    .in("channel_id", channelIds)
+    .neq("title", "")
+    .order("published_at", { ascending: false })
+    .limit(channelIds.length * RECENT_VIDEOS_PER_CHANNEL);
+  if (error) throw new Error(`recentVideosFor failed: ${error.message}`);
+  for (const row of data) {
+    const list = result.get(row.channel_id) ?? [];
+    if (list.length < RECENT_VIDEOS_PER_CHANNEL) list.push(row);
+    result.set(row.channel_id, list);
+  }
+  return result;
+}
+
+// D-077: the oldest reading from TRUE_VIEWS_MIN_READING_AGE_DAYS..30 days
+// ago per channel, for a true 30-day views difference.
+async function monthOldReadings(
+  supabase: Supabase,
+  channelIds: string[],
+  now: number,
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (channelIds.length === 0) return result;
+  const day = (offset: number) => new Date(now - offset * DAY_MS).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("channel_view_snapshots")
+    .select("channel_id, snapshot_date, total_view_count")
+    .in("channel_id", channelIds)
+    .gte("snapshot_date", day(CHANNEL_VIEW_SNAPSHOT_DAYS))
+    .lte("snapshot_date", day(TRUE_VIEWS_MIN_READING_AGE_DAYS))
+    .order("snapshot_date", { ascending: true });
+  if (error) throw new Error(`monthOldReadings failed: ${error.message}`);
+  for (const row of data) {
+    if (!result.has(row.channel_id)) result.set(row.channel_id, row.total_view_count);
+  }
+  return result;
+}
+
+async function risingNicheIds(supabase: Supabase): Promise<string[]> {
+  const { data, error } = await supabase.from("niches").select("id").eq("status", "rising");
+  if (error) throw new Error(`risingNicheIds failed: ${error.message}`);
+  return data.map((row) => row.id);
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
 async function loadChannelPage(
@@ -377,21 +458,43 @@ async function loadChannelPage(
     if (!id) return empty;
     nicheFilter = [id];
   }
+  let primaryNicheFilter: string[] | undefined;
+  if (filters.risingNiche) {
+    primaryNicheFilter = await risingNicheIds(supabase);
+    if (primaryNicheFilter.length === 0) return empty;
+  }
 
-  // Only enriched, still-qualifying channels (hot/warm) belong in the feed;
-  // cold ones no longer pass §6.2.
+  // Joins, not id lists: a big `in (...)` blows PostgREST's URL limit.
+  // `tags` = every niche of the channel; `match` / `bo` only filter.
+  const select = [
+    "id, youtube_channel_id, name, avatar_url, subscriber_count, video_count, total_view_count",
+    "avg_views_recent, median_views_recent, outlier_score, youtube_created_at, first_upload_at",
+    "discovered_at, is_faceless, likely_monetized, content_type, language, country, views_last_30d",
+    "tags:channel_niches(is_primary, niches(slug, name))",
+    ...(nicheFilter ? ["match:channel_niches!inner(niche_id)"] : []),
+    ...(filters.breakout ? ["bo:outliers_feed!inner(video_id, videos!inner(published_at))"] : []),
+  ].join(", ");
+
   let query = supabase
     .from("channels")
-    .select(
-      "id, youtube_channel_id, name, avatar_url, subscriber_count, video_count, avg_views_recent, outlier_score, youtube_created_at, is_faceless, likely_monetized, has_shorts, language, niches(slug, name)",
-      { count: "exact" },
-    )
+    .select(select, { count: "exact" })
     .not("enriched_at", "is", null)
     .not("avg_views_recent", "is", null)
     .in("refresh_tier", ["hot", "warm"])
     .is("unavailable_since", null);
 
-  if (nicheFilter) query = query.in("niche_id", nicheFilter);
+  if (nicheFilter) query = query.in("match.niche_id", nicheFilter);
+  if (primaryNicheFilter) query = query.in("niche_id", primaryNicheFilter);
+  if (filters.breakout) {
+    const since = new Date(now - BREAKOUT_WINDOW_DAYS * DAY_MS).toISOString();
+    query = query.gte("bo.videos.published_at", since);
+  }
+  if (filters.q) query = query.ilike("name", `%${escapeLike(filters.q)}%`);
+  if (filters.maxAgeMonths !== undefined) {
+    const since = new Date(now);
+    since.setUTCMonth(since.getUTCMonth() - filters.maxAgeMonths);
+    query = query.gte("youtube_created_at", since.toISOString());
+  }
   if (filters.createdAfter) query = query.gte("youtube_created_at", filters.createdAfter);
   if (filters.createdBefore) query = query.lte("youtube_created_at", filters.createdBefore);
   if (filters.minSubs !== undefined) query = query.gte("subscriber_count", filters.minSubs);
@@ -402,9 +505,10 @@ async function loadChannelPage(
     query = query.gte("outlier_score", filters.minOutlierScore);
   if (filters.faceless) query = query.eq("is_faceless", true);
   if (filters.excludeKids) query = query.or("made_for_kids.is.null,made_for_kids.eq.false");
-  if (filters.hasShorts) query = query.eq("has_shorts", true);
   if (filters.likelyMonetized) query = query.eq("likely_monetized", true);
   if (filters.language) query = query.eq("language", filters.language);
+  if (filters.country) query = query.eq("country", filters.country);
+  if (filters.contentType) query = query.eq("content_type", filters.contentType);
 
   query = query
     .order(CHANNEL_SORT_COLUMN[filters.sort], { ascending: false, nullsFirst: false })
@@ -413,36 +517,121 @@ async function loadChannelPage(
   const from = (filters.page - 1) * pageSize;
   const { data, error, count } = await query.range(from, from + pageSize - 1);
   if (error) throw new Error(`listFeedChannels failed: ${error.message}`);
+  const rows = data as unknown as ChannelRow[];
 
-  const videos = await popularVideosFor(
-    supabase,
-    data.map((row) => row.id),
-    4,
-  );
+  const ids = rows.map((row) => row.id);
+  const [videos, readings] = await Promise.all([
+    recentVideosFor(supabase, ids),
+    monthOldReadings(supabase, ids, now),
+  ]);
+
   return {
     ...empty,
-    total: count ?? data.length,
-    items: data.map((row) => ({
-      id: row.id,
-      youtubeChannelId: row.youtube_channel_id,
-      name: row.name,
-      avatarUrl: row.avatar_url,
-      subscriberCount: row.subscriber_count,
-      videoCount: row.video_count,
-      avgViewsRecent: row.avg_views_recent,
-      outlierScore: row.outlier_score,
-      youtubeCreatedAt: row.youtube_created_at,
-      daysSinceStart: Math.max(
-        0,
-        Math.floor((now - new Date(row.youtube_created_at).getTime()) / DAY_MS),
-      ),
-      isFaceless: row.is_faceless,
-      likelyMonetized: row.likely_monetized,
-      hasShorts: row.has_shorts,
-      language: row.language,
-      niche: row.niches ? { slug: row.niches.slug, name: row.niches.name } : null,
-      popularVideos: videos.get(row.id) ?? [],
-    })),
+    total: count ?? rows.length,
+    items: rows.map((row) =>
+      toFeedChannel(row, videos.get(row.id) ?? [], readings.get(row.id), now),
+    ),
+  };
+}
+
+interface ChannelRow {
+  id: string;
+  youtube_channel_id: string;
+  name: string;
+  avatar_url: string | null;
+  subscriber_count: number;
+  video_count: number;
+  total_view_count: number;
+  avg_views_recent: number | null;
+  median_views_recent: number | null;
+  outlier_score: number | null;
+  youtube_created_at: string;
+  first_upload_at: string | null;
+  discovered_at: string | null;
+  is_faceless: boolean | null;
+  likely_monetized: boolean | null;
+  content_type: string | null;
+  language: string | null;
+  country: string | null;
+  views_last_30d: number | null;
+  tags: { is_primary: boolean; niches: { slug: string; name: string } | null }[];
+}
+
+function asContentType(value: string | null): ContentType | null {
+  return value === "long" || value === "shorts" || value === "mixed" ? value : null;
+}
+
+export function toFeedChannel(
+  row: ChannelRow,
+  recent: RecentVideoRow[],
+  monthOldReading: number | undefined,
+  now: number,
+): FeedChannel {
+  const topVideos: TopVideo[] = [...recent]
+    .sort((a, b) => b.view_count - a.view_count)
+    .slice(0, TOP_VIDEOS_PER_CARD)
+    .map((video) => ({
+      videoId: video.id,
+      youtubeVideoId: video.youtube_video_id,
+      title: video.title,
+      thumbnailUrl: video.thumbnail_url,
+      viewCount: video.view_count,
+      publishedAt: video.published_at,
+      outlierMultiple: video.outlier_multiple,
+      // The shared 3x rule (lib/outliers/scoring.ts), same as everywhere.
+      isOutlier:
+        video.outlier_multiple !== null && video.outlier_multiple >= OUTLIER_THRESHOLD_MULTIPLIER,
+    }));
+
+  const niches = row.tags
+    .filter((tag) => tag.niches !== null)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+    .map((tag) => ({ slug: tag.niches!.slug, name: tag.niches!.name, isPrimary: tag.is_primary }));
+
+  return {
+    id: row.id,
+    youtubeChannelId: row.youtube_channel_id,
+    name: row.name,
+    avatarUrl: row.avatar_url,
+    subscriberCount: row.subscriber_count,
+    videoCount: row.video_count,
+    avgViewsRecent: row.avg_views_recent,
+    medianViewsRecent: row.median_views_recent,
+    outlierScore: row.outlier_score,
+    youtubeCreatedAt: row.youtube_created_at,
+    activeSince: row.first_upload_at ?? row.youtube_created_at,
+    daysSinceStart: Math.max(
+      0,
+      Math.floor((now - new Date(row.youtube_created_at).getTime()) / DAY_MS),
+    ),
+    discoveredAt: row.discovered_at,
+    isFaceless: row.is_faceless,
+    likelyMonetized: row.likely_monetized,
+    contentType: asContentType(row.content_type),
+    language: row.language,
+    country: row.country,
+    views30d:
+      monthOldReading !== undefined
+        ? { kind: "true", value: Math.max(0, row.total_view_count - monthOldReading) }
+        : { kind: "uploads", value: row.views_last_30d },
+    niches,
+    topVideos,
+    insights: channelInsights(
+      {
+        youtubeCreatedAt: row.youtube_created_at,
+        firstUploadAt: row.first_upload_at,
+        isFaceless: row.is_faceless,
+        recentVideos: recent.map((video) => ({
+          publishedAt: video.published_at,
+          viewCount: video.view_count,
+          likeCount: video.like_count,
+          commentCount: video.comment_count,
+          outlierMultiple: video.outlier_multiple,
+        })),
+      },
+      now,
+    ),
+    viewsToSubs: viewsToSubsRatio(row.median_views_recent, row.subscriber_count),
   };
 }
 
