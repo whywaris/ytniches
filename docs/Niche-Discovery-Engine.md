@@ -151,11 +151,11 @@ create table outliers_feed (
 
 ### 5.4 Retention (D-073)
 
-`retention-purge` runs nightly and calls `purge_stale_youtube_data()`. It does three things:
+There is one 30-day purge: main's `youtube-retention-cron` (D-067b), which calls `purge_stale_youtube_data(p_max_age_days, p_snapshot_days)`. Migration `20260928100006` extends it to the engine's tables. Main's rules are unchanged: stale videos are deleted, **except videos a saved prompt references, which are blanked, not deleted**; stale untracked channels with no videos are deleted and other stale channels are emptied. It also does the following for the engine:
 
-- **Stale channels.** It deletes channels whose `last_synced_at` is older than **30 days** (YouTube API policy). Their videos are removed by cascade. A channel is **never** deleted if any user tracks it or if any prompt, calendar entry or tracked event references it or its videos.
-- **Video trimming.** It keeps the latest **30** videos per untracked channel. Older ones are deleted unless user data references them.
-- **Snapshot rollup.** It keeps 90 days of daily snapshots. Older ones are reduced to one row per ISO week (the Monday row).
+- **Outliers.** `outliers_feed` rows whose video or channel is stale are deleted first, so a blanked video never stays in the feed.
+- **Discovery columns.** Blanking a video clears `outlier_multiple`. Emptying a channel clears every YouTube-derived discovery column, including `niche_id` and `enriched_at`, so it drops out of the feeds. Our own provenance (`discovered_at`, `discovered_via_seed`, `refresh_tier`) stays.
+- **Snapshot rollup.** It keeps 90 days (`p_snapshot_days`) of daily snapshots. Older ones are reduced to one row per ISO week (the Monday row).
 
 ---
 
@@ -169,7 +169,6 @@ Crons run on the Pacific quota day (`TZ=America/Los_Angeles`), because YouTube r
 | `enrichment-cron` → `enrichment-batch` | every 2h | Picks channels that are due by tier (§6.1), in batches of 50. For each batch: `channels.list` → uploads `playlistItems.list` → `videos.list`. Computes averages, multiples and tier, and writes `outliers_feed`.                                                                                                   | ~6,500/day |
 | `classify-run`                         | 02:00 PT | Takes unclassified channels plus channels classified more than 30 days ago. gpt-4o-mini reads their titles and description and returns niche label, faceless, language, confidence and related keywords. The label is embedded and matched to an existing niche (cosine ≥ 0.85); otherwise a new niche is created. | $0 YouTube |
 | `niches-snapshot`                      | 04:00 PT | Computes five signals + Opportunity Score per niche, writes today's snapshot, sets status, warms the Upstash cache and sends niche notifications (§11).                                                                                                                                                            | $0 YouTube |
-| `retention-purge`                      | 03:00 PT | `purge_stale_youtube_data()`                                                                                                                                                                                                                                                                                       | $0         |
 
 The existing `channel-sync` (tracked channels) keeps running. It also writes `outliers_feed` rows when it detects an outlier, so tracked outliers show up in the global feed.
 

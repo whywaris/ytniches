@@ -6,8 +6,6 @@ import {
   ENRICHMENT_BATCH_SIZE,
   ENRICHMENT_BATCHES_PER_TICK,
   SEEDS_PER_RUN,
-  SNAPSHOT_DAILY_RETENTION_DAYS,
-  STALE_DATA_DAYS,
   TIER_INTERVAL_DAYS,
   VIDEOS_KEPT_PER_CHANNEL,
 } from "@/lib/discovery/config";
@@ -174,7 +172,9 @@ export async function runClassify(step: JobStep): Promise<{ classified: number; 
   return { classified, batches };
 }
 
-// --- snapshot + purge -------------------------------------------------------
+// --- snapshot -----------------------------------------------------------------
+// (The 30-day purge is main's youtube-retention job, extended to the
+// discovery tables -- D-073, workers/youtube-retention.ts.)
 
 export async function runSnapshot(
   step: JobStep,
@@ -185,18 +185,6 @@ export async function runSnapshot(
     notifyNicheTrackers(snapshot.changes),
   )) as NicheNotifyResult;
   return { ...snapshot, notified };
-}
-
-export async function runPurge(step: JobStep): Promise<unknown> {
-  return step.run("purge-stale-youtube-data", async () => {
-    const { data, error } = await createServiceClient().rpc("purge_stale_youtube_data", {
-      p_stale_days: STALE_DATA_DAYS,
-      p_keep_videos: VIDEOS_KEPT_PER_CHANNEL,
-      p_snapshot_days: SNAPSHOT_DAILY_RETENTION_DAYS,
-    });
-    if (error) throw new Error(`purge_stale_youtube_data failed: ${error.message}`);
-    return data;
-  });
 }
 
 // --- Inngest functions ------------------------------------------------------
@@ -253,20 +241,10 @@ export const nichesSnapshotFunction = inngest.createFunction(
   async ({ step }) => runSnapshot(step),
 );
 
-export const retentionPurgeFunction = inngest.createFunction(
-  {
-    id: "retention-purge",
-    ...single,
-    triggers: [{ cron: `${PT} 0 3 * * *` }, { event: MANUAL_EVENTS.purge }],
-  },
-  async ({ step }) => runPurge(step),
-);
-
 export const discoveryFunctions = [
   discoveryRunFunction,
   enrichmentCron,
   enrichmentBatchFunction,
   classifyRunFunction,
   nichesSnapshotFunction,
-  retentionPurgeFunction,
 ];

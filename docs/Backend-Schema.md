@@ -508,7 +508,7 @@ Essential indexes for MVP:
 | `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
 | `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
 
-Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`, `purge_stale_youtube_data`. Migration `20260928100004`; `channels(discovered_via_seed)` is indexed in `20260928100005`.
+Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche`, `niche_signal_inputs`. Migration `20260928100004`. The 30-day purge is main's `purge_stale_youtube_data` (D-067b), extended to `outliers_feed`, the discovery columns and `niche_snapshots` in `20260928100006` (D-073); `channels(discovered_via_seed)` is indexed in `20260928100005`.
 
 ### 6.3 Audit tables
 
@@ -548,7 +548,7 @@ Background job (nightly) enforces:
 | `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                         |
 | Failed webhook events               | 30 days                 | Delete after review                                                                             |
 | `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                      |
-| `niche_snapshots`                  | 90 days daily              | Roll up to one row per week                                                                     |
+| `niche_snapshots`                   | 90 days daily           | Roll up to one row per week                                                                     |
 
 **GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 

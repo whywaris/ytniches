@@ -86,7 +86,9 @@ export function isValidNicheSlug(slug: string): boolean {
 }
 
 // --- Retention (D-073) -----------------------------------------------------
-export const STALE_DATA_DAYS = 30;
+// The 30-day window itself is main's YOUTUBE_DATA_MAX_AGE_DAYS
+// (lib/youtube/retention.ts); this is only how long daily snapshots stay
+// daily before the purge rolls them up to weekly.
 export const SNAPSHOT_DAILY_RETENTION_DAYS = 90;
 
 // --- Browse (D-072) --------------------------------------------------------

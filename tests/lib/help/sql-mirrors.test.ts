@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 import { DIGEST_LOCAL_HOUR } from "@/lib/notifications/digest-config";
 import { INVITE_EXPIRY_DAYS } from "@/lib/help/facts";
 import { EMBEDDING_DIMENSIONS } from "@/lib/ai/client";
-import { RESERVED_NICHE_SLUGS, TIER_INTERVAL_DAYS } from "@/lib/discovery/config";
+import {
+  RESERVED_NICHE_SLUGS,
+  SNAPSHOT_DAILY_RETENTION_DAYS,
+  TIER_INTERVAL_DAYS,
+} from "@/lib/discovery/config";
 
 // These TS constants mirror values the database decides. The help center
 // shows the TS side, so it must match the SQL that actually runs.
@@ -32,6 +36,12 @@ describe("TS constants mirror the SQL", () => {
     for (const slug of RESERVED_NICHE_SLUGS) {
       expect(sql).toContain(`slug <> '${slug}'`);
     }
+  });
+
+  it("SNAPSHOT_DAILY_RETENTION_DAYS matches the purge default", () => {
+    const sql = migration("20260928100006_extend_youtube_purge_for_discovery.sql");
+    const days = /p_snapshot_days integer default (\d+)/.exec(sql);
+    expect(Number(days?.[1])).toBe(SNAPSHOT_DAILY_RETENTION_DAYS);
   });
 
   it("EMBEDDING_DIMENSIONS matches niches.embedding", () => {

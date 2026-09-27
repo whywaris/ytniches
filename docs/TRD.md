@@ -211,22 +211,21 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 
 ### 4.2 Job catalog
 
-| Job                            | Trigger            | Cadence                     | What it does                                                                 |
-| ------------------------------ | ------------------ | --------------------------- | ---------------------------------------------------------------------------- |
-| `channel.sync`                 | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events                 |
-| `outlier.scan`                 | Scheduled          | Daily (Phase 2)             | Recompute baselines, flag outliers on all tracked channels                   |
-| `digest.email`                 | Scheduled          | Daily 8am user local        | Send email digest to users with digest enabled                               |
-| `credit.expire`                | Scheduled          | Nightly                     | Expire unused credits per allocation rollover rules                          |
-| `retention.enforce`            | Scheduled          | Nightly                     | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4) |
-| `webhook.retry`                | Event-driven       | On webhook failure          | Exponential backoff retry (max 3), then manual queue                         |
-| `prompt.generate`              | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
-| ~~`youtube.transcript.fetch`~~ | Removed (D-067)    | —                           | No transcripts: YouTube Developer Policies forbid the unofficial endpoint    |
-| `youtube-retention-cron`       | Daily              | 03:15 UTC                   | Purge YouTube data not refreshed in 30 days (III.E.4.d, D-067)               |
-| `discovery-run`            | Scheduled          | Daily 00:15 PT              | Search seeds → qualify → ingest new channels (D-069)                                                                                                                                       |
-| `enrichment-cron/batch`    | Scheduled          | Every 2h                    | Refresh due channels by tier, compute outliers → `outliers_feed`             |
-| `classify-run`             | Scheduled          | Daily 02:00 PT              | gpt-4o-mini niche label + embedding match (D-074)                                                                                                                                          |
-| `niches-snapshot`          | Scheduled          | Daily 04:00 PT              | Opportunity Score + status per niche, cache warm, niche notifications                                                                                                                      |
-| `retention-purge`          | Scheduled          | Daily 03:00 UTC             | `purge_stale_youtube_data()` (D-073)                                         |
+| Job                            | Trigger            | Cadence                     | What it does                                                                                   |
+| ------------------------------ | ------------------ | --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `channel.sync`                 | Scheduled per tier | 24h / 12h / 6h / 1h (D-013) | Fetch tracked channel's latest videos + stats, detect events                                   |
+| `outlier.scan`                 | Scheduled          | Daily (Phase 2)             | Recompute baselines, flag outliers on all tracked channels                                     |
+| `digest.email`                 | Scheduled          | Daily 8am user local        | Send email digest to users with digest enabled                                                 |
+| `credit.expire`                | Scheduled          | Nightly                     | Expire unused credits per allocation rollover rules                                            |
+| `retention.enforce`            | Scheduled          | Nightly                     | Hard-delete soft-deleted records past grace period (see Backend-Schema §6.4)                   |
+| `webhook.retry`                | Event-driven       | On webhook failure          | Exponential backoff retry (max 3), then manual queue                                           |
+| `prompt.generate`              | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                                   |
+| ~~`youtube.transcript.fetch`~~ | Removed (D-067)    | —                           | No transcripts: YouTube Developer Policies forbid the unofficial endpoint                      |
+| `youtube-retention-cron`       | Daily              | 03:15 UTC                   | Purge YouTube data not refreshed in 30 days (III.E.4.d, D-067), incl. discovery tables (D-073) |
+| `discovery-run`                | Scheduled          | Daily 00:15 PT              | Search seeds → qualify → ingest new channels (D-069)                                           |
+| `enrichment-cron/batch`        | Scheduled          | Every 2h                    | Refresh due channels by tier, compute outliers → `outliers_feed`                               |
+| `classify-run`                 | Scheduled          | Daily 02:00 PT              | gpt-4o-mini niche label + embedding match (D-074)                                              |
+| `niches-snapshot`              | Scheduled          | Daily 04:00 PT              | Opportunity Score + status per niche, cache warm, niche notifications                          |
 
 Discovery jobs are scheduled on the Pacific quota day (D-076) and draw only on the discovery budget (default 3,000, D-075). They stop cleanly when the budget runs out. Every YouTube call records its source (`search`, `free_tools`, `channel_sync`, `discovery`, `enrichment`) in `quota:youtube:{date}:{source}`. See `Niche-Discovery-Engine.md` §6.
 

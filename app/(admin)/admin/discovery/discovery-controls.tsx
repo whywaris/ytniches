@@ -34,7 +34,11 @@ const JOBS: { job: ManualJob; label: string; hint: string }[] = [
   { job: "enrichment", label: "Run enrichment", hint: "Refresh due channels" },
   { job: "classify", label: "Run classify", hint: "Label niches (AI, no quota)" },
   { job: "snapshot", label: "Run snapshot", hint: "Recompute scores" },
-  { job: "purge", label: "Run purge", hint: "Delete data older than 30 days" },
+  {
+    job: "purge",
+    label: "Run YouTube data purge",
+    hint: "The daily 30-day purge (D-067b), including discovery data",
+  },
 ];
 
 const DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });

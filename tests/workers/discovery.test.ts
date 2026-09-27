@@ -44,7 +44,7 @@ vi.mock("@/lib/services/discovery/niche-notifications", () => ({
   notifyNicheTrackers: (...args: unknown[]) => notifyNicheTrackers(...args),
 }));
 
-const { dispatchEnrichment, runDiscovery, runClassify, runEnrichmentBatch, runPurge, runSnapshot } =
+const { dispatchEnrichment, runDiscovery, runClassify, runEnrichmentBatch, runSnapshot } =
   await import("@/workers/discovery");
 
 const NOW = new Date("2026-09-26T20:00:00Z");
@@ -195,21 +195,6 @@ describe("runClassify", () => {
   });
 });
 
-describe("runPurge", () => {
-  it("passes the D-073 retention windows to SQL", async () => {
-    fake.onRpc("purge_stale_youtube_data", { data: { channels: 3, videos: 40, snapshots: 0 } });
-
-    const result = await runPurge(makeStep());
-
-    expect(fake.rpcCalls[0]?.args).toEqual({
-      p_stale_days: 30,
-      p_keep_videos: 30,
-      p_snapshot_days: 90,
-    });
-    expect(result).toEqual({ channels: 3, videos: 40, snapshots: 0 });
-  });
-});
-
 describe("runSnapshot", () => {
   it("scores, then notifies niche trackers in a separate retryable step", async () => {
     const changes = [{ nicheId: "n1", score: 80, trend: 12, status: "rising" }];
@@ -234,7 +219,7 @@ describe("schedules (D-076)", () => {
     const source = readFileSync(`${process.cwd()}/workers/discovery.ts`, "utf8");
     const crons = [...source.matchAll(/cron: `\$\{PT\} ([^`]+)`/g)].map((m) => m[1]);
     expect(source).toContain('const PT = "TZ=America/Los_Angeles"');
-    expect(crons).toEqual(["15 0 * * *", "0 */2 * * *", "0 2 * * *", "0 4 * * *", "0 3 * * *"]);
+    expect(crons).toEqual(["15 0 * * *", "0 */2 * * *", "0 2 * * *", "0 4 * * *"]);
     expect(source).not.toMatch(/cron: "/);
   });
 });

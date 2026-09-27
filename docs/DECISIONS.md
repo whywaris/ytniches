@@ -870,11 +870,11 @@ Decisions that still need to close before their dependent docs / features can be
 
 - **Status:** Resolved (2026-09-26)
 - **Context:** YouTube API policy requires refreshing or deleting API data within 30 days. Before the engine we stored only channels that users searched or tracked, and there was no retention rule for `channels` / `videos`.
-- **Final call:** `retention-purge` runs nightly and calls `purge_stale_youtube_data()`. It does three things:
-  - Deletes channels not synced for 30 days. It never deletes a channel that is tracked, or that is referenced by prompts, calendar entries or tracked events.
-  - Trims untracked channels to their latest 30 videos. Videos that user data references are skipped.
-  - Keeps 90 days of daily `niche_snapshots`, then one row per week.
-- **One purge (2026-09-27):** main had no purge job; TRD §4.2's `retention.enforce` was never built. `retention-purge` is the only 30-day purge, and it is the YouTube-data part of `retention.enforce`. Soft-deleted-record retention is still unbuilt. Any later retention work extends this job rather than adding a second one.
+- **Final call:** No second purge. Main's daily `youtube-retention-cron` (D-067b) and its `purge_stale_youtube_data` are extended (migration `20260928100006`), and main's rules win. Stale videos referenced by saved prompts are blanked, not deleted. The extension adds:
+  - `outliers_feed` rows for stale videos or channels are deleted.
+  - Blanked videos lose `outlier_multiple`; emptied channels lose every YouTube-derived discovery column (`niche_id`, `enriched_at`, etc.).
+  - `niche_snapshots` keep 90 days daily, then one row per week.
+- **Superseded (2026-09-27):** the branch's own `retention-purge` job and 3-argument `purge_stale_youtube_data` (trim to the latest 30 videos, protect calendar/tracked-event channels) were dropped. Admin → Discovery "Run YouTube data purge" sends `youtube/retention.requested` to main's job.
 - **Impacts:** Backend-Schema §6.4, TRD §4.2.
 
 ### D-074: gpt-4o-mini + text-embedding-3-small for niche classification
