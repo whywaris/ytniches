@@ -13,7 +13,14 @@ async function getBrowserClient() {
   if (!POSTHOG_KEY || typeof window === "undefined") return undefined;
   if (!browserClient) {
     const posthog = (await import("posthog-js")).default;
-    posthog.init(POSTHOG_KEY, { api_host: POSTHOG_HOST, person_profiles: "identified_only" });
+    // D-067e: cookieless. "memory" keeps PostHog's id in the page only (no
+    // cookies, no localStorage), so analytics needs no consent banner (see
+    // /legal/cookies). Trade-off: a returning anonymous visitor counts as new.
+    posthog.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      person_profiles: "identified_only",
+      persistence: "memory",
+    });
     browserClient = posthog;
   }
   return browserClient;
