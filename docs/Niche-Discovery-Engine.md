@@ -319,7 +319,7 @@ Filters sit in a left panel on desktop and a bottom sheet on mobile. All of them
 
 ### 9.6 Design rules
 
-- Dark mode by default, with the emerald accent via tokens (never inline hex).
+- Dark mode by default, with the brand-orange accent via tokens (never inline hex, D-068): fills, borders and chart strokes use `accent`, orange text uses `accent-text`.
 - Lucide icons only.
 - Reuse the primitives: Card, Badge, Tag, Tabs, EmptyState, ErrorState, LoadingSkeleton, Modal.
 - Thumbnails are lazy-loaded from YouTube CDN URLs. No images are stored.

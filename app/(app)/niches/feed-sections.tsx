@@ -69,7 +69,7 @@ function FeedEmpty({ icon, message }: { icon: React.ReactNode; message: string }
     <div className="rounded-md border border-border-subtle bg-bg-surface-1">
       <EmptyState icon={icon} message={message} />
       <p className="-mt-8 pb-10 text-center text-body-sm">
-        <Link href="/niches?tab=search" className="text-accent hover:underline">
+        <Link href="/niches?tab=search" className="text-accent-text hover:underline">
           Try a live search
         </Link>
       </p>

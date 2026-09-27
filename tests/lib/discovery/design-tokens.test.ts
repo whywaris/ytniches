@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 // CLAUDE.md §4.2 / Design-System.md: never inline colours. Every colour in
 // the discovery UI (cards, score badges, trend arrows, charts, chips) comes
-// from a design token -- accent for brand emphasis, success/error for
-// up/down -- so a brand change to the tokens reaches all of it.
+// from a design token -- accent for brand emphasis (accent-text for text,
+// D-068), success/error for up/down -- so a brand change to the tokens reaches all of it.
 const ROOTS = [
   "components/features/niche-finder",
   "app/(app)/niches",
@@ -40,6 +40,19 @@ describe("discovery UI uses design tokens only", () => {
         .split("\n")
         .map((line, i) => ({ line: i + 1, text: line.trim() }))
         .filter(({ text }) => !text.startsWith("//") && RAW_COLOUR.some((re) => re.test(text)));
+      expect(offending).toEqual([]);
+    },
+  );
+
+  // D-068: `accent` on white is 3.1:1, so orange text uses `accent-text`
+  // (darkened in light mode); `accent` itself is for fills, borders, strokes.
+  it.each(files.map((f) => [path.relative(process.cwd(), f), f]))(
+    "%s sets orange text with accent-text, not accent",
+    (_label, file) => {
+      const offending = readFileSync(file, "utf8")
+        .split("\n")
+        .map((line, i) => ({ line: i + 1, text: line.trim() }))
+        .filter(({ text }) => /(^|[\s"'`:])text-accent(?!-text)\b/.test(text));
       expect(offending).toEqual([]);
     },
   );
