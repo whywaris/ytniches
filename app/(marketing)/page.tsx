@@ -21,7 +21,15 @@ export const metadata: Metadata = {
   title: SEO.title,
   description: SEO.description,
   alternates: { canonical: "/" },
-  openGraph: { title: SEO.title, description: SEO.description, url: SEO.url, type: "website" },
+  // A page-level openGraph replaces the inherited one (image included), so
+  // name the default card from app/opengraph-image.tsx explicitly.
+  openGraph: {
+    title: SEO.title,
+    description: SEO.description,
+    url: SEO.url,
+    type: "website",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
 };
 
 // Monetization.md §2 prices; aggregateRating added once ratings exist.
