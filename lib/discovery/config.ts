@@ -68,8 +68,22 @@ export const EXPANSION_SEED_PRIORITY = 8;
 
 // --- Niche matching (D-074) ------------------------------------------------
 export const NICHE_MATCH_MIN_SIMILARITY = 0.85;
-// /niches/channels/[id] already exists, so no niche may take this slug.
+// A niche slug can't shadow a static route under /niches (today:
+// /niches/channels/[id]). tests/lib/discovery/reserved-slugs.test.ts fails
+// if a new static folder appears under app/(app)/niches without being
+// listed here (and in the niches.slug check in SQL).
 export const RESERVED_NICHE_SLUGS = ["channels"] as const;
+export const NICHE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+// Whether a URL segment could be a niche page at all -- checked before any
+// query, so /niches/<reserved or junk> 404s cheaply.
+export function isValidNicheSlug(slug: string): boolean {
+  return (
+    slug.length <= 80 &&
+    NICHE_SLUG_PATTERN.test(slug) &&
+    !(RESERVED_NICHE_SLUGS as readonly string[]).includes(slug)
+  );
+}
 
 // --- Retention (D-073) -----------------------------------------------------
 export const STALE_DATA_DAYS = 30;

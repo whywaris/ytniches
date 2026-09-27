@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarPlus, Lock, Sparkles } from "lucide-react";
 
 import { getRequestContext } from "@/lib/context";
+import { isValidNicheSlug } from "@/lib/discovery/config";
 import { formatCount } from "@/lib/format";
 import { getNicheBySlug } from "@/lib/services/niche-feed";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,11 @@ import { TrackNicheButton } from "@/app/(app)/niches/[slug]/track-niche-button";
 import type { Metadata } from "next";
 
 // Deduped between generateMetadata and the page (same as channel detail).
-const loadNiche = cache(async (slug: string) => getNicheBySlug(await getRequestContext(), slug));
+const loadNiche = cache(async (slug: string) => {
+  // Reserved or malformed slugs never reach the database.
+  if (!isValidNicheSlug(slug)) return { ok: false as const, error: { type: "not_found" as const } };
+  return getNicheBySlug(await getRequestContext(), slug);
+});
 
 export async function generateMetadata({
   params,
