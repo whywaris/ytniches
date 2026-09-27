@@ -42,7 +42,7 @@ export default async function AdminDashboardPage() {
           <h2 id="webhook-errors" className="text-h4 font-semibold text-text-primary">
             Recent webhook errors
           </h2>
-          <Link href="/admin/revenue" className="text-body-sm text-accent hover:underline">
+          <Link href="/admin/revenue" className="text-body-sm text-accent-text hover:underline">
             Revenue
           </Link>
         </div>

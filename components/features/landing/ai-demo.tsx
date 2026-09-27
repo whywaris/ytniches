@@ -75,7 +75,7 @@ function AiDemo() {
               index < cardsShown ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
             )}
           >
-            <Sparkles className="size-3.5 text-accent" aria-hidden="true" />
+            <Sparkles className="size-3.5 text-accent-text" aria-hidden="true" />
             {category}
           </li>
         ))}

@@ -7,11 +7,11 @@ function ConsentLine() {
   return (
     <p className="text-center text-caption text-text-secondary">
       By continuing, you agree to our{" "}
-      <Link href="/legal/terms" className="text-accent hover:underline">
+      <Link href="/legal/terms" className="text-accent-text hover:underline">
         Terms
       </Link>{" "}
       and{" "}
-      <Link href="/legal/privacy" className="text-accent hover:underline">
+      <Link href="/legal/privacy" className="text-accent-text hover:underline">
         Privacy Policy
       </Link>
       .

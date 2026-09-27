@@ -10,7 +10,7 @@ import { getCategory } from "@/lib/blog/categories";
 const BG_BASE = "#0a0a0b";
 const TEXT_PRIMARY = "#f5f5f7";
 const TEXT_SECONDARY = "#a1a1a6";
-const ACCENT = "#10b981";
+const ACCENT = "#ff5a2e";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

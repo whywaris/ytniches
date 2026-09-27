@@ -19,7 +19,7 @@ async function CreditChip() {
       href="/settings/billing"
       className="flex h-8 items-center gap-1.5 rounded-sm border border-border-subtle px-2.5 text-body-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary"
     >
-      <Zap className="size-3.5 text-accent" aria-hidden="true" />
+      <Zap className="size-3.5 text-accent-text" aria-hidden="true" />
       {balance} credits
     </Link>
   );

@@ -105,7 +105,9 @@ function ComparisonView({ channels, onRemove, className }: ComparisonViewProps) 
                 )}
               >
                 <span className="text-text-tertiary">{row.label}</span>
-                <span className={cn("font-medium", isWinner ? "text-accent" : "text-text-primary")}>
+                <span
+                  className={cn("font-medium", isWinner ? "text-accent-text" : "text-text-primary")}
+                >
                   {row.render(channel)}
                 </span>
               </div>

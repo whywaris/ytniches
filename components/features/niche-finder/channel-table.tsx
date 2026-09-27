@@ -148,10 +148,10 @@ function ChannelTable({
                 event.stopPropagation();
                 onSave(row.id);
               }}
-              className="text-text-tertiary hover:text-accent"
+              className="text-text-tertiary hover:text-accent-text"
             >
               {saved ? (
-                <BookmarkCheck className="size-4 text-accent" aria-hidden="true" />
+                <BookmarkCheck className="size-4 text-accent-text" aria-hidden="true" />
               ) : (
                 <Bookmark className="size-4" aria-hidden="true" />
               )}

@@ -211,7 +211,7 @@ function CalendarClient({
   }
 
   function renderEventContent(arg: EventContentArg) {
-    return <span className="truncate px-1 text-caption text-white">{arg.event.title}</span>;
+    return <span className="truncate px-1 text-caption text-text-inverse">{arg.event.title}</span>;
   }
 
   return (
@@ -293,7 +293,7 @@ function CalendarClient({
                 href={buildGoogleCalendarUrl(modalState.entry)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-body-sm text-accent hover:underline"
+                className="text-body-sm text-accent-text hover:underline"
               >
                 Add to Google Calendar
               </a>

@@ -40,7 +40,7 @@ export function SaveButton({ channelId }: { channelId: string }) {
         disabled={saved}
       >
         {saved ? (
-          <BookmarkCheck className="text-accent" aria-hidden="true" />
+          <BookmarkCheck className="text-accent-text" aria-hidden="true" />
         ) : (
           <Bookmark aria-hidden="true" />
         )}

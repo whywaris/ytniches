@@ -246,7 +246,7 @@ function TrackingClient({
               onChange={handleRangeChange}
               ariaLabel="Time range"
             />
-            <Link href="/outliers" className="text-body-sm text-accent hover:underline">
+            <Link href="/outliers" className="text-body-sm text-accent-text hover:underline">
               View outliers
             </Link>
             <Button size="sm" onClick={() => setShowAddChannel(true)}>
@@ -263,7 +263,7 @@ function TrackingClient({
               actionLabel="Add channel"
               onAction={() => setShowAddChannel(true)}
             />
-            <Link href="/niches" className="text-body-sm text-accent hover:underline">
+            <Link href="/niches" className="text-body-sm text-accent-text hover:underline">
               Or discover channels in Niche Finder
             </Link>
           </div>

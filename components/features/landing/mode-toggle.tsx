@@ -18,7 +18,7 @@ function ModeToggle() {
     <Section labelledBy="mode-heading">
       <div className="mx-auto max-w-[1120px]">
         <div className="mb-10 max-w-2xl">
-          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent uppercase">
+          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent-text uppercase">
             {MODE_TOGGLE.eyebrow}
           </p>
           <h2

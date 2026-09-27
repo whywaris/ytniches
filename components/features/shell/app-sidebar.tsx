@@ -46,7 +46,7 @@ function SidebarHeader({ onOpenSearch }: { onOpenSearch: () => void }) {
         className="flex h-9 items-center text-h4 font-semibold tracking-tight text-text-primary"
       >
         {collapsed ? (
-          <span className="flex size-8 items-center justify-center rounded-sm bg-accent-subtle text-accent">
+          <span className="flex size-8 items-center justify-center rounded-sm bg-accent-subtle text-accent-text">
             Y
           </span>
         ) : (

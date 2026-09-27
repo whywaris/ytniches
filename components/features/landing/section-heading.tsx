@@ -16,7 +16,7 @@ function SectionHeading({
   return (
     <div className={cn("mb-10 max-w-3xl", align === "center" && "mx-auto text-center")}>
       {eyebrow ? (
-        <p className="mb-3 text-body-sm font-medium tracking-wide text-accent uppercase">
+        <p className="mb-3 text-body-sm font-medium tracking-wide text-accent-text uppercase">
           {eyebrow}
         </p>
       ) : null}

@@ -61,11 +61,11 @@ export default async function SignupPage({
           <TextInput label="Password" type="password" name="password" disabled />
           <label className="flex items-start gap-2 text-body-sm text-text-secondary">
             <Checkbox disabled className="mt-0.5" />I agree to the{" "}
-            <Link href="/legal/terms" className="text-accent hover:underline">
+            <Link href="/legal/terms" className="text-accent-text hover:underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/legal/privacy" className="text-accent hover:underline">
+            <Link href="/legal/privacy" className="text-accent-text hover:underline">
               Privacy Policy
             </Link>
           </label>
@@ -76,7 +76,7 @@ export default async function SignupPage({
 
         <p className="text-center text-body-sm text-text-secondary">
           Already have an account?{" "}
-          <Link href="/login" className="text-accent hover:underline">
+          <Link href="/login" className="text-accent-text hover:underline">
             Log in
           </Link>
         </p>

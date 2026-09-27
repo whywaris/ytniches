@@ -39,7 +39,7 @@ function ProblemSection() {
           </p>
         </div>
         <div className="md:col-span-2">
-          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent uppercase">
+          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent-text uppercase">
             {PROBLEM.eyebrow}
           </p>
           <h2 id="problem-heading" className="text-h1 font-semibold text-text-primary">

@@ -24,7 +24,9 @@ function VsSection() {
                 <span className="mt-3 flex-1 text-body-sm text-text-secondary">
                   {competitor.framing}
                 </span>
-                <span className="mt-4 text-body-sm font-medium text-accent">{VS.cardLink}</span>
+                <span className="mt-4 text-body-sm font-medium text-accent-text">
+                  {VS.cardLink}
+                </span>
               </TrackedLink>
             </li>
           ))}

@@ -44,7 +44,7 @@ function TemplatesShowcase() {
                         }}
                         className="flex items-center gap-2 rounded-full border border-border-default bg-bg-surface-1 px-4 py-2 text-body-sm whitespace-nowrap text-text-primary outline-none transition-colors duration-fast hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-accent-subtle focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
                       >
-                        <Icon className="size-3.5 text-accent" aria-hidden="true" />
+                        <Icon className="size-3.5 text-accent-text" aria-hidden="true" />
                         {name}
                       </button>
                     </li>

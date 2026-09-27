@@ -68,7 +68,7 @@ function LikeDislike() {
         aria-pressed={vote === "like"}
         onClick={() => setVote((current) => (current === "like" ? null : "like"))}
       >
-        <ThumbsUp className={cn(vote === "like" && "text-accent")} aria-hidden="true" />
+        <ThumbsUp className={cn(vote === "like" && "text-accent-text")} aria-hidden="true" />
       </Button>
       <Button
         variant="ghost"

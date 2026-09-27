@@ -2,12 +2,15 @@
 // (Backend-Schema.md has none, and adding one is out of scope here), so
 // this hashes channelId into a small fixed palette instead. Same color
 // every time for a given channel, no state to keep in sync.
-const PALETTE = [
-  "#10b981", // accent (matches Design-System.md's own accent green)
+//
+// Entry labels are near-black (text-inverse) on these, so every colour must
+// clear 4.5:1 against #0a0a0b (tests/lib/calendar/colors.test.ts).
+export const PALETTE = [
+  "#ff5a2e", // brand orange, the accent (D-068)
   "#3b82f6",
   "#f59e0b",
   "#ec4899",
-  "#8b5cf6",
+  "#a78bfa",
   "#14b8a6",
   "#ef4444",
   "#06b6d4",

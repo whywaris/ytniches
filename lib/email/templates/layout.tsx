@@ -11,7 +11,7 @@ const COLORS = {
   textSecondary: "#a1a1a6",
   textTertiary: "#6e6e73",
   borderDefault: "#38383a",
-  accent: "#10b981",
+  accent: "#ff5a2e", // brand orange (D-068); button text is bgBase, 6.3:1
 };
 
 const FONT_STACK =

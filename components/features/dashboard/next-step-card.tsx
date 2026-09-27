@@ -50,7 +50,9 @@ async function NextStepCard({
       className="mt-6 flex flex-col gap-4 border-accent-border bg-accent-subtle sm:flex-row sm:items-center"
     >
       <div className="flex-1">
-        <p className="text-caption font-semibold tracking-wide text-accent uppercase">Next step</p>
+        <p className="text-caption font-semibold tracking-wide text-accent-text uppercase">
+          Next step
+        </p>
         <h2 className="mt-1 text-h3 font-semibold text-text-primary">{step.title}</h2>
         <p className="mt-1 text-body-sm text-text-secondary">{step.body}</p>
       </div>

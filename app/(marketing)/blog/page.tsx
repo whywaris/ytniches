@@ -114,7 +114,7 @@ export default function BlogPage() {
                 </h2>
                 <Link
                   href={`/blog/categories/${category.slug}`}
-                  className="text-body-sm font-medium text-accent hover:underline"
+                  className="text-body-sm font-medium text-accent-text hover:underline"
                 >
                   View all<span className="sr-only"> {category.name} posts</span>
                 </Link>

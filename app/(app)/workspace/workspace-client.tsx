@@ -58,7 +58,7 @@ function WorkspaceClient({ isTeamTier, workspace, myRole }: WorkspaceClientProps
       <div className="flex items-center gap-2">
         <h1 className="text-h2 text-text-primary">Workspace</h1>
         {isTeamTier ? null : (
-          <span className="rounded-xs bg-accent-subtle px-1.5 py-0.5 text-caption font-medium text-accent">
+          <span className="rounded-xs bg-accent-subtle px-1.5 py-0.5 text-caption font-medium text-accent-text">
             Team
           </span>
         )}

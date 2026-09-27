@@ -23,7 +23,7 @@ const buttonVariants = cva(
           "border border-border-default bg-bg-surface-1 text-text-primary hover:bg-bg-hover active:bg-bg-active",
         ghost: "bg-transparent text-text-primary hover:bg-bg-hover active:bg-bg-active",
         destructive: "bg-error/10 text-error hover:bg-error/20 active:bg-error/30",
-        link: "h-auto bg-transparent p-0 text-accent underline-offset-4 hover:underline",
+        link: "h-auto bg-transparent p-0 text-accent-text underline-offset-4 hover:underline",
       },
       size: {
         xs: "h-6 px-2 text-caption gap-1 [&_svg]:size-3",

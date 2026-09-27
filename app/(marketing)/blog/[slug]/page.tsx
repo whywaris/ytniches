@@ -114,7 +114,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             {author && (
               <Link
                 href={`/blog/authors/${author.slug}`}
-                className="font-medium text-text-primary hover:text-accent"
+                className="font-medium text-text-primary hover:text-accent-text"
               >
                 {author.name}
               </Link>
@@ -187,7 +187,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             <AuthorAvatar author={author} size={56} />
             <div>
               <p className="text-body font-semibold text-text-primary">
-                <Link href={`/blog/authors/${author.slug}`} className="hover:text-accent">
+                <Link href={`/blog/authors/${author.slug}`} className="hover:text-accent-text">
                   {author.name}
                 </Link>
               </p>

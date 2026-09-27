@@ -212,7 +212,7 @@ function VsComparison({ page }: { page: CompetitorPage }) {
               href={page.pricingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-block text-body-sm font-medium text-accent hover:underline"
+              className="mt-4 inline-block text-body-sm font-medium text-accent-text hover:underline"
             >
               See {page.name}&apos;s current pricing
               <span className="sr-only"> (opens in a new tab)</span> ↗
@@ -277,7 +277,7 @@ function VsComparison({ page }: { page: CompetitorPage }) {
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent hover:underline"
+                className="text-accent-text hover:underline"
               >
                 {source.url}
               </a>{" "}

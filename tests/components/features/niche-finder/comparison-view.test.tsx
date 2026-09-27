@@ -90,7 +90,7 @@ describe("ComparisonView", () => {
     );
 
     // The winning value's cell carries the accent text class; the loser's doesn't.
-    expect(screen.getByText("999.0K")).toHaveClass("text-accent");
-    expect(screen.getByText("100")).not.toHaveClass("text-accent");
+    expect(screen.getByText("999.0K")).toHaveClass("text-accent-text");
+    expect(screen.getByText("100")).not.toHaveClass("text-accent-text");
   });
 });

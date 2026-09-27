@@ -21,7 +21,10 @@ function DashboardSection({
           {title}
         </h2>
         {viewAllHref ? (
-          <Link href={viewAllHref} className="text-body-sm font-medium text-accent hover:underline">
+          <Link
+            href={viewAllHref}
+            className="text-body-sm font-medium text-accent-text hover:underline"
+          >
             View all
           </Link>
         ) : null}

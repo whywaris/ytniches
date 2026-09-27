@@ -8,7 +8,7 @@ function FounderSection() {
       <div className="mx-auto grid max-w-[1120px] items-start gap-12 md:grid-cols-5">
         <Ill id="founder_photo" className="aspect-[4/5] md:col-span-2" />
         <div className="md:col-span-3">
-          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent uppercase">
+          <p className="mb-3 text-body-sm font-medium tracking-wide text-accent-text uppercase">
             {FOUNDER.eyebrow}
           </p>
           <h2 id="founder-heading" className="text-h1 font-semibold text-text-primary">

@@ -19,7 +19,7 @@ function Preview({ type }: { type: CreatorType }) {
       <ul className="space-y-3 md:col-span-2">
         {type.bullets.map((bullet) => (
           <li key={bullet} className="flex gap-3 text-body text-text-secondary">
-            <Check className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+            <Check className="mt-0.5 size-4 shrink-0 text-accent-text" aria-hidden="true" />
             {bullet}
           </li>
         ))}

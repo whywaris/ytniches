@@ -800,3 +800,17 @@ Decisions that still need to close before their dependent docs / features can be
   - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner. **Done** (checked in the browser).
   - f. Legal pages: terms, privacy, refunds, cookies (D-058). **Done.** Numbers come from constants via `<Fact>`, and no payment provider is named. Every processor is named in the privacy policy. Business facts live in `lib/legal/policy.ts`: sole proprietor, Pakistan law, minimum age 16, liability cap of 12 months' fees, 30 days for data requests.
 - **Deferred:** in-app data export and account deletion buttons (`/settings/danger`, UI-UX-Flow.md §8.1.6). Until then, requests go by email and are done within 30 days.
+
+### D-068: Accent colour = brand orange (replaces the emerald recommendation)
+
+- **Status:** Resolved (2026-09-27)
+- **Context:** The logo (`/brand`) is orange (#FF5A2E). The UI accent was emerald (Design-System.md §2.4's open recommendation), which clashed with the brand and with the "one accent colour" rule (§2 principle 4).
+- **Final call:**
+  - `--accent` = #FF5A2E in both themes. Hover is #E04F28 (brand + 12% black); subtle and border are the brand at 12% and 35% alpha, the same recipe as the emerald tokens.
+  - New `--accent-text` token for accent-coloured text: #FF5A2E in dark mode, #B33F20 in light, because #FF5A2E on white is only 3.1:1. All 47 `text-accent` uses moved to `text-accent-text`.
+  - Text on accent fills is `text-inverse` (near-black, 6.3:1), never white (3.1:1).
+  - Green is kept only for `success`.
+  - The niches object colour moves from emerald to fuchsia (#d946ef, light #a21caf): not orange, and its hue sits between videos' violet and tasks' rose, away from both.
+  - Hard-coded emerald replaced in the calendar palette, email layout and blog OG image.
+  - Calendar entry labels were white on the palette, which failed contrast; they're now near-black. Violet is lightened to #a78bfa so every palette colour clears 4.5:1.
+  - `tests/lib/design-tokens.test.ts` checks every accent pairing in both themes, because jest-axe in jsdom can't see CSS variables.

@@ -65,16 +65,22 @@ Deepest to highest surface. Elevation is signalled by lightening, not shadow.
 
 ### 2.4 Accent color
 
-Single accent, used sparingly. **Recommendation:** Emerald.
+Single accent, used sparingly: the **brand orange** from the logo (D-068, replacing the earlier emerald recommendation).
 
-| Token           | Value                    | Use                                      |
-| --------------- | ------------------------ | ---------------------------------------- |
-| `accent`        | #10b981                  | Primary buttons, active nav items, links |
-| `accent-hover`  | #059669                  | Hover state                              |
-| `accent-subtle` | rgba(16, 185, 129, 0.12) | Tag backgrounds, subtle emphasis         |
-| `accent-border` | rgba(16, 185, 129, 0.35) | Borders of accent-tinted surfaces        |
+| Token           | Dark                    | Light   | Use                                                      |
+| --------------- | ----------------------- | ------- | -------------------------------------------------------- |
+| `accent`        | #FF5A2E                 | same    | Fills: primary buttons, active states, checkboxes, rings |
+| `accent-hover`  | #E04F28                 | same    | Hover on accent fills (brand + 12% black)                |
+| `accent-subtle` | rgba(255, 90, 46, 0.12) | same    | Tag backgrounds, subtle emphasis                         |
+| `accent-border` | rgba(255, 90, 46, 0.35) | same    | Borders of accent-tinted surfaces                        |
+| `accent-text`   | #FF5A2E                 | #B33F20 | Text and links in the accent colour                      |
 
-> **Open decision:** Emerald is a recommendation because YouTube tools rarely use green (differentiation), it signals growth/monetization, and works well in dark mode. Alternatives: violet (Linear-esque), cyan (research-tool signal). Mac to confirm or override.
+Rules (WCAG AA, checked by `tests/lib/design-tokens.test.ts`):
+
+- **Text on an accent fill is always `text-inverse`** (near-black): 6.3:1 on #FF5A2E. White is only 3.1:1, so never white.
+- **Accent-coloured text uses `accent-text`, never `accent`.** #FF5A2E is 6.3:1 on the dark background but only 3.1:1 on white, so light mode uses #B33F20 (brand + 30% black, 5.7:1).
+- Borders, rings and fills may use `accent` directly: UI parts need 3:1, and #FF5A2E on white is 3.1:1.
+- Green is **only** the semantic `success` colour.
 
 ### 2.5 Semantic colors
 
@@ -89,15 +95,15 @@ Single accent, used sparingly. **Recommendation:** Emerald.
 
 Muted, distinguishable colors per object type. Used for icons, category badges, calendar events — never as full backgrounds.
 
-| Object          | Color                    | Hex     |
-| --------------- | ------------------------ | ------- |
-| Niches          | Emerald (matches accent) | #10b981 |
-| Channels        | Blue                     | #3b82f6 |
-| Videos          | Violet                   | #8b5cf6 |
-| Prompts         | Amber                    | #f59e0b |
-| Calendar events | Teal                     | #14b8a6 |
-| Tasks           | Rose                     | #f43f5e |
-| Outliers        | Orange                   | #fb923c |
+| Object          | Color                                                           | Hex                     |
+| --------------- | --------------------------------------------------------------- | ----------------------- |
+| Niches          | Fuchsia (not orange, so niches never read as the accent; D-068) | #d946ef (light #a21caf) |
+| Channels        | Blue                                                            | #3b82f6                 |
+| Videos          | Violet                                                          | #8b5cf6                 |
+| Prompts         | Amber                                                           | #f59e0b                 |
+| Calendar events | Teal                                                            | #14b8a6                 |
+| Tasks           | Rose                                                            | #f43f5e                 |
+| Outliers        | Orange                                                          | #fb923c                 |
 
 ### 2.7 Light mode (alternative theme)
 
@@ -342,7 +348,7 @@ Charts appear on: Niche Finder metric cards, Competitor Tracking activity graphs
 
 **Colors:**
 
-- Single series: `accent` (emerald)
+- Single series: `accent` (brand orange)
 - Comparison of 2–3: `accent` + object type colors (channels blue, videos violet)
 - Trend: `accent` for the line, `success` / `error` semantic dots for anomalies
 

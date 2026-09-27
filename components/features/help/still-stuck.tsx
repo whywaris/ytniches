@@ -16,7 +16,7 @@ function StillStuck() {
       </p>
       <a
         href={`mailto:${SUPPORT_EMAIL}`}
-        className="mt-4 inline-flex items-center gap-2 text-body-sm font-medium text-accent hover:underline"
+        className="mt-4 inline-flex items-center gap-2 text-body-sm font-medium text-accent-text hover:underline"
       >
         <Mail aria-hidden="true" className="size-4" />
         {SUPPORT_EMAIL}

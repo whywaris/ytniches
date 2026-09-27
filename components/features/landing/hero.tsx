@@ -20,7 +20,7 @@ function Hero() {
       />
       <HeroVideoProvider>
         <div className="relative mx-auto flex max-w-[1120px] flex-col items-center text-center">
-          <p className="mb-4 text-body-sm font-medium tracking-wide text-accent uppercase">
+          <p className="mb-4 text-body-sm font-medium tracking-wide text-accent-text uppercase">
             {HERO.eyebrow}
           </p>
           <h1

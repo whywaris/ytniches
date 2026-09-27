@@ -43,10 +43,10 @@ function ChannelCard({ channel, saved = false, onSave, onOpen, className }: Chan
           event.stopPropagation();
           onSave?.(channel.id);
         }}
-        className="absolute top-3 right-3 text-text-tertiary hover:text-accent"
+        className="absolute top-3 right-3 text-text-tertiary hover:text-accent-text"
       >
         {saved ? (
-          <BookmarkCheck className="size-4 text-accent" aria-hidden="true" />
+          <BookmarkCheck className="size-4 text-accent-text" aria-hidden="true" />
         ) : (
           <Bookmark className="size-4" aria-hidden="true" />
         )}

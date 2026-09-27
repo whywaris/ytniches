@@ -87,7 +87,7 @@ function Select({
                 >
                   <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
                   <RadixSelect.ItemIndicator className="absolute right-3 flex items-center">
-                    <Check className="size-4 text-accent" />
+                    <Check className="size-4 text-accent-text" />
                   </RadixSelect.ItemIndicator>
                 </RadixSelect.Item>
               ))}

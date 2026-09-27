@@ -80,7 +80,7 @@ function BentoFeatures() {
             return (
               <StaggerItem key={fill.id} className="lg:col-span-3">
                 <div className={CELL}>
-                  <Icon className="size-5 text-accent" aria-hidden="true" />
+                  <Icon className="size-5 text-accent-text" aria-hidden="true" />
                   <h3 className="mt-3 text-body font-semibold text-text-primary">{fill.label}</h3>
                   <p className="mt-1 text-body-sm text-text-secondary">{fill.description}</p>
                 </div>

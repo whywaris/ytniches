@@ -22,7 +22,7 @@ export default function SuspendedPage() {
         </p>
         <Link
           href="/"
-          className="mt-8 inline-block text-body-sm font-medium text-accent hover:underline"
+          className="mt-8 inline-block text-body-sm font-medium text-accent-text hover:underline"
         >
           Back to ytniches.com
         </Link>

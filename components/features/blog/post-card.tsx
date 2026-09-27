@@ -90,7 +90,7 @@ function PostCard({ post, author }: { post: PostSummary; author?: Author }) {
     <article className="group relative flex flex-col gap-3">
       <Cover post={post} />
       <CategoryLabel post={post} />
-      <h3 className="text-h4 font-semibold text-text-primary group-hover:text-accent">
+      <h3 className="text-h4 font-semibold text-text-primary group-hover:text-accent-text">
         <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0">
           {post.title}
         </Link>
@@ -107,7 +107,7 @@ function FeaturedPostCard({ post, author }: { post: PostSummary; author?: Author
       <Cover post={post} priority />
       <div className="flex flex-col gap-4">
         <CategoryLabel post={post} />
-        <h2 className="text-h1 font-semibold text-text-primary group-hover:text-accent">
+        <h2 className="text-h1 font-semibold text-text-primary group-hover:text-accent-text">
           <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0">
             {post.title}
           </Link>

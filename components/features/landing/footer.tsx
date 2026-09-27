@@ -38,7 +38,7 @@ function Footer({ blogLive = false }: { blogLive?: boolean }) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 rounded-full border border-border-default px-3 py-1.5 text-body-sm text-text-secondary transition-colors duration-fast hover:bg-bg-hover hover:text-text-primary"
                 >
-                  <Sparkles className="size-3.5 text-accent" aria-hidden="true" />
+                  <Sparkles className="size-3.5 text-accent-text" aria-hidden="true" />
                   {link.label}
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>

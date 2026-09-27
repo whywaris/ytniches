@@ -59,7 +59,7 @@ export default async function LoginPage({
           </Button>
           <Link
             href="/forgot-password"
-            className="block text-center text-body-sm text-accent hover:underline"
+            className="block text-center text-body-sm text-accent-text hover:underline"
           >
             Forgot password?
           </Link>
@@ -67,7 +67,7 @@ export default async function LoginPage({
 
         <p className="text-center text-body-sm text-text-secondary">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-accent hover:underline">
+          <Link href="/signup" className="text-accent-text hover:underline">
             Sign up
           </Link>
         </p>
