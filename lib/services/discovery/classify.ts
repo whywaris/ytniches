@@ -4,7 +4,9 @@ import { CLASSIFY_MODEL, createEmbedding, generateStructuredOutput } from "@/lib
 import {
   CLASSIFY_STALE_DAYS,
   DAY_MS,
+  MAX_NICHES_PER_CHANNEL,
   NICHE_MATCH_MIN_SIMILARITY,
+  SECONDARY_NICHE_MIN_CONFIDENCE,
   RESERVED_NICHE_SLUGS,
 } from "@/lib/discovery/config";
 import { addExpansionSeeds } from "@/lib/services/discovery/seeds";
@@ -27,6 +29,10 @@ export const ChannelClassificationSchema = z.object({
       isFaceless: z.boolean(),
       language: z.string().nullable(),
       confidence: z.number(),
+      // D-077: other niches the channel clearly also fits (tags/filtering).
+      secondaryNiches: z.array(
+        z.object({ niche: z.string(), nicheDescription: z.string(), confidence: z.number() }),
+      ),
       relatedKeywords: z.array(z.string()),
     }),
   ),
@@ -40,6 +46,7 @@ For each channel return:
 - isFaceless: true if the creator does not appear on camera (voiceover, stock footage, animation, slideshows, ambient/music, screen recordings).
 - language: ISO 639-1 code of the content language, or null if unclear.
 - confidence: 0 to 1, how sure you are about the niche.
+- secondaryNiches: up to ${MAX_NICHES_PER_CHANNEL - 1} OTHER niches the channel clearly also belongs to (same naming rules, each with its own description and 0-1 confidence). Use an empty array when the channel fits one niche.
 - relatedKeywords: up to 3 YouTube search keywords for adjacent faceless niches worth exploring.
 Return every input channel exactly once, using its channelId.`;
 
@@ -186,6 +193,54 @@ export async function resolveNiche(
   return raced.data.id;
 }
 
+// D-077: extra niches the model is confident about, resolved like the
+// primary, deduped, capped at MAX_NICHES_PER_CHANNEL - 1.
+async function resolveSecondaryNiches(
+  secondary: ChannelClassification["secondaryNiches"],
+  primaryId: string,
+  cache: Map<string, string>,
+): Promise<{ nicheId: string; confidence: number }[]> {
+  const picked: { nicheId: string; confidence: number }[] = [];
+  for (const extra of secondary) {
+    if (picked.length >= MAX_NICHES_PER_CHANNEL - 1) break;
+    const confidence = clampConfidence(extra.confidence);
+    if (confidence < SECONDARY_NICHE_MIN_CONFIDENCE) continue;
+    const nicheId = await resolveNiche(extra.niche, extra.nicheDescription, cache);
+    if (!nicheId || nicheId === primaryId || picked.some((p) => p.nicheId === nicheId)) continue;
+    picked.push({ nicheId, confidence });
+  }
+  return picked;
+}
+
+// Replaces the channel's niche tags: one primary plus the extras.
+async function writeChannelNiches(
+  channelId: string,
+  primary: { nicheId: string; confidence: number },
+  extras: { nicheId: string; confidence: number }[],
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { error: clearError } = await supabase
+    .from("channel_niches")
+    .delete()
+    .eq("channel_id", channelId);
+  if (clearError) throw new Error(`writeChannelNiches clear failed: ${clearError.message}`);
+  const { error } = await supabase.from("channel_niches").insert([
+    {
+      channel_id: channelId,
+      niche_id: primary.nicheId,
+      confidence: primary.confidence,
+      is_primary: true,
+    },
+    ...extras.map((extra) => ({
+      channel_id: channelId,
+      niche_id: extra.nicheId,
+      confidence: extra.confidence,
+      is_primary: false,
+    })),
+  ]);
+  if (error) throw new Error(`writeChannelNiches insert failed: ${error.message}`);
+}
+
 export interface ClassifyResult {
   classified: number;
   failed: boolean;
@@ -247,6 +302,12 @@ export async function classifyBatch(
       .update({ niche_id: nicheId })
       .eq("channel_id", channel.id);
     if (feedError) throw new Error(`classifyBatch feed update failed: ${feedError.message}`);
+
+    await writeChannelNiches(
+      channel.id,
+      { nicheId, confidence: clampConfidence(item.confidence) },
+      await resolveSecondaryNiches(item.secondaryNiches, nicheId, nicheCache),
+    );
 
     related.push(...item.relatedKeywords.slice(0, 3));
     classified += 1;

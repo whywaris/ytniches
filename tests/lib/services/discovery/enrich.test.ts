@@ -87,6 +87,52 @@ describe("computeChannelEnrichment", () => {
     expect(result.hasShorts).toBe(true);
   });
 
+  it("gives the median of long-form views, not the mean (D-077)", () => {
+    const result = computeChannelEnrichment(
+      channel(),
+      [video("a", 1_000, 20), video("b", 2_000, 15), video("hit", 90_000, 10)],
+      false,
+      NOW.getTime(),
+    );
+    expect(result.medianViewsRecent).toBe(2_000);
+    expect(result.avgViewsRecent).toBe(31_000);
+  });
+
+  it("treats uploads up to 3 minutes as Shorts and sets the content type", () => {
+    const long = computeChannelEnrichment(channel(), breakoutUploads(), false, NOW.getTime());
+    expect(long.contentType).toBe("long");
+    const shorts = computeChannelEnrichment(
+      channel(),
+      Array.from({ length: 5 }, (_, i) => video(`s${i}`, 1_000, i + 1, "PT2M50S")),
+      false,
+      NOW.getTime(),
+    );
+    expect(shorts.contentType).toBe("shorts");
+    const mixed = computeChannelEnrichment(
+      channel(),
+      [
+        video("l1", 1, 1),
+        video("l2", 1, 2),
+        video("s1", 1, 3, "PT30S"),
+        video("s2", 1, 4, "PT30S"),
+      ],
+      false,
+      NOW.getTime(),
+    );
+    expect(mixed.contentType).toBe("mixed");
+    expect(computeChannelEnrichment(channel(), [], false, NOW.getTime()).contentType).toBeNull();
+  });
+
+  it("sums views on uploads from the last 30 days", () => {
+    const result = computeChannelEnrichment(
+      channel(),
+      [video("new", 5_000, 3), video("edge", 1_000, 29), video("old", 99_000, 45)],
+      false,
+      NOW.getTime(),
+    );
+    expect(result.viewsLast30d).toBe(6_000);
+  });
+
   it("scores each video with the shared 3x rule and lists the outliers", () => {
     const result = computeChannelEnrichment(channel(), breakoutUploads(), false, NOW.getTime());
     expect(result.multiples.get("breakout")).toBe(5);

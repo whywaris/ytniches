@@ -65,3 +65,27 @@ begin
 end $$;
 
 rollback;
+
+-- The trigger records one reading per channel per day, keeping the highest,
+-- and records nothing for an emptied (0-view) channel.
+begin;
+
+insert into public.channels (id, youtube_channel_id, name, youtube_created_at, total_view_count)
+values ('00000000-0000-0000-0000-00000000f301', 'UCtrig', 'Trig', '2020-01-01', 1000);
+update public.channels set total_view_count = 1500 where id = '00000000-0000-0000-0000-00000000f301';
+update public.channels set total_view_count = 1200 where id = '00000000-0000-0000-0000-00000000f301';
+update public.channels set total_view_count = 0 where id = '00000000-0000-0000-0000-00000000f301';
+
+do $$
+begin
+  if (select total_view_count from public.channel_view_snapshots
+      where channel_id = '00000000-0000-0000-0000-00000000f301' and snapshot_date = current_date) <> 1500 then
+    raise exception 'expected the day''s highest reading (1500)';
+  end if;
+  if (select count(*) from public.channel_view_snapshots
+      where channel_id = '00000000-0000-0000-0000-00000000f301') <> 1 then
+    raise exception 'expected exactly one reading for the day';
+  end if;
+end $$;
+
+rollback;

@@ -96,6 +96,7 @@ describe("classifyBatch", () => {
             isFaceless: true,
             language: "en",
             confidence: 1.4,
+            secondaryNiches: [],
             relatedKeywords: ["mob documentary"],
           },
           {
@@ -105,6 +106,7 @@ describe("classifyBatch", () => {
             isFaceless: false,
             language: null,
             confidence: 0.5,
+            secondaryNiches: [],
             relatedKeywords: [],
           },
         ],
@@ -125,6 +127,43 @@ describe("classifyBatch", () => {
       language: "en",
     });
     expect(addExpansionSeeds).toHaveBeenCalledWith(["mob documentary"], NOW);
+  });
+
+  it("tags up to 3 niches: primary plus confident extras, deduped (D-077)", async () => {
+    generateStructuredOutput.mockResolvedValue({
+      ok: true,
+      value: {
+        channels: [
+          {
+            channelId: "c1",
+            niche: "Mafia History",
+            nicheDescription: "Organised crime history",
+            isFaceless: true,
+            language: "en",
+            confidence: 0.9,
+            secondaryNiches: [
+              { niche: "True Crime", nicheDescription: "Crime stories", confidence: 0.8 },
+              { niche: "Vague Stuff", nicheDescription: "Too unsure", confidence: 0.4 },
+              { niche: "Mafia History", nicheDescription: "Duplicate of primary", confidence: 0.9 },
+            ],
+            relatedKeywords: [],
+          },
+        ],
+      },
+    });
+    // Slug lookups: primary, then the one confident extra, then the duplicate.
+    fake.on("niches", { data: { id: "n1" } }, { data: { id: "n2" } });
+
+    await classifyBatch(channels, new Map(), NOW);
+
+    const insert = fake
+      .queriesFor("channel_niches")
+      .flatMap((q) => q.calls)
+      .find((c) => c.method === "insert");
+    expect(insert?.args[0]).toEqual([
+      { channel_id: "c1", niche_id: "n1", confidence: 0.9, is_primary: true },
+      { channel_id: "c1", niche_id: "n2", confidence: 0.8, is_primary: false },
+    ]);
   });
 
   it("throws on a transient AI error so the job retries", async () => {

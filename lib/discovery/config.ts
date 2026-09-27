@@ -44,7 +44,14 @@ export const DISCOVERY_PREFILTER_MIN_LIFETIME_AVG_VIEWS = 2_500;
 // latter. Always shown labelled as an estimate.
 export const LIKELY_MONETIZED_MIN_SUBS = 1_000;
 export const LIKELY_MONETIZED_MIN_TOTAL_VIEWS = 200_000;
-export const SHORTS_MAX_SECONDS = 60;
+// YouTube Shorts can run up to 3 minutes (since Oct 2024), D-077.
+export const SHORTS_MAX_SECONDS = 180;
+
+// D-077 content type from the recent uploads' Shorts share.
+export const CONTENT_TYPE_SHORTS_MIN_SHARE = 0.8;
+export const CONTENT_TYPE_LONG_MAX_SHARE = 0.2;
+// "Views on uploads from the last N days" on the channel card.
+export const RECENT_UPLOAD_VIEWS_DAYS = 30;
 
 // --- Refresh tiers (spec §6.1) ---------------------------------------------
 export const TIER_INTERVAL_DAYS = { hot: 2, warm: 7, cold: 25 } as const;
@@ -95,6 +102,11 @@ export const SNAPSHOT_DAILY_RETENTION_DAYS = 90;
 // this many days back from today (so today + 30 dated rows), inside the
 // 30-day YouTube data limit; enough for a true 30-day views difference.
 export const CHANNEL_VIEW_SNAPSHOT_DAYS = 30;
+
+// D-077: a channel carries up to this many niche tags (primary + extras);
+// an extra niche needs at least this confidence. Scores count the primary.
+export const MAX_NICHES_PER_CHANNEL = 3;
+export const SECONDARY_NICHE_MIN_CONFIDENCE = 0.6;
 
 // --- Browse (D-072) --------------------------------------------------------
 export const CAPPED_PLAN_NICHE_LIMIT = 50;

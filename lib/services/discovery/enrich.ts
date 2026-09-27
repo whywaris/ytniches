@@ -2,6 +2,9 @@ import {
   LIKELY_MONETIZED_MIN_SUBS,
   LIKELY_MONETIZED_MIN_TOTAL_VIEWS,
   SHORTS_MAX_SECONDS,
+  CONTENT_TYPE_LONG_MAX_SHARE,
+  CONTENT_TYPE_SHORTS_MIN_SHARE,
+  RECENT_UPLOAD_VIEWS_DAYS,
   VIDEOS_KEPT_PER_CHANNEL,
   type RefreshTier,
 } from "@/lib/discovery/config";
@@ -22,8 +25,15 @@ import type { YouTubeChannelItem, YouTubeVideoItem } from "@/lib/youtube/schemas
 // their latest uploads, then derive the discovery metrics (§5.1), per-video
 // outlier multiples, the refresh tier (§6.1) and global outlier feed rows.
 
+export type ContentType = "long" | "shorts" | "mixed";
+
 export interface ChannelEnrichment {
   avgViewsRecent: number | null;
+  /** Median of the same basis as the average: typical, not skewed by one hit. */
+  medianViewsRecent: number | null;
+  contentType: ContentType | null;
+  /** Views on uploads published in the last RECENT_UPLOAD_VIEWS_DAYS. */
+  viewsLast30d: number;
   outlierScore: number | null;
   hasShorts: boolean;
   likelyMonetized: boolean;
@@ -34,6 +44,13 @@ export interface ChannelEnrichment {
   multiples: Map<string, number | null>;
   /** youtube_video_ids at or above the feed threshold. */
   outlierVideoIds: string[];
+}
+
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
 // Pure: everything enrichment decides about one channel from its fetched
@@ -59,6 +76,26 @@ export function computeChannelEnrichment(
     basis.length > 0
       ? basis.reduce((sum, video) => sum + (video.statistics?.viewCount ?? 0), 0) / basis.length
       : null;
+  const medianViewsRecent = median(basis.map((video) => video.statistics?.viewCount ?? 0));
+
+  const timed = withDuration.filter(({ seconds }) => seconds > 0);
+  const shortsShare =
+    timed.length > 0
+      ? timed.filter(({ seconds }) => seconds <= SHORTS_MAX_SECONDS).length / timed.length
+      : null;
+  const contentType: ContentType | null =
+    shortsShare === null
+      ? null
+      : shortsShare >= CONTENT_TYPE_SHORTS_MIN_SHARE
+        ? "shorts"
+        : shortsShare <= CONTENT_TYPE_LONG_MAX_SHARE
+          ? "long"
+          : "mixed";
+
+  const recentSince = now - RECENT_UPLOAD_VIEWS_DAYS * 24 * 60 * 60 * 1000;
+  const viewsLast30d = videos
+    .filter((video) => new Date(video.snippet.publishedAt).getTime() >= recentSince)
+    .reduce((sum, video) => sum + (video.statistics?.viewCount ?? 0), 0);
 
   // Same rule as tracked outliers and the free Outlier Checker (D-054):
   // each video against the channel's uploads published before it.
@@ -102,6 +139,9 @@ export function computeChannelEnrichment(
 
   return {
     avgViewsRecent,
+    medianViewsRecent,
+    contentType,
+    viewsLast30d,
     outlierScore: channelOutlierScore(avgViewsRecent ?? 0, subscriberCount),
     hasShorts,
     likelyMonetized:
@@ -331,6 +371,9 @@ export async function enrichChannels(
       .from("channels")
       .update({
         avg_views_recent: enrichment.avgViewsRecent,
+        median_views_recent: enrichment.medianViewsRecent,
+        content_type: enrichment.contentType,
+        views_last_30d: enrichment.viewsLast30d,
         outlier_score: enrichment.outlierScore,
         has_shorts: enrichment.hasShorts,
         likely_monetized: enrichment.likelyMonetized,
