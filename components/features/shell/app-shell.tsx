@@ -10,6 +10,7 @@ import { useTheme } from "@/components/theme-provider";
 import { CommandPalette, type CommandPaletteGroup } from "@/components/ui/command-palette";
 import { AppSidebar } from "@/components/features/shell/app-sidebar";
 import { AppTopBar } from "@/components/features/shell/app-top-bar";
+import { YouTubeAttribution } from "@/components/features/youtube/youtube-attribution";
 import {
   HELP_NAV,
   PRIMARY_NAV,
@@ -149,7 +150,10 @@ function AppShell({
           onOpenCommandPalette={() => setPaletteOpen(true)}
         />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1440px] px-6 pt-6 md:px-10">{children}</div>
+          <div className="mx-auto w-full max-w-[1440px] px-6 pt-6 md:px-10">
+            {children}
+            <YouTubeAttribution className="py-6" />
+          </div>
         </main>
       </div>
       <CommandPalette groups={groups} open={paletteOpen} onOpenChange={setPaletteOpen} />

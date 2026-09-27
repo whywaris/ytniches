@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import Link from "next/link";
 
+import { YouTubeAttribution } from "@/components/features/youtube/youtube-attribution";
 import { getTool, TOOLS, type ToolSlug } from "@/lib/tools/registry";
 
 import type { Metadata } from "next";
@@ -43,6 +44,7 @@ export function ToolPage({ slug, children }: { slug: ToolSlug; children: ReactNo
       <section aria-label={tool.name} className="mt-10 rounded-md border border-border-subtle p-6">
         {children}
       </section>
+      {tool.youtubeData ? <YouTubeAttribution className="mt-3" /> : null}
 
       <section aria-labelledby="how-to" className="mt-16">
         <h2 id="how-to" className="text-h2 font-semibold text-text-primary">

@@ -25,11 +25,15 @@ export interface Tool {
   howTo: [string, string, string];
   faq: { question: string; answer: string }[];
   related: ToolSlug[];
+  // Shows data fetched from YouTube, so the page carries YouTube attribution
+  // (Developer Policies III.F.2.a, D-067d).
+  youtubeData?: true;
 }
 
 export const TOOLS: Tool[] = [
   {
     slug: "youtube-outlier-checker",
+    youtubeData: true,
     name: "YouTube Outlier Checker",
     tagline: "Paste a video. See if it's beating its own channel's average.",
     seoTitle: "YouTube Outlier Checker — Is This Video Beating Its Channel?",
@@ -71,6 +75,7 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-subscribe-link-generator",
+    youtubeData: true,
     name: "YouTube Subscribe Link Generator",
     tagline: "A link that opens your channel with the subscribe prompt already up.",
     seoTitle: "YouTube Subscribe Link Generator — Free, Works on Every Device",
@@ -107,6 +112,7 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "rss-feed-generator",
+    youtubeData: true,
     name: "YouTube RSS Feed Generator",
     tagline: "Get the RSS feed for any YouTube channel or playlist.",
     seoTitle: "YouTube RSS Feed Generator — Free, Instant, No Login",
@@ -224,6 +230,7 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-channel-id-finder",
+    youtubeData: true,
     name: "YouTube Channel ID Finder",
     tagline: "Turn any @handle or channel link into its permanent channel ID.",
     seoTitle: "YouTube Channel ID Finder — Get Any Channel's ID Free",
@@ -255,6 +262,7 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-thumbnail-download",
+    youtubeData: true,
     name: "YouTube Thumbnail Downloader",
     tagline: "Get any video's thumbnail in every size YouTube stores.",
     seoTitle: "YouTube Thumbnail Downloader — Free HD Thumbnails",
@@ -395,6 +403,7 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "tag-extractor",
+    youtubeData: true,
     name: "YouTube Tag Extractor",
     tagline: "See the tags on any public YouTube video.",
     seoTitle: "YouTube Tag Extractor — See Any Video's Tags Free",
