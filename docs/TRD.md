@@ -222,13 +222,13 @@ Reasons: event-driven (fits our webhook + user-action model), Vercel-native, ret
 | `prompt.generate`              | Event-driven       | On user submit              | Async because AI generation is 3–10s; UI polls or subscribes                 |
 | ~~`youtube.transcript.fetch`~~ | Removed (D-067)    | —                           | No transcripts: YouTube Developer Policies forbid the unofficial endpoint    |
 | `youtube-retention-cron`       | Daily              | 03:15 UTC                   | Purge YouTube data not refreshed in 30 days (III.E.4.d, D-067)               |
-| `discovery-run`            | Scheduled          | Daily 20:00 UTC             | Search seeds → qualify → ingest new channels (D-069)                         |
+| `discovery-run`            | Scheduled          | Daily 00:15 PT              | Search seeds → qualify → ingest new channels (D-069)                                                                                                                                       |
 | `enrichment-cron/batch`    | Scheduled          | Every 2h                    | Refresh due channels by tier, compute outliers → `outliers_feed`             |
-| `classify-run`             | Scheduled          | Daily 22:00 UTC             | gpt-4o-mini niche label + embedding match (D-074)                            |
-| `niches-snapshot`          | Scheduled          | Daily 01:00 UTC             | Opportunity Score + status per niche, cache warm, niche notifications        |
+| `classify-run`             | Scheduled          | Daily 02:00 PT              | gpt-4o-mini niche label + embedding match (D-074)                                                                                                                                          |
+| `niches-snapshot`          | Scheduled          | Daily 04:00 PT              | Opportunity Score + status per niche, cache warm, niche notifications                                                                                                                      |
 | `retention-purge`          | Scheduled          | Daily 03:00 UTC             | `purge_stale_youtube_data()` (D-073)                                         |
 
-Discovery jobs share a budget guard: `used + cost ≤ DISCOVERY_DAILY_BUDGET`, which defaults to the daily limit − 500. They stop cleanly when the budget runs out. Every YouTube call records its source (`search`, `free_tools`, `channel_sync`, `discovery`, `enrichment`) in `quota:youtube:{date}:{source}`. See `Niche-Discovery-Engine.md` §6.
+Discovery jobs are scheduled on the Pacific quota day (D-076) and draw only on the discovery budget (default 3,000, D-075). They stop cleanly when the budget runs out. Every YouTube call records its source (`search`, `free_tools`, `channel_sync`, `discovery`, `enrichment`) in `quota:youtube:{date}:{source}`. See `Niche-Discovery-Engine.md` §6.
 
 ### 4.3 Job execution guarantees
 
@@ -287,7 +287,8 @@ YouTube Data API v3 default quota: 10,000 units/day. Search costs 100 units, mos
 - **Batch endpoints where possible.** `videos.list` accepts up to 50 IDs at 1 unit total; fetch by batch not by loop.
 - **Prefer `channels.list` over `search.list`** when we know the channel ID (1 unit vs 100).
 - **Search is expensive.** Every Niche Finder query costs 100 units. Per-user daily search cap enforced (via ratelimit key) so runaway free-tier users can't exhaust quota.
-- **Quota tracking:** every YouTube call increments a counter in Redis (`quota:youtube:{YYYY-MM-DD}`); admin sees live usage; alerts at 70% + 90% of daily budget.
+- **Quota tracking:** every YouTube call increments counters in Redis for the Pacific quota day (D-076): the total (`quota:youtube:{YYYY-MM-DD}`), its source and its category (`…:cat:{category}`); admin sees live usage per category; alerts at 70% + 90% of daily budget.
+- **Per-category budgets (D-075):** live user 3,500, tracking sync 2,000, free tools 1,500, discovery 3,000 (env-overridable). A call is refused when its category or the day's total is exhausted, so one category can never starve another.
 - **Circuit breaker:** at 95% of daily quota, non-critical fetches (background outlier scans) pause; user-initiated searches continue until 100%; then return "Service busy, try again in \<hours>" until midnight PT reset.
 
 ### 5.4 AI provider cost management

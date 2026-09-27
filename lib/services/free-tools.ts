@@ -4,7 +4,7 @@ import { getRedis } from "@/lib/cache/redis";
 import { evaluateAgainstChannel, OUTLIER_THRESHOLD_MULTIPLIER } from "@/lib/outliers/scoring";
 import { err, ok, type Result } from "@/lib/result";
 import { getChannelById, getChannelVideos, getVideoById, resolveChannelUrl } from "@/lib/youtube";
-import { FREE_TOOLS_QUOTA_CUTOFF, getQuotaUsedToday, withQuotaSource } from "@/lib/youtube/quota";
+import { getCategoryUsed, getQuotaBudgets, withQuotaSource } from "@/lib/youtube/quota";
 import { parseChannelInput, parseVideoInput } from "@/lib/youtube/urls";
 
 // D-014 / D-054: the server-backed free tools (channel lookup, outlier
@@ -45,7 +45,10 @@ function getLimiters() {
 
 // Quota first: when the tools are busy, a visitor's allowance isn't spent.
 export async function guardFreeTool(ip: string): Promise<Result<void, FreeToolError>> {
-  if ((await getQuotaUsedToday()) >= FREE_TOOLS_QUOTA_CUTOFF) return err({ type: "busy" });
+  // D-075: free tools have their own daily budget, so nothing else (the
+  // discovery crawler included) can push them into "Busy".
+  if ((await getCategoryUsed("free_tools")) >= getQuotaBudgets().free_tools)
+    return err({ type: "busy" });
   const { hour, day } = getLimiters();
   const [hourly, daily] = await Promise.all([hour.limit(ip), day.limit(ip)]);
   if (!hourly.success || !daily.success) return err({ type: "rate_limited" });

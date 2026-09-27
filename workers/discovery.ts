@@ -200,7 +200,10 @@ export async function runPurge(step: JobStep): Promise<unknown> {
 }
 
 // --- Inngest functions ------------------------------------------------------
-// Crons are UTC; PKT = UTC+5 (spec §6).
+// D-076: scheduled on the Pacific quota day (YouTube resets at midnight
+// PT), so discovery starts right after the reset with a full budget and
+// the rest of the chain follows it.
+const PT = "TZ=America/Los_Angeles";
 
 const single = { concurrency: { limit: 1 } };
 
@@ -208,7 +211,7 @@ export const discoveryRunFunction = inngest.createFunction(
   {
     id: "discovery-run",
     ...single,
-    triggers: [{ cron: "0 20 * * *" }, { event: MANUAL_EVENTS.discovery }],
+    triggers: [{ cron: `${PT} 15 0 * * *` }, { event: MANUAL_EVENTS.discovery }],
   },
   async ({ step }) => runDiscovery(step),
 );
@@ -217,7 +220,7 @@ export const enrichmentCron = inngest.createFunction(
   {
     id: "enrichment-cron",
     ...single,
-    triggers: [{ cron: "0 */2 * * *" }, { event: MANUAL_EVENTS.enrichment }],
+    triggers: [{ cron: `${PT} 0 */2 * * *` }, { event: MANUAL_EVENTS.enrichment }],
   },
   async ({ step }) => dispatchEnrichment(step),
 );
@@ -236,7 +239,7 @@ export const classifyRunFunction = inngest.createFunction(
   {
     id: "classify-run",
     ...single,
-    triggers: [{ cron: "0 22 * * *" }, { event: MANUAL_EVENTS.classify }],
+    triggers: [{ cron: `${PT} 0 2 * * *` }, { event: MANUAL_EVENTS.classify }],
   },
   async ({ step }) => runClassify(step),
 );
@@ -245,7 +248,7 @@ export const nichesSnapshotFunction = inngest.createFunction(
   {
     id: "niches-snapshot",
     ...single,
-    triggers: [{ cron: "0 1 * * *" }, { event: MANUAL_EVENTS.snapshot }],
+    triggers: [{ cron: `${PT} 0 4 * * *` }, { event: MANUAL_EVENTS.snapshot }],
   },
   async ({ step }) => runSnapshot(step),
 );
@@ -254,7 +257,7 @@ export const retentionPurgeFunction = inngest.createFunction(
   {
     id: "retention-purge",
     ...single,
-    triggers: [{ cron: "0 3 * * *" }, { event: MANUAL_EVENTS.purge }],
+    triggers: [{ cron: `${PT} 0 3 * * *` }, { event: MANUAL_EVENTS.purge }],
   },
   async ({ step }) => runPurge(step),
 );

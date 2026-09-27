@@ -50,7 +50,14 @@ vi.mock("@/lib/credits", () => ({ computeBalance: vi.fn() }));
 vi.mock("@/lib/youtube/quota", () => ({
   DAILY_QUOTA_LIMIT: 10_000,
   SOFT_LIMIT: 9_500,
-  getQuotaHistory: vi.fn(),
+  getQuotaHistory: vi.fn(async () => [{ date: "2026-09-27", used: 4_200 }]),
+  getQuotaBySource: vi.fn(async () => ({ discovery: 3_000 })),
+  getQuotaByCategory: vi.fn(async () => ({
+    live: { used: 1_000, budget: 3_500 },
+    sync: { used: 200, budget: 2_000 },
+    free_tools: { used: 0, budget: 1_500 },
+    discovery: { used: 3_000, budget: 3_000 },
+  })),
 }));
 
 const inngestSend = vi.fn();
@@ -63,8 +70,14 @@ vi.mock("@/lib/services/discovery/seeds", async (importOriginal) => ({
   addManualSeed: (...args: unknown[]) => addManualSeed(...args),
 }));
 
-const { requireSuperAdmin, refundLastPayment, suspendUser, triggerDiscoveryJob, addDiscoverySeed } =
-  await import("@/lib/services/admin");
+const {
+  requireSuperAdmin,
+  refundLastPayment,
+  suspendUser,
+  triggerDiscoveryJob,
+  addDiscoverySeed,
+  getQuotaReport,
+} = await import("@/lib/services/admin");
 
 function signedInAs(profile: { role: string; suspended_at: string | null }) {
   getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
@@ -207,5 +220,15 @@ describe("discovery admin (D-069)", () => {
       ok: false,
       error: { type: "invalid_keyword" },
     });
+  });
+});
+
+describe("getQuotaReport (D-075)", () => {
+  it("reports used vs budget per category alongside the per-source detail", async () => {
+    const report = await getQuotaReport();
+    expect(report.today).toEqual({ date: "2026-09-27", used: 4_200 });
+    expect(report.byCategory.discovery).toEqual({ used: 3_000, budget: 3_000 });
+    expect(report.byCategory.free_tools).toEqual({ used: 0, budget: 1_500 });
+    expect(report.bySource).toEqual({ discovery: 3_000 });
   });
 });

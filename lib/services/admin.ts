@@ -17,7 +17,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import {
   DAILY_QUOTA_LIMIT,
   SOFT_LIMIT,
-  getJobDailyBudget,
+  getQuotaByCategory,
   getQuotaBySource,
   getQuotaHistory,
   type QuotaDay,
@@ -635,15 +635,19 @@ export async function getRevenueReport(now: Date = new Date()): Promise<RevenueR
 // ---------- API quotas ----------
 
 export async function getQuotaReport(now: Date = new Date()) {
-  const [history, bySource] = await Promise.all([getQuotaHistory(7, now), getQuotaBySource(now)]);
+  const [history, bySource, byCategory] = await Promise.all([
+    getQuotaHistory(7, now),
+    getQuotaBySource(now),
+    getQuotaByCategory(now),
+  ]);
   return {
     history,
     today: history[history.length - 1],
     limit: DAILY_QUOTA_LIMIT,
     softLimit: SOFT_LIMIT,
-    // Niche-Discovery-Engine.md §4: jobs log usage per source (D-069).
+    // D-075: used vs budget per category; per-source detail (D-069).
+    byCategory,
     bySource,
-    jobBudget: getJobDailyBudget(),
   };
 }
 

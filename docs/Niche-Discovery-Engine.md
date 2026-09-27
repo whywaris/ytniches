@@ -161,15 +161,15 @@ create table outliers_feed (
 
 ## 6. Jobs (Inngest, `workers/discovery.ts`)
 
-Crons are written in UTC. PKT = UTC+5.
+Crons run on the Pacific quota day (`TZ=America/Los_Angeles`), because YouTube resets the daily quota at midnight PT (D-076). Discovery starts right after the reset.
 
-| Function                               | Schedule                 | What it does                                                                                                                                                                                                                                                                                                       | Quota      |
-| -------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| `discovery-run`                        | `0 20 * * *` (01:00 PKT) | Picks ~30 seeds: highest priority first, then longest since `last_run_at`. For each it runs `search.list` (type=video, publishedAfter=7d, order=viewCount), collects new channel IDs, qualifies them (§6.2) and upserts them. Qualified IDs go to enrichment.                                                      | ~3,000     |
-| `enrichment-cron` → `enrichment-batch` | `0 */2 * * *`            | Picks channels that are due by tier (§6.1), in batches of 50. For each batch: `channels.list` → uploads `playlistItems.list` → `videos.list`. Computes averages, multiples and tier, and writes `outliers_feed`.                                                                                                   | ~6,500/day |
-| `classify-run`                         | `0 22 * * *`             | Takes unclassified channels plus channels classified more than 30 days ago. gpt-4o-mini reads their titles and description and returns niche label, faceless, language, confidence and related keywords. The label is embedded and matched to an existing niche (cosine ≥ 0.85); otherwise a new niche is created. | $0 YouTube |
-| `niches-snapshot`                      | `0 1 * * *` (06:00 PKT)  | Computes five signals + Opportunity Score per niche, writes today's snapshot, sets status, warms the Upstash cache and sends niche notifications (§11).                                                                                                                                                            | $0 YouTube |
-| `retention-purge`                      | `0 3 * * *`              | `purge_stale_youtube_data()`                                                                                                                                                                                                                                                                                       | $0         |
+| Function                               | Schedule | What it does                                                                                                                                                                                                                                                                                                       | Quota      |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| `discovery-run`                        | 00:15 PT | Picks ~30 seeds: highest priority first, then longest since `last_run_at`. For each it runs `search.list` (type=video, publishedAfter=7d, order=viewCount), collects new channel IDs, qualifies them (§6.2) and upserts them. Qualified IDs go to enrichment.                                                      | ~3,000     |
+| `enrichment-cron` → `enrichment-batch` | every 2h | Picks channels that are due by tier (§6.1), in batches of 50. For each batch: `channels.list` → uploads `playlistItems.list` → `videos.list`. Computes averages, multiples and tier, and writes `outliers_feed`.                                                                                                   | ~6,500/day |
+| `classify-run`                         | 02:00 PT | Takes unclassified channels plus channels classified more than 30 days ago. gpt-4o-mini reads their titles and description and returns niche label, faceless, language, confidence and related keywords. The label is embedded and matched to an existing niche (cosine ≥ 0.85); otherwise a new niche is created. | $0 YouTube |
+| `niches-snapshot`                      | 04:00 PT | Computes five signals + Opportunity Score per niche, writes today's snapshot, sets status, warms the Upstash cache and sends niche notifications (§11).                                                                                                                                                            | $0 YouTube |
+| `retention-purge`                      | 03:00 PT | `purge_stale_youtube_data()`                                                                                                                                                                                                                                                                                       | $0         |
 
 The existing `channel-sync` (tracked channels) keeps running. It also writes `outliers_feed` rows when it detects an outlier, so tracked outliers show up in the global feed.
 
@@ -202,21 +202,24 @@ Channels that fail are not stored. Channels found through live search or trackin
 
 - **Retry-safe writes.** Upserts only, keyed on YouTube IDs. Every `step.run` is retry-safe.
 - **One run at a time.** Each function sets `concurrency: 1`, and each event carries an idempotency key.
-- **Budget guard.** Before every YouTube call a job checks `hasJobBudget(cost)`: `used + cost ≤ DISCOVERY_DAILY_BUDGET` (default `DAILY_QUOTA_LIMIT − 500`). If the check fails, the job stops cleanly and the remaining work waits for the next run. The last 500 units are always left for live user searches.
+- **Budget guard.** Before every YouTube call a job checks `hasJobBudget(cost)`: the discovery category's units so far plus `cost` must stay within its budget (`DISCOVERY_DAILY_BUDGET`, default **3,000**, D-075). If the check fails, the job stops cleanly and the remaining work waits for the next run. Discovery only ever draws on its own budget, so it can't starve live searches, tracking sync or free tools.
 
 ---
 
-## 7. Quota budget (default 10,000 units/day)
+## 7. Quota budget (default 10,000 units/day, D-075)
 
-| Call                        | Units | Calls/day | Total |
-| --------------------------- | ----- | --------- | ----- |
-| search.list                 | 100   | 30        | 3,000 |
-| playlistItems.list          | 1     | 2,000     | 2,000 |
-| videos.list (50 IDs)        | 1     | 3,000     | 3,000 |
-| channels.list (50 IDs)      | 1     | 1,500     | 1,500 |
-| Buffer (live user searches) | —     | —         | 500   |
+The day's quota (Pacific day, D-076) is split into per-category budgets. Each category stops at its own cap, so no category can starve another.
 
-> ⚠️ At the default quota this budget leaves about 5 live searches per day for everyone. It is realistic only after the **D-036** quota extension. Until then, lower `DISCOVERY_DAILY_BUDGET` (env) to trade engine coverage for search headroom. The D-036 audit form must disclose the derived metrics (outlier multiple, Opportunity Score) under "Analytics & Reporting".
+| Category      | Sources                                 | Default budget | Env override             |
+| ------------- | --------------------------------------- | -------------- | ------------------------ |
+| Live user     | Niche Finder search, other in-app calls | 3,500          | `YT_BUDGET_LIVE`         |
+| Tracking sync | `channel-sync`                          | 2,000          | `YT_BUDGET_SYNC`         |
+| Free tools    | public tools (D-054)                    | 1,500          | `YT_BUDGET_FREE_TOOLS`   |
+| Discovery     | discovery run + enrichment              | 3,000          | `DISCOVERY_DAILY_BUDGET` |
+
+Within discovery's 3,000: ~30 seed searches at 100 units would use it all, so in practice the run searches fewer seeds and leaves room for enrichment (1 `channels.list` per 50 channels, 1 `playlistItems.list` per channel, 1 `videos.list` per 50 videos).
+
+> ⚠️ 3,000 units a day keeps the crawler small. Raise `DISCOVERY_DAILY_BUDGET` (and the other budgets) after the **D-036** quota extension. The D-036 audit form must disclose the derived metrics (outlier multiple, Opportunity Score) under "Analytics & Reporting".
 
 ---
 

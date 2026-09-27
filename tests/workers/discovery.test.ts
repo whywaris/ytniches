@@ -227,3 +227,14 @@ describe("runSnapshot", () => {
     expect(result.notified).toEqual({ scoreMoves: 1, newOutliers: 0 });
   });
 });
+
+describe("schedules (D-076)", () => {
+  it("every discovery cron runs on the Pacific quota day", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(`${process.cwd()}/workers/discovery.ts`, "utf8");
+    const crons = [...source.matchAll(/cron: `\$\{PT\} ([^`]+)`/g)].map((m) => m[1]);
+    expect(source).toContain('const PT = "TZ=America/Los_Angeles"');
+    expect(crons).toEqual(["15 0 * * *", "0 */2 * * *", "0 2 * * *", "0 4 * * *", "0 3 * * *"]);
+    expect(source).not.toMatch(/cron: "/);
+  });
+});

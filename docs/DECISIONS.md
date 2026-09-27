@@ -648,7 +648,7 @@ Decisions that still need to close before their dependent docs / features can be
   - **Old tool URLs we don't rebuild** stay undecided for now, pending Mac's call per URL (redirect, rebuild or drop).
   - **Client-side first.** Subscribe link, RSS (channel or playlist), embed code and thumbnail resizing run in the browser. A `/channel/UC…` URL or bare channel ID needs zero API calls; only `@handles` go to the server.
   - **Rate limit.** Server-backed tool requests share one per-IP bucket: 10 per hour and 30 per day (Upstash sliding windows). Cache hits count too. Plus a hidden honeypot field.
-  - **Quota guard.** Free tools return "Busy right now" once the day's YouTube quota reaches 70% of `DAILY_QUOTA_LIMIT` (7,000 of 10,000), so the last 30% is kept for signed-in users. The check runs before the rate limit, so a busy day doesn't spend a visitor's allowance. Busy blocks cached results too (simplest; revisit if it hurts).
+  - **Quota guard.** ~~Free tools return "Busy right now" once the day's YouTube quota reaches 70% of `DAILY_QUOTA_LIMIT` (7,000 of 10,000), so the last 30% is kept for signed-in users.~~ Revisited 2026-09-27 (D-075): free tools have their own 1,500-unit daily budget and go "Busy" only when that is spent, so other traffic can't push them there. The check runs before the rate limit, so a busy day doesn't spend a visitor's allowance. Busy blocks cached results too (simplest; revisit if it hurts).
   - **Handle cache.** New Redis key `youtube:handle:{handle}` → channel ID, 24h TTL. Previously every repeat `@handle` lookup cost a unit. It benefits the app's own channel inputs too. (TRD.md §5.2's key list should add it in the next TRD edit.)
   - **Wider shared parser.** `lib/youtube/urls.ts` now accepts bare `@handle`, bare `UC…` IDs, trailing tabs (`/videos`), `m.youtube.com`, and `/live`, `/embed` and bare video IDs. It's shared by the app and the tools. Legacy `/c/` and `/user/` links are still rejected with a clear message.
   - **One outlier rule.** The "earlier uploads" selection moved from `workers/channel-sync.ts` into `evaluateAgainstChannel` in `lib/outliers/scoring.ts`, used by both the worker and the Outlier Checker. New edge-case tests (cold start, 2,999 vs 3,000 views, zero baseline) pass against both the old and the new worker.
@@ -823,7 +823,7 @@ Decisions that still need to close before their dependent docs / features can be
   - A: New `yt_channels` / `yt_videos` tables, as in the draft spec.
   - B: Extend the existing shared `channels` / `videos`.
 - **Final call:** B. Tracked channels, prompts, calendar entries and tracked events already have FKs to these rows. Forking them would store the same channel twice and create a sync problem. The new tables are `discovery_seeds`, `niches`, `niche_snapshots` and `outliers_feed`. The route stays `/niches`, and the feed is a set of tabs (`?tab=niches|channels|outliers|search`).
-- **Quota warning:** the spec budget (about 9,500 units a day for jobs, 500 buffer) leaves roughly 5 live searches a day at the default 10k quota. `DISCOVERY_DAILY_BUDGET` (env) caps the jobs. It is realistic only after D-036.
+- **Quota warning:** the spec budget (about 9,500 units a day for jobs, 500 buffer) would have left roughly 5 live searches a day. Revisited 2026-09-27: the jobs now have their own 3,000-unit budget (D-075) until D-036.
 - **Gate (open):** all of the following, before this is called done:
   - [ ] 7 days of unattended cron runs
   - [ ] the quota was never exceeded
@@ -885,3 +885,27 @@ Decisions that still need to close before their dependent docs / features can be
   - Niche labels are embedded with `text-embedding-3-small` (1536 dims) and stored in `niches.embedding` (pgvector).
   - A label joins an existing niche at cosine similarity ≥ 0.85; otherwise a new niche is created.
 - **Impacts:** `lib/ai/client.ts`, TRD §6.2.
+
+### D-075: Per-category YouTube quota budgets
+
+- **Status:** Resolved (2026-09-27). Revisits D-054's quota guard and D-069's job budget.
+- **Context:** One shared daily pool meant the discovery crawler could push free tools into "Busy" (D-054's 70% cutoff) and eat live-search headroom.
+- **Final call:** the daily quota is split into budgets, each env-overridable and capped at `DAILY_QUOTA_LIMIT`:
+
+  | Category   | Sources                                 | Default | Env                      |
+  | ---------- | --------------------------------------- | ------- | ------------------------ |
+  | live       | Niche Finder search, other in-app calls | 3,500   | `YT_BUDGET_LIVE`         |
+  | sync       | channel-sync                            | 2,000   | `YT_BUDGET_SYNC`         |
+  | free_tools | public tools                            | 1,500   | `YT_BUDGET_FREE_TOOLS`   |
+  | discovery  | discovery run + enrichment              | 3,000   | `DISCOVERY_DAILY_BUDGET` |
+
+  `checkAndIncrement` refuses a call when its category or the day's total is over. Free tools are "Busy" only when their own budget is spent. Discovery jobs pre-check their budget and stop cleanly. Admin → API Quotas shows used/budget per category. Revisit all four after D-036.
+
+- **Impacts:** `lib/youtube/quota.ts`, `lib/services/free-tools.ts`, TRD §5.3, Niche-Discovery-Engine §6.4/§7.
+
+### D-076: Quota day and discovery schedules follow Pacific time
+
+- **Status:** Resolved (2026-09-27)
+- **Context:** YouTube resets the daily quota at midnight Pacific. Our counters rolled over at UTC midnight and the jobs were scheduled in PKT, so a "day" of our budget straddled two YouTube quota days.
+- **Final call:** quota counters are keyed by the `America/Los_Angeles` date. Discovery crons use Inngest's `TZ=America/Los_Angeles`: discovery 00:15 (right after the reset), classify 02:00, purge 03:00, snapshot 04:00; enrichment stays every 2h. The first day after deploy has a partial counter (the key changes); harmless.
+- **Impacts:** `lib/youtube/quota.ts`, `workers/discovery.ts`, TRD §4.2/§5.3, Niche-Discovery-Engine §6.
