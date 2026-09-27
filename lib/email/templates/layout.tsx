@@ -44,16 +44,16 @@ export function EmailLayout({ preheader, children, siteUrl }: EmailLayoutProps) 
       </div>
 
       <div style={{ maxWidth: "480px", margin: "0 auto" }}>
-        <p
-          style={{
-            color: COLORS.accent,
-            fontSize: "16px",
-            fontWeight: 700,
-            margin: "0 0 24px",
-          }}
-        >
-          YTNiches
-        </p>
+        {/* Absolute URL: email clients can't resolve relative paths. PNG, not
+            SVG: Gmail and Outlook don't render SVG. 2x asset shown at 135x32. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- email HTML, not a Next page */}
+        <img
+          src={`${siteUrl}/email/logo.png`}
+          width={135}
+          height={32}
+          alt="YTNiches"
+          style={{ display: "block", border: 0, margin: "0 0 24px" }}
+        />
 
         <div
           style={{
