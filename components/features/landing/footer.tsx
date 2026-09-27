@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 
 import { FOOTER, askAiLinks, withBlogLink } from "@/components/features/landing/content";
 import { SoonLink } from "@/components/features/landing/soon-link";
+import { Logo } from "@/components/features/brand/logo";
 
 // Landing-Page-Spec §15. Social row omitted with Mac's handles (call F).
 function Footer({ blogLive = false }: { blogLive?: boolean }) {
@@ -10,7 +11,7 @@ function Footer({ blogLive = false }: { blogLive?: boolean }) {
       <div className="mx-auto max-w-[1440px]">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-h4 font-semibold text-text-primary">YTNiches</p>
+            <Logo className="h-7 text-text-primary" />
             <p className="mt-3 text-body-sm text-text-secondary">{FOOTER.tagline}</p>
             <p className="mt-6 text-body-sm text-text-secondary">{FOOTER.madeIn}</p>
           </div>

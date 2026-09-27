@@ -8,6 +8,7 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sidebar, SidebarSection, useSidebar } from "@/components/ui/sidebar";
 import { SidebarItem } from "@/components/ui/sidebar-item";
+import { Logo } from "@/components/features/brand/logo";
 import {
   CREATE_WORKSPACE_NAV,
   DASHBOARD_NAV,
@@ -35,7 +36,7 @@ function NavLink({ item, active, count }: { item: NavItem; active: boolean; coun
 }
 
 // Brand + search sit inside the Sidebar so they read its collapsed state:
-// wordmark -> "Y" mark, search field -> icon-only button.
+// lockup -> brand mark, search field -> icon-only button.
 function SidebarHeader({ onOpenSearch }: { onOpenSearch: () => void }) {
   const { collapsed } = useSidebar();
   return (
@@ -43,15 +44,9 @@ function SidebarHeader({ onOpenSearch }: { onOpenSearch: () => void }) {
       <Link
         href="/dashboard"
         aria-label="YTNiches home"
-        className="flex h-9 items-center text-h4 font-semibold tracking-tight text-text-primary"
+        className="flex h-9 items-center text-text-primary"
       >
-        {collapsed ? (
-          <span className="flex size-8 items-center justify-center rounded-sm bg-accent-subtle text-accent-text">
-            Y
-          </span>
-        ) : (
-          "YTNiches"
-        )}
+        {collapsed ? <Logo variant="mark" decorative /> : <Logo decorative className="h-7" />}
       </Link>
       <button
         type="button"

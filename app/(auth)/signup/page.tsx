@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ConsentLine } from "@/components/features/auth/consent-line";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TextInput } from "@/components/ui/text-input";
+import { Logo } from "@/components/features/brand/logo";
 import { signInWithGoogle } from "@/app/(auth)/actions";
 
 import type { Metadata } from "next";
@@ -30,6 +31,9 @@ export default async function SignupPage({
     <div className="flex min-h-screen items-center justify-center bg-bg-base px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
+          <Link href="/" aria-label="YTNiches home" className="mb-6 inline-flex text-text-primary">
+            <Logo decorative className="h-8" />
+          </Link>
           <h1 className="text-h2 font-semibold text-text-primary">Create your account</h1>
           <p className="text-body-sm text-text-secondary">
             Research + execution for YouTube creators.

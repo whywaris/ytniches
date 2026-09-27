@@ -12,11 +12,12 @@ import { Modal } from "@/components/ui/modal";
 import { NAV_LINKS, withBlogLink } from "@/components/features/landing/content";
 import { CtaLink } from "@/components/features/landing/cta-link";
 import { SoonLink } from "@/components/features/landing/soon-link";
+import { Logo } from "@/components/features/brand/logo";
 
 function Wordmark() {
   return (
-    <Link href="/" className="text-h4 font-semibold tracking-tight text-text-primary">
-      YTNiches
+    <Link href="/" aria-label="YTNiches home" className="text-text-primary">
+      <Logo decorative className="h-7" />
     </Link>
   );
 }
