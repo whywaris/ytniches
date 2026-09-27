@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { ConsentLine } from "@/components/features/auth/consent-line";
 import { TextInput } from "@/components/ui/text-input";
 import { signInWithGoogle } from "@/app/(auth)/actions";
 
@@ -41,6 +42,7 @@ export default async function LoginPage({
             Continue with Google
           </Button>
         </form>
+        <ConsentLine />
 
         <div className="flex items-center gap-3 text-caption text-text-tertiary">
           <span className="h-px flex-1 bg-border-subtle" />
