@@ -841,6 +841,7 @@ Decisions that still need to close before their dependent docs / features can be
   - (c) the existing service-layer writes to shared cache tables and admin actions.
 
   All three are server-only, and client components must never import them. User-facing reads of research data (`niches`, `niche_snapshots`, `outliers_feed`, `channels`, `videos`) go through the user client under RLS, using `anyone_read_*` policies. Admin-triggered discovery actions are written to `admin_actions`.
+
 - **Impacts:** Security.md §3.1, Backend-Schema §6.1.
 
 ### D-071: Opportunity Score weights v1 and qualification thresholds
@@ -872,7 +873,8 @@ Decisions that still need to close before their dependent docs / features can be
   - Deletes channels not synced for 30 days. It never deletes a channel that is tracked, or that is referenced by prompts, calendar entries or tracked events.
   - Trims untracked channels to their latest 30 videos. Videos that user data references are skipped.
   - Keeps 90 days of daily `niche_snapshots`, then one row per week.
-- **Impacts:** Backend-Schema §6.4.
+- **One purge (2026-09-27):** main had no purge job; TRD §4.2's `retention.enforce` was never built. `retention-purge` is the only 30-day purge, and it is the YouTube-data part of `retention.enforce`. Soft-deleted-record retention is still unbuilt. Any later retention work extends this job rather than adding a second one.
+- **Impacts:** Backend-Schema §6.4, TRD §4.2.
 
 ### D-074: gpt-4o-mini + text-embedding-3-small for niche classification
 

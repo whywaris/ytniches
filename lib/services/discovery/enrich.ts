@@ -1,7 +1,6 @@
 import {
   LIKELY_MONETIZED_MIN_SUBS,
   LIKELY_MONETIZED_MIN_TOTAL_VIEWS,
-  OUTLIER_FEED_MIN_MULTIPLE,
   SHORTS_MAX_SECONDS,
   VIDEOS_KEPT_PER_CHANNEL,
   type RefreshTier,
@@ -74,7 +73,9 @@ export function computeChannelEnrichment(
   for (const candidate of channelVideos) {
     const evaluation = evaluateAgainstChannel(candidate, channelVideos);
     multiples.set(candidate.id, evaluation.multiplier);
-    if (evaluation.multiplier !== null && evaluation.multiplier >= OUTLIER_FEED_MIN_MULTIPLE) {
+    // The shared rule decides (views >= 3x baseline); the multiple is only
+    // what gets stored and ranked.
+    if (evaluation.isOutlier) {
       outlierVideoIds.push(candidate.id);
       outlierPublishedAt.push(candidate.publishedAt);
     }

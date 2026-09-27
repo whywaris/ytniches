@@ -96,6 +96,24 @@ describe("computeChannelEnrichment", () => {
     expect(result.tier).toBe("hot");
   });
 
+  it("uses the shared 3x rule at the boundary (D-054): 2,999 is not an outlier, 3,000 is", () => {
+    const steady = Array.from({ length: 10 }, (_, i) => video(`v${i}`, 1_000, 60 - i * 5));
+    const below = computeChannelEnrichment(
+      channel(),
+      [...steady, video("edge", 2_999, 3)],
+      false,
+      NOW.getTime(),
+    );
+    const at = computeChannelEnrichment(
+      channel(),
+      [...steady, video("edge", 3_000, 3)],
+      false,
+      NOW.getTime(),
+    );
+    expect(below.outlierVideoIds).not.toContain("edge");
+    expect(at.outlierVideoIds).toContain("edge");
+  });
+
   it("computes the channel outlier score as avg views / subs", () => {
     const result = computeChannelEnrichment(
       channel({ subscriberCount: 5_000 }),
