@@ -345,7 +345,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-027: Transcript fetching — unofficial timedtext endpoint
 
-- **Status:** Resolved (2026-09-21)
+- **Status:** Superseded by D-067 (2026-09-27). The timedtext path is removed and the cached transcripts are deleted. Originally resolved 2026-09-21.
 - **Context:** TRD.md §6.2 says "YouTube auto-captions where available," but the official `captions.download` endpoint requires OAuth consent from the video's owner — it can't fetch captions for an arbitrary third-party (competitor) video with just an API key. The only practical way to get transcript text for someone else's public video is YouTube's unofficial, undocumented `timedtext` endpoint, which is what effectively every "YouTube transcript" tool in the wild actually uses.
 - **Final call:** Use the unofficial `timedtext` endpoint. Hard fallback to an empty transcript on any failure (network error, no captions track, endpoint shape change) — never throws, never blocks generation. Called out in code with a comment naming it as unofficial, plus the endpoint format, since it isn't part of documented YouTube Data API v3 and could change or break without notice.
 
@@ -780,3 +780,16 @@ Decisions that still need to close before their dependent docs / features can be
 - **Context:** PRD.md §8.1 says the owner can't leave without transferring ownership or deleting the workspace. `leaveWorkspace` blocks the owner (`must_transfer_or_delete`), but there's no transfer. So an owner's only way out is deleting the workspace for everyone. The help center's Workspace roles article says so.
 - **Why deferred:** a transfer is also a billing change. Members inherit Team from the owner's subscription (D-059), so moving ownership means either moving the subscription, or the new owner buying Team before the old one's lapses. That depends on how D-051 (plan changes) gets fixed.
 - **Needed when picked up:** an admin-only "Transfer ownership" action that sets `workspaces.owner_id` to another Admin who has their own live Team plan. Run `reapplyPlanEffects` for everyone affected, and update the help article.
+
+### D-067: YouTube API Services compliance before launch
+
+- **Status:** In progress (logged 2026-09-27)
+- **Context:** Payment providers and a Google API audit both need a compliant product plus legal pages (D-058). Checked against [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies). We only hold Non-Authorized Data: sign-in is openid/email/profile, and all YouTube data is public, fetched with our API key.
+- **Parts:**
+  - a. Stop fetching transcripts. The timedtext endpoint breaks III.D.7, III.E.6 and III.I.14. Prompts now use title, description and tags only, and `video_transcripts_cache` is emptied. **Done.**
+  - b. A daily purge of YouTube data not refreshed in 30 days (III.E.4.d).
+  - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2).
+  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a).
+  - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner.
+  - f. Legal pages: terms, privacy, refunds, cookies (D-058).
+- **Deferred:** in-app data export and account deletion buttons (`/settings/danger`, UI-UX-Flow.md §8.1.6). Until then, requests go by email and are done within 30 days.

@@ -74,7 +74,6 @@ const TONE_OPTIONS: SelectOption[] = [
 
 const PROGRESS_STEPS = [
   "Fetching video metadata",
-  "Reading transcript",
   "Analyzing title pattern",
   "Analyzing thumbnail style",
   "Generating variants",

@@ -7,7 +7,6 @@ function makeContext(overrides: Partial<PromptGenerationContext> = {}): PromptGe
     videoTitle: "How I Grew to 1M Subs",
     videoDescription: "My full journey.",
     videoTags: ["growth", "youtube"],
-    transcriptText: null,
     targetAudience: null,
     tone: "neutral",
     ...overrides,
@@ -23,24 +22,11 @@ describe("buildPrompt", () => {
     expect(user).toContain("growth, youtube");
   });
 
-  it("tells the model to infer hooks from title+description when no transcript is available", () => {
-    const { user } = buildPrompt(makeContext({ transcriptText: null }));
-
-    expect(user).toMatch(/not available.*infer hook_variants/i);
-  });
-
-  it("includes the transcript excerpt when one is available", () => {
-    const { user } = buildPrompt(makeContext({ transcriptText: "Hey everyone, welcome back..." }));
-
-    expect(user).toContain("Hey everyone, welcome back...");
-    expect(user).not.toMatch(/not available/i);
-  });
-
-  it("truncates a very long transcript rather than sending it in full", () => {
-    const longTranscript = "word ".repeat(2000);
-    const { user } = buildPrompt(makeContext({ transcriptText: longTranscript }));
-
-    expect(user.length).toBeLessThan(longTranscript.length);
+  // D-067: no transcripts (YouTube Developer Policies III.D.7 / III.E.6).
+  it("never mentions a transcript", () => {
+    const { system, user } = buildPrompt(makeContext());
+    expect(`${system}
+${user}`).not.toMatch(/transcript/i);
   });
 
   it("includes the target audience only when provided", () => {

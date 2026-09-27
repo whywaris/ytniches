@@ -1,11 +1,9 @@
 import { getChannelById, getVideoById, resolveVideoUrl } from "@/lib/youtube";
-import { fetchTranscript } from "@/lib/youtube/transcript";
 import { generatePromptOutput, type AiError, type PromptOutput } from "@/lib/ai";
 import { consume, refund } from "@/lib/credits";
 import { upsertChannels } from "@/lib/services/channels";
 import { upsertVideos } from "@/workers/channel-sync";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
 import type { InsufficientCreditsError } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/credits/costs";
@@ -143,52 +141,6 @@ async function resolveVideoContext(
   return resolveAndCacheVideoFromUrl(input.videoUrl);
 }
 
-// D-027: checks video_transcripts_cache first (service role -- no
-// authenticated grant exists on that table), else fetches fresh via the
-// unofficial timedtext endpoint and caches a hit. Never throws on a
-// missing/unfetchable transcript -- returns null (soft-degrade, see
-// UI-UX-Flow.md §7.6's deviation note).
-async function getOrFetchTranscript(video: VideoContext): Promise<string | null> {
-  const service = createServiceClient();
-  const { data: cached, error: cacheError } = await service
-    .from("video_transcripts_cache")
-    .select("transcript_text")
-    .eq("video_id", video.id)
-    .maybeSingle();
-
-  if (cacheError) {
-    throw new Error(`getOrFetchTranscript cache query failed: ${cacheError.message}`);
-  }
-  if (cached) {
-    return cached.transcript_text;
-  }
-
-  const fetched = await fetchTranscript(video.youtubeVideoId);
-  if (!fetched) {
-    return null;
-  }
-
-  const { error: insertError } = await service.from("video_transcripts_cache").insert({
-    video_id: video.id,
-    transcript_text: fetched.text,
-    language: fetched.language,
-    source: "youtube_captions",
-  });
-  if (insertError) {
-    throw new Error(`getOrFetchTranscript cache insert failed: ${insertError.message}`);
-  }
-
-  const { error: updateError } = await service
-    .from("videos")
-    .update({ has_transcript: true })
-    .eq("id", video.id);
-  if (updateError) {
-    throw new Error(`getOrFetchTranscript has_transcript update failed: ${updateError.message}`);
-  }
-
-  return fetched.text;
-}
-
 function describeAiError(error: AiError): string {
   switch (error.type) {
     case "rate_limited":
@@ -253,7 +205,7 @@ async function insertPromptRow(
 }
 
 // Application-Flow.md §4.3: idle -> analyzing -> generating -> results |
-// failed | insufficient_credits. Resolving the video and its transcript
+// failed | insufficient_credits. Resolving the video
 // (analyzing) never spends credits -- only the AI call (generating) does,
 // via consume() immediately before it and refund() if it fails.
 // D-028: one synchronous call, no background job -- the cosmetic
@@ -272,8 +224,6 @@ export async function generatePrompts(
   }
   const video = videoResult.value;
 
-  const transcriptText = await getOrFetchTranscript(video);
-
   const consumeResult = await consume(ctx, GENERATE_COST, "Prompt generation", idempotencyKey);
   if (!consumeResult.ok) {
     return err(consumeResult.error);
@@ -283,7 +233,6 @@ export async function generatePrompts(
     videoTitle: video.title,
     videoDescription: video.description,
     videoTags: video.tags,
-    transcriptText,
     targetAudience: input.targetAudience,
     tone: input.tone,
   });
@@ -326,8 +275,7 @@ async function getOwnPromptRow(
 // UI-UX-Flow.md §7.5: always a NEW prompts row (regeneration_of = the
 // original), the original stays untouched in the library as a version.
 // Reuses the original's source video, target audience, and tone -- only
-// the feedback is new. The transcript is reused from cache, never
-// re-fetched.
+// the feedback is new.
 export async function regeneratePrompts(
   ctx: RequestContext,
   promptId: string,
@@ -344,8 +292,6 @@ export async function regeneratePrompts(
     return err({ type: "not_found" });
   }
 
-  const transcriptText = await getOrFetchTranscript(video);
-
   const consumeResult = await consume(ctx, REGENERATE_COST, "Prompt regeneration", idempotencyKey);
   if (!consumeResult.ok) {
     return err(consumeResult.error);
@@ -355,7 +301,6 @@ export async function regeneratePrompts(
     videoTitle: video.title,
     videoDescription: video.description,
     videoTags: video.tags,
-    transcriptText,
     targetAudience: original.target_audience,
     tone: original.tone as Tone,
     feedback,

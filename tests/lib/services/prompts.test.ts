@@ -9,11 +9,6 @@ vi.mock("@/lib/youtube", () => ({
   resolveVideoUrl: (...args: unknown[]) => resolveVideoUrl(...args),
 }));
 
-const fetchTranscript = vi.fn();
-vi.mock("@/lib/youtube/transcript", () => ({
-  fetchTranscript: (...args: unknown[]) => fetchTranscript(...args),
-}));
-
 const generatePromptOutput = vi.fn();
 vi.mock("@/lib/ai", () => ({
   generatePromptOutput: (...args: unknown[]) => generatePromptOutput(...args),
@@ -120,10 +115,6 @@ beforeEach(() => {
 describe("generatePrompts (by videoId)", () => {
   it("generates, consumes credits, and inserts a prompt on the happy path", async () => {
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null })); // getVideoRow
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // transcript cache miss
-    fetchTranscript.mockResolvedValueOnce({ text: "Hey everyone", language: "en" });
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // transcript insert
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // has_transcript update
     consume.mockResolvedValueOnce({ ok: true, value: undefined });
     generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null })); // insertPromptRow
@@ -138,10 +129,13 @@ describe("generatePrompts (by videoId)", () => {
     expect(generatePromptOutput).toHaveBeenCalledWith(
       expect.objectContaining({
         videoTitle: "How to pick a niche",
-        transcriptText: "Hey everyone",
         tone: "neutral",
       }),
     );
+    expect(generatePromptOutput).toHaveBeenCalledWith(
+      expect.not.objectContaining({ transcriptText: expect.anything() }),
+    );
+    expect(serviceFrom).not.toHaveBeenCalledWith("video_transcripts_cache");
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.output).toEqual(PROMPT_OUTPUT);
@@ -162,51 +156,8 @@ describe("generatePrompts (by videoId)", () => {
     expect(consume).not.toHaveBeenCalled();
   });
 
-  it("soft-degrades to a null transcript without failing generation", async () => {
-    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null }));
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // cache miss
-    fetchTranscript.mockResolvedValueOnce(null); // unfetchable
-    consume.mockResolvedValueOnce({ ok: true, value: undefined });
-    generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
-    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null }));
-
-    const result = await generatePrompts(
-      ctx,
-      { videoId: "vid-internal-1", targetAudience: null, tone: "neutral" },
-      "key-1",
-    );
-
-    expect(generatePromptOutput).toHaveBeenCalledWith(
-      expect.objectContaining({ transcriptText: null }),
-    );
-    expect(result.ok).toBe(true);
-  });
-
-  it("reuses an already-cached transcript instead of calling fetchTranscript", async () => {
-    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null }));
-    serviceFrom.mockReturnValueOnce(
-      makeQueryBuilder({ data: { transcript_text: "Cached transcript" }, error: null }),
-    );
-    consume.mockResolvedValueOnce({ ok: true, value: undefined });
-    generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
-    sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null }));
-
-    await generatePrompts(
-      ctx,
-      { videoId: "vid-internal-1", targetAudience: null, tone: "neutral" },
-      "key-1",
-    );
-
-    expect(fetchTranscript).not.toHaveBeenCalled();
-    expect(generatePromptOutput).toHaveBeenCalledWith(
-      expect.objectContaining({ transcriptText: "Cached transcript" }),
-    );
-  });
-
   it("returns insufficient_credits without ever calling the AI", async () => {
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null }));
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
-    fetchTranscript.mockResolvedValueOnce(null);
     consume.mockResolvedValueOnce({
       ok: false,
       error: { type: "insufficient_credits", balance: 2, required: 5 },
@@ -227,8 +178,6 @@ describe("generatePrompts (by videoId)", () => {
 
   it("refunds the charge and returns generation_failed when the AI call fails", async () => {
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null }));
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
-    fetchTranscript.mockResolvedValueOnce(null);
     consume.mockResolvedValueOnce({ ok: true, value: undefined });
     generatePromptOutput.mockResolvedValueOnce({ ok: false, error: { type: "overloaded" } });
 
@@ -259,8 +208,6 @@ describe("generatePrompts (by videoUrl)", () => {
     getChannelById.mockResolvedValueOnce({ ok: true, value: { id: "yt-chan-1" } });
     upsertChannels.mockResolvedValueOnce(new Map([["yt-chan-1", "chan-internal-1"]]));
     upsertVideos.mockResolvedValueOnce(new Map([["yt-vid-1", "vid-internal-1"]]));
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
-    fetchTranscript.mockResolvedValueOnce(null);
     consume.mockResolvedValueOnce({ ok: true, value: undefined });
     generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null }));
@@ -317,8 +264,6 @@ describe("regeneratePrompts", () => {
       }),
     ); // getOwnPromptRow
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null })); // getVideoRow
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null })); // transcript cache miss
-    fetchTranscript.mockResolvedValueOnce(null);
     consume.mockResolvedValueOnce({ ok: true, value: undefined });
     generatePromptOutput.mockResolvedValueOnce({ ok: true, value: PROMPT_OUTPUT });
     sessionFrom.mockReturnValueOnce(
@@ -366,8 +311,6 @@ describe("regeneratePrompts", () => {
   it("refunds the regenerate cost (3) on AI failure", async () => {
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: promptRow(), error: null }));
     sessionFrom.mockReturnValueOnce(makeQueryBuilder({ data: VIDEO_ROW, error: null }));
-    serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: null, error: null }));
-    fetchTranscript.mockResolvedValueOnce(null);
     consume.mockResolvedValueOnce({ ok: true, value: undefined });
     generatePromptOutput.mockResolvedValueOnce({ ok: false, error: { type: "rate_limited" } });
 

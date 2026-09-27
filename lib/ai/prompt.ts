@@ -10,9 +10,6 @@ export interface PromptGenerationContext {
   videoTitle: string;
   videoDescription: string;
   videoTags: string[];
-  // D-027: null when the transcript couldn't be fetched (soft-degrade, not
-  // a blocker) -- UI-UX-Flow.md §7.6's deviation note.
-  transcriptText: string | null;
   targetAudience: string | null;
   tone: "neutral" | "casual" | "educational" | "dramatic" | "clickbait_lite";
   // Present only for a regeneration (Application-Flow.md §4.3 regenerating
@@ -25,7 +22,7 @@ const SYSTEM_PROMPT = `You are a YouTube content strategist helping a creator tu
 Generate exactly five categories of output:
 1. title_variants: 5-10 alternative titles inspired by the source video's title pattern, adapted to the creator's own content.
 2. thumbnail_concepts: 3-5 short text descriptions of thumbnail concepts (not images) inspired by the source video.
-3. hook_variants: 3-5 alternative opening hook lines for the first ~30 seconds of a video. When a transcript is provided, base these on its actual opening. When no transcript is available, infer plausible hooks from the title and description instead -- say so is not necessary, just produce strong hooks either way.
+3. hook_variants: 3-5 alternative opening hook lines for the first ~30 seconds of a video, inferred from the source video's title and description.
 4. script_outline: a structured outline (intro / body_sections / outro) -- an outline only, never a full script.
 5. description_template: a ready-to-paste video description template.
 
@@ -36,9 +33,6 @@ function buildContextSection(context: PromptGenerationContext): string {
     `Source video title: ${context.videoTitle}`,
     `Source video description: ${context.videoDescription || "(none provided)"}`,
     `Source video tags: ${context.videoTags.length > 0 ? context.videoTags.join(", ") : "(none)"}`,
-    context.transcriptText
-      ? `Source video transcript (opening excerpt): ${context.transcriptText.slice(0, 4000)}`
-      : "Source video transcript: not available -- infer hook_variants from the title and description instead.",
     `Desired tone: ${TONE_LABELS[context.tone]}`,
   ];
   if (context.targetAudience) {
