@@ -27,6 +27,26 @@ export type AiClientError =
   | { type: "api_error"; status: number; message: string }
   | { type: "invalid_response"; message: string };
 
+// One structured line per call, so a job's OpenAI cost can be totalled from
+// the server log (grep "ai_usage"). `job` is the schema name for structured
+// output, or the caller's label for embeddings.
+export function logAiUsage(
+  job: string,
+  model: string,
+  usage: { prompt_tokens: number; completion_tokens?: number } | undefined,
+): void {
+  if (!usage) return;
+  console.info(
+    JSON.stringify({
+      event: "ai_usage",
+      job,
+      model,
+      input_tokens: usage.prompt_tokens,
+      output_tokens: usage.completion_tokens ?? 0,
+    }),
+  );
+}
+
 let cachedClient: OpenAI | undefined;
 function getClient(): OpenAI {
   cachedClient ??= new OpenAI();
@@ -44,9 +64,10 @@ export async function generateStructuredOutput<T>(
   schemaName: string,
   options: { model?: string } = {},
 ): Promise<Result<T, AiClientError>> {
+  const model = options.model ?? MODEL;
   try {
     const completion = await getClient().chat.completions.parse({
-      model: options.model ?? MODEL,
+      model,
       max_completion_tokens: MAX_TOKENS,
       messages: [
         { role: "system", content: system },
@@ -54,6 +75,7 @@ export async function generateStructuredOutput<T>(
       ],
       response_format: zodResponseFormat(schema, schemaName),
     });
+    logAiUsage(schemaName, model, completion.usage);
 
     const parsed = completion.choices[0]?.message.parsed;
     if (!parsed) {
@@ -69,13 +91,17 @@ export async function generateStructuredOutput<T>(
   }
 }
 
-export async function createEmbedding(text: string): Promise<Result<number[], AiClientError>> {
+export async function createEmbedding(
+  text: string,
+  job = "embedding",
+): Promise<Result<number[], AiClientError>> {
   try {
     const response = await getClient().embeddings.create({
       model: EMBEDDING_MODEL,
       input: text,
       dimensions: EMBEDDING_DIMENSIONS,
     });
+    logAiUsage(job, EMBEDDING_MODEL, response.usage);
     const embedding = response.data[0]?.embedding;
     if (!embedding || embedding.length !== EMBEDDING_DIMENSIONS) {
       return err({ type: "invalid_response", message: "embedding missing or wrong size" });

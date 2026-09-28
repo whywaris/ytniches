@@ -945,3 +945,13 @@ Decisions that still need to close before their dependent docs / features can be
     - `channels.median_views_recent`, `content_type` and `views_last_30d`, computed at enrichment.
     - `channel_view_snapshots`: a daily total-views reading kept 30 days back, inside the YouTube limit. The card switches to a true "Views (30 days)" once a reading from 28–30 days ago exists. The purge expires the readings.
   - **New primitives:** Popover, Tooltip, Sheet (Design-System.md §5.14–5.16).
+
+### D-078: Discovery searches use at most half the discovery budget
+
+- **Status:** Resolved (2026-09-28). Refines D-069 / D-075.
+- **Context:** The first dev run searched 30 seeds × 100 units = the whole 3,000-unit discovery budget. Ingest (channels.list) and first enrichment bill the same budget, so nothing was stored or enriched. The seeds were marked run anyway, so the paid searches were lost.
+- **Final call:**
+  - A run searches at most `floor((budget × 50% − discovery-job units already spent today) / 100)` seeds, capped at 30. That's 15 seeds at the default 3,000 budget. The other half covers ingest and first enrichment (~81 units per 50 channels).
+  - Seeds are marked run only after ingest has stored their channels. An ingest that fails or runs out of budget leaves them due for the next run.
+  - A manual run may cap its seeds (`maxSeeds`) for small test runs.
+- **Impacts:** `lib/discovery/config.ts`, `workers/discovery.ts`, `lib/services/discovery/{ingest,seeds}.ts`, Niche-Discovery-Engine §6.

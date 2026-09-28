@@ -6,14 +6,19 @@ const fake = createFakeSupabase();
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => fake.client }));
 
 const hasJobBudget = vi.fn();
+const getQuotaBySource = vi.fn();
 vi.mock("@/lib/youtube/quota", () => ({
   hasJobBudget: (...args: unknown[]) => hasJobBudget(...args),
+  getQuotaBySource: (...args: unknown[]) => getQuotaBySource(...args),
+  getQuotaBudgets: () => ({ live: 3500, sync: 2000, free_tools: 1500, discovery: 3000 }),
   withQuotaSource: (_source: string, fn: () => Promise<unknown>) => fn(),
 }));
 
 const pickDueSeeds = vi.fn();
+const markSeedsRun = vi.fn();
 vi.mock("@/lib/services/discovery/seeds", () => ({
   pickDueSeeds: (...args: unknown[]) => pickDueSeeds(...args),
+  markSeedsRun: (...args: unknown[]) => markSeedsRun(...args),
 }));
 
 const searchSeeds = vi.fn();
@@ -70,6 +75,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   hasJobBudget.mockResolvedValue(true);
+  getQuotaBySource.mockResolvedValue({ discovery: 0 });
 });
 
 describe("dispatchEnrichment", () => {
@@ -169,9 +175,80 @@ describe("runDiscovery", () => {
     const step = makeStep();
 
     await expect(runDiscovery(step, NOW)).rejects.toThrow("db blip");
+    // D-078: the failed ingest left the seed due.
+    expect(markSeedsRun).not.toHaveBeenCalled();
     await runDiscovery(step, NOW); // Inngest retry with memoised steps
 
     expect(searchSeeds).toHaveBeenCalledTimes(1);
+    expect(markSeedsRun).toHaveBeenCalledWith(["s1"], NOW);
+  });
+
+  const ingestOk = {
+    newChannelIds: [],
+    skippedExisting: 0,
+    rejectedByPrefilter: 0,
+    stoppedForBudget: false,
+  };
+
+  it("spends at most half the discovery budget on searches (D-078)", async () => {
+    pickDueSeeds.mockResolvedValue([]);
+
+    await runDiscovery(makeStep(), NOW);
+    expect(pickDueSeeds).toHaveBeenLastCalledWith(15); // 1,500 of 3,000 units / 100
+
+    getQuotaBySource.mockResolvedValue({ discovery: 1_250 });
+    await runDiscovery(makeStep(), NOW);
+    expect(pickDueSeeds).toHaveBeenLastCalledWith(2);
+
+    getQuotaBySource.mockResolvedValue({ discovery: 1_450 });
+    const spent = await runDiscovery(makeStep(), NOW);
+    expect(pickDueSeeds).toHaveBeenCalledTimes(2);
+    expect(spent).toEqual({ seedsSearched: 0, newChannels: 0, stoppedForBudget: true });
+  });
+
+  it("honours a manual maxSeeds below the budget cap", async () => {
+    pickDueSeeds.mockResolvedValue([]);
+    await runDiscovery(makeStep(), NOW, 3);
+    expect(pickDueSeeds).toHaveBeenCalledWith(3);
+  });
+
+  it("marks seeds run after ingest stores their channels, not before", async () => {
+    pickDueSeeds.mockResolvedValue(seeds.slice(0, 2));
+    searchSeeds
+      .mockResolvedValueOnce({
+        searched: [{ seedId: "s1", channelIds: ["UC1"] }],
+        stoppedForBudget: false,
+      })
+      .mockResolvedValueOnce({
+        searched: [{ seedId: "s2", channelIds: [] }],
+        stoppedForBudget: false,
+      });
+    const order: string[] = [];
+    ingestDiscoveredChannels.mockImplementation(async () => {
+      order.push("ingest");
+      return ingestOk;
+    });
+    markSeedsRun.mockImplementation(async () => {
+      order.push("mark");
+    });
+
+    await runDiscovery(makeStep(), NOW);
+
+    expect(order).toEqual(["ingest", "mark"]);
+    expect(markSeedsRun).toHaveBeenCalledWith(["s1", "s2"], NOW);
+  });
+
+  it("leaves seeds due when ingest runs out of budget before storing", async () => {
+    pickDueSeeds.mockResolvedValue(seeds.slice(0, 1));
+    searchSeeds.mockResolvedValue({
+      searched: [{ seedId: "s1", channelIds: ["UC1"] }],
+      stoppedForBudget: false,
+    });
+    ingestDiscoveredChannels.mockResolvedValue({ ...ingestOk, stoppedForBudget: true });
+
+    await runDiscovery(makeStep(), NOW);
+
+    expect(markSeedsRun).not.toHaveBeenCalled();
   });
 });
 

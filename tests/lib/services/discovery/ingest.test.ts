@@ -43,14 +43,15 @@ beforeEach(() => {
 });
 
 describe("searchSeeds", () => {
-  it("searches the last 7 days and marks each seed run", async () => {
+  it("searches the last 7 days and leaves marking to the caller (D-078)", async () => {
     discoverChannelIdsForKeyword.mockResolvedValue({ ok: true, value: ["UC1"] });
 
     const result = await searchSeeds([seed("s1"), seed("s2")], NOW);
 
     expect(discoverChannelIdsForKeyword).toHaveBeenCalledWith("kw s1", "2026-09-19T20:00:00.000Z");
     expect(result.searched).toHaveLength(2);
-    expect(fake.queriesFor("discovery_seeds")).toHaveLength(2);
+    // Marked only after ingest stores the results (workers/discovery.ts).
+    expect(fake.queriesFor("discovery_seeds")).toHaveLength(0);
   });
 
   it("stops at the budget line without marking the unsearched seed", async () => {
@@ -106,6 +107,24 @@ describe("ingestDiscoveredChannels", () => {
       discovered_via_seed: "s1",
     });
     expect(provenance?.calls.find((c) => c.method === "is")?.args).toEqual(["discovered_at", null]);
+  });
+
+  it("looks up existing channels 100 IDs at a time so the URL stays short", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `UC${String(i).padStart(22, "0")}`);
+    fake.on("channels", { data: [{ youtube_channel_id: ids[0] }] });
+    fake.on("channels", { data: [{ youtube_channel_id: ids[150] }] });
+    fake.on("channels", { data: [] });
+    fetchChannelsFresh.mockResolvedValue({ ok: true, value: [] });
+    upsertChannels.mockResolvedValue(new Map());
+
+    const result = await ingestDiscoveredChannels([{ seedId: "s1", channelIds: ids }], NOW);
+
+    const lookups = fake
+      .queriesFor("channels")
+      .map((q) => q.calls.find((c) => c.method === "in")?.args[1] as string[]);
+    expect(lookups.map((list) => list.length)).toEqual([100, 100, 50]);
+    expect(result.skippedExisting).toBe(2);
+    expect(fetchChannelsFresh.mock.calls[0]?.[0]).toHaveLength(248);
   });
 
   it("spends nothing when every channel is already known", async () => {

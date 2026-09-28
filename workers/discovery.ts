@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 import {
+  affordableSeeds,
   CLASSIFY_BATCH_SIZE,
   CLASSIFY_BATCHES_PER_RUN,
   ENRICHMENT_BATCH_SIZE,
   ENRICHMENT_BATCHES_PER_TICK,
-  SEEDS_PER_RUN,
+  SEEDS_PER_RUN_MAX,
   TIER_INTERVAL_DAYS,
   VIDEOS_KEPT_PER_CHANNEL,
 } from "@/lib/discovery/config";
@@ -18,14 +19,19 @@ import {
   searchSeeds,
   type SeedSearchOutcome,
 } from "@/lib/services/discovery/ingest";
-import { pickDueSeeds, type DiscoverySeed } from "@/lib/services/discovery/seeds";
+import { markSeedsRun, pickDueSeeds, type DiscoverySeed } from "@/lib/services/discovery/seeds";
 import {
   notifyNicheTrackers,
   type NicheNotifyResult,
 } from "@/lib/services/discovery/niche-notifications";
 import { snapshotNiches, type SnapshotResult } from "@/lib/services/discovery/snapshot";
 import { createServiceClient } from "@/lib/supabase/service";
-import { hasJobBudget, withQuotaSource } from "@/lib/youtube/quota";
+import {
+  getQuotaBudgets,
+  getQuotaBySource,
+  hasJobBudget,
+  withQuotaSource,
+} from "@/lib/youtube/quota";
 
 // Niche-Discovery-Engine.md §6 (D-069). Same shape as workers/cron.ts: a
 // testable core per job taking a duck-typed `step`, wrapped by a thin
@@ -110,15 +116,25 @@ export interface DiscoveryRunResult {
   stoppedForBudget: boolean;
 }
 
+// A manual run can cap its seeds (e.g. a small test run); the cron's
+// scheduled-timer event carries no maxSeeds.
+export const DiscoveryRequestedSchema = z.object({
+  maxSeeds: z.number().int().min(1).max(SEEDS_PER_RUN_MAX).optional(),
+});
+
 // One step per seed, so an Inngest retry never re-pays a search that
 // already succeeded (each step's output is memoised).
 export async function runDiscovery(
   step: JobStep,
   now: Date = new Date(),
+  maxSeeds: number = SEEDS_PER_RUN_MAX,
 ): Promise<DiscoveryRunResult> {
-  const seeds = (await step.run("pick-seeds", () =>
-    pickDueSeeds(SEEDS_PER_RUN),
-  )) as DiscoverySeed[];
+  const seeds = (await step.run("pick-seeds", async () => {
+    const used = (await getQuotaBySource(now)).discovery;
+    const limit = Math.min(maxSeeds, affordableSeeds(getQuotaBudgets().discovery, used));
+    return limit > 0 ? pickDueSeeds(limit) : [];
+  })) as DiscoverySeed[];
+  if (seeds.length === 0) return { seedsSearched: 0, newChannels: 0, stoppedForBudget: true };
 
   const searched: SeedSearchOutcome[] = [];
   let stoppedForBudget = false;
@@ -136,6 +152,18 @@ export async function runDiscovery(
   const ingest = (await step.run("ingest-channels", () =>
     withQuotaSource("discovery", () => ingestDiscoveredChannels(searched, now)),
   )) as Awaited<ReturnType<typeof ingestDiscoveredChannels>>;
+
+  // D-078: only now are the searches' results stored. An ingest that threw
+  // or ran out of budget leaves the seeds due, so their channels are
+  // picked up next run.
+  if (!ingest.stoppedForBudget) {
+    await step.run("mark-seeds-run", () =>
+      markSeedsRun(
+        searched.map((outcome) => outcome.seedId),
+        now,
+      ),
+    );
+  }
 
   if (ingest.newChannelIds.length > 0) {
     await step.sendEvent(
@@ -201,7 +229,8 @@ export const discoveryRunFunction = inngest.createFunction(
     ...single,
     triggers: [{ cron: `${PT} 15 0 * * *` }, { event: MANUAL_EVENTS.discovery }],
   },
-  async ({ step }) => runDiscovery(step),
+  async ({ event, step }) =>
+    runDiscovery(step, new Date(), DiscoveryRequestedSchema.parse(event.data ?? {}).maxSeeds),
 );
 
 export const enrichmentCron = inngest.createFunction(

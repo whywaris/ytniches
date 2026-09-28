@@ -60,7 +60,21 @@ export const HOT_OUTLIER_WINDOW_DAYS = 14;
 export const HOT_CHANNEL_AGE_MONTHS = 6;
 
 // --- Crawl sizes -----------------------------------------------------------
-export const SEEDS_PER_RUN = 30;
+// D-078: searches may use at most half the discovery budget (search.list
+// is 100 units); the rest is kept for storing what they find (channels.list
+// at ingest) and first enrichment (~81 units per 50 channels), which bill
+// the same budget.
+export const SEEDS_PER_RUN_MAX = 30;
+export const SEARCH_COST_UNITS = 100;
+export const DISCOVERY_SEARCH_BUDGET_SHARE = 0.5;
+
+// Seeds today's run can afford: the search share of the discovery budget,
+// less what the discovery job (searches + ingest) already spent today.
+export function affordableSeeds(discoveryBudget: number, discoveryJobUsed: number): number {
+  const cap = Math.floor(discoveryBudget * DISCOVERY_SEARCH_BUDGET_SHARE);
+  const seeds = Math.floor((cap - discoveryJobUsed) / SEARCH_COST_UNITS);
+  return Math.max(0, Math.min(SEEDS_PER_RUN_MAX, seeds));
+}
 export const DISCOVERY_PUBLISHED_WITHIN_DAYS = 7;
 export const VIDEOS_KEPT_PER_CHANNEL = 30;
 export const ENRICHMENT_BATCH_SIZE = 50;

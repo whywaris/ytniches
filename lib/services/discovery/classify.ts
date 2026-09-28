@@ -154,7 +154,7 @@ export async function resolveNiche(
     return existing.data.id;
   }
 
-  const embedding = await createEmbedding(`${name}: ${description}`);
+  const embedding = await createEmbedding(`${name}: ${description}`, "niche_embedding");
   if (!embedding.ok) {
     console.error("resolveNiche embedding failed", name, embedding.error);
     return null;

@@ -158,6 +158,46 @@ describe("model override (D-074)", () => {
   });
 });
 
+describe("token usage log", () => {
+  const usageLines = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
+
+  it("logs one ai_usage line per call with job, model and tokens", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    parseMock.mockResolvedValueOnce({
+      choices: [{ message: { parsed: VALID_OUTPUT } }],
+      usage: { prompt_tokens: 1200, completion_tokens: 340 },
+    });
+    embeddingsCreate.mockResolvedValueOnce({
+      data: [{ embedding: Array.from({ length: 1536 }, () => 0) }],
+      usage: { prompt_tokens: 9 },
+    });
+
+    await generateStructuredOutput("s", "u", TEST_SCHEMA, "channel_classification", {
+      model: "gpt-4o-mini",
+    });
+    await createEmbedding("x", "niche_embedding");
+
+    expect(usageLines(info)).toEqual([
+      {
+        event: "ai_usage",
+        job: "channel_classification",
+        model: "gpt-4o-mini",
+        input_tokens: 1200,
+        output_tokens: 340,
+      },
+      {
+        event: "ai_usage",
+        job: "niche_embedding",
+        model: "text-embedding-3-small",
+        input_tokens: 9,
+        output_tokens: 0,
+      },
+    ]);
+    info.mockRestore();
+  });
+});
+
 describe("createEmbedding", () => {
   it("returns a 1536-dim text-embedding-3-small vector", async () => {
     const vector = Array.from({ length: 1536 }, () => 0.01);

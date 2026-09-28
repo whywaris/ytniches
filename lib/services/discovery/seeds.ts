@@ -55,12 +55,13 @@ export async function pickDueSeeds(limit: number): Promise<DiscoverySeed[]> {
   return data.map(toSeed);
 }
 
-export async function markSeedRun(seedId: string, at: Date = new Date()): Promise<void> {
+export async function markSeedsRun(seedIds: string[], at: Date = new Date()): Promise<void> {
+  if (seedIds.length === 0) return;
   const { error } = await createServiceClient()
     .from("discovery_seeds")
     .update({ last_run_at: at.toISOString() })
-    .eq("id", seedId);
-  if (error) throw new Error(`markSeedRun failed: ${error.message}`);
+    .in("id", seedIds);
+  if (error) throw new Error(`markSeedsRun failed: ${error.message}`);
 }
 
 async function insertSeeds(

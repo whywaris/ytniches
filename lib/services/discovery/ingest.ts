@@ -4,7 +4,7 @@ import {
   DISCOVERY_PUBLISHED_WITHIN_DAYS,
 } from "@/lib/discovery/config";
 import { upsertChannels } from "@/lib/services/channels";
-import { markSeedRun, type DiscoverySeed } from "@/lib/services/discovery/seeds";
+import type { DiscoverySeed } from "@/lib/services/discovery/seeds";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   discoverChannelIdsForKeyword,
@@ -33,9 +33,11 @@ function isBudgetStop(error: DiscoveryYouTubeError): boolean {
   return error.type === "budget_exhausted" || error.type === "quota_exceeded";
 }
 
-// One search per seed, in order, until the job budget runs out. A seed is
-// marked run even when it finds nothing, so a dead keyword rotates to the
-// back instead of being retried every night.
+// One search per seed, in order, until the job budget runs out. Seeds are
+// not marked run here: the caller marks them only once what they found is
+// stored (D-078), so a failed ingest retries them instead of losing paid
+// searches. A seed that finds nothing is still marked, so a dead keyword
+// rotates to the back.
 export async function searchSeeds(
   seeds: DiscoverySeed[],
   now: Date = new Date(),
@@ -53,7 +55,6 @@ export async function searchSeeds(
       console.error("discovery search failed", seed.keyword, result.error);
       continue;
     }
-    await markSeedRun(seed.id, now);
     searched.push({ seedId: seed.id, channelIds: result.value });
   }
 
@@ -66,14 +67,22 @@ export function passesPrefilter(channel: YouTubeChannelItem): boolean {
   return viewCount / videoCount >= DISCOVERY_PREFILTER_MIN_LIFETIME_AVG_VIEWS;
 }
 
+// PostgREST puts .in() lists in the URL; a whole run's candidates (1,000+
+// 24-char IDs) make it too long and come back as "Bad Request".
+const EXISTING_LOOKUP_CHUNK = 100;
+
 async function existingYoutubeIds(youtubeChannelIds: string[]): Promise<Set<string>> {
-  if (youtubeChannelIds.length === 0) return new Set();
-  const { data, error } = await createServiceClient()
-    .from("channels")
-    .select("youtube_channel_id")
-    .in("youtube_channel_id", youtubeChannelIds);
-  if (error) throw new Error(`existingYoutubeIds failed: ${error.message}`);
-  return new Set(data.map((row) => row.youtube_channel_id));
+  const existing = new Set<string>();
+  const supabase = createServiceClient();
+  for (let i = 0; i < youtubeChannelIds.length; i += EXISTING_LOOKUP_CHUNK) {
+    const { data, error } = await supabase
+      .from("channels")
+      .select("youtube_channel_id")
+      .in("youtube_channel_id", youtubeChannelIds.slice(i, i + EXISTING_LOOKUP_CHUNK));
+    if (error) throw new Error(`existingYoutubeIds failed: ${error.message}`);
+    for (const row of data) existing.add(row.youtube_channel_id);
+  }
+  return existing;
 }
 
 export interface IngestResult {
