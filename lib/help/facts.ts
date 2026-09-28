@@ -1,3 +1,4 @@
+import { BETA_NOTICE_DAYS } from "@/lib/billing/beta";
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
 import { LEGAL } from "@/lib/legal/policy";
@@ -59,6 +60,7 @@ export const FACTS: Record<string, string | number> = {
   "search.cacheHours": SEARCH_RESULTS_CACHE_HOURS,
 
   "trial.pitch": TRIAL_PITCH,
+  "beta.noticeDays": BETA_NOTICE_DAYS,
   "trial.days": TRIAL.days,
   "trial.credits": TRIAL.credits,
   "trial.plan": TIER_INFO[TRIAL.tier].label,

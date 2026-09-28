@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { BETA_MODE } from "@/lib/billing/beta";
 import {
   DEFAULT_REFRESH_CADENCE_HOURS,
   refreshCadenceHoursFor,
@@ -80,8 +81,12 @@ describe("trial (D-060)", () => {
     expect(refreshCadenceHoursFor({ tier: "pro", status: "trialing" })).toBe(6);
   });
 
-  it("is pitched one way, from one constant", () => {
-    expect(TRIAL_PITCH).toBe("Try every Pro feature free for 14 days");
+  it("is pitched one way, from one constant -- the beta wording while BETA_MODE is on (D-081)", () => {
+    expect(TRIAL_PITCH).toBe(
+      BETA_MODE
+        ? "Every Pro feature free during beta, with 50 credits a month"
+        : "Try every Pro feature free for 14 days",
+    );
   });
 
   it("never says 'full Pro access' anywhere in the product", () => {

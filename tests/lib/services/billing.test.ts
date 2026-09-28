@@ -37,6 +37,11 @@ vi.mock("@/lib/billing", () => ({
 type Plan = { tier: string | null; status: string | null; teamWorkspaceId: string | null };
 let plansByUser: Record<string, Plan> = {};
 let affectedUsers: string[] | null = null;
+// D-081: off by default so these tests cover the paid path; beta tests
+// switch it on.
+const beta = vi.hoisted(() => ({ BETA_MODE: false, BETA_BANNER: "beta" }));
+vi.mock("@/lib/billing/beta", () => beta);
+
 vi.mock("@/lib/billing/effective-plan", () => ({
   getEffectivePlans: async (ids: string[]) =>
     new Map(
@@ -53,6 +58,7 @@ const {
   cancelSubscription,
   upsertSubscriptionFromProvider,
   allocateCycleCredits,
+  allocateBetaTrialCredits,
   handleRefund,
   TRIAL_CREDITS,
 } = await import("@/lib/services/billing");
@@ -134,6 +140,28 @@ describe("getSubscriptionStatus", () => {
     expect(result?.accountState).toBe("expired_trial");
   });
 
+  it("never expires a trial while BETA_MODE is on (D-081)", async () => {
+    beta.BETA_MODE = true;
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: {
+          tier: "pro",
+          status: "trialing",
+          current_period_start: new Date(Date.now() - 90 * 86_400_000).toISOString(),
+          current_period_end: new Date(Date.now() - 76 * 86_400_000).toISOString(),
+          trial_ends_at: new Date(Date.now() - 76 * 86_400_000).toISOString(),
+          cancelled_at: null,
+          provider_subscription_id: null,
+        },
+        error: null,
+      }),
+    );
+
+    const result = await getSubscriptionStatus(ctx);
+    expect(result?.accountState).toBe("trialing");
+    beta.BETA_MODE = false;
+  });
+
   it("computes accountState=cancelling when cancelled_at is set but the period hasn't ended", async () => {
     const future = new Date(Date.now() + 5 * 86_400_000).toISOString();
     sessionFrom.mockReturnValueOnce(
@@ -197,6 +225,17 @@ describe("getSubscriptionStatus", () => {
 });
 
 describe("createCheckout", () => {
+  it("refuses during the beta, before touching the session or Creem (D-081)", async () => {
+    beta.BETA_MODE = true;
+    expect(await createCheckout(ctx, "pro", "monthly")).toEqual({
+      ok: false,
+      error: { type: "beta" },
+    });
+    expect(getUser).not.toHaveBeenCalled();
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+    beta.BETA_MODE = false;
+  });
+
   it("creates a checkout session using the caller's own email", async () => {
     getUser.mockResolvedValueOnce({ data: { user: { email: "ada@example.com" } } });
     createCheckoutSession.mockResolvedValueOnce({
@@ -386,6 +425,37 @@ describe("upsertSubscriptionFromProvider", () => {
 
     expect(updateBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: "cancelled" }),
+    );
+  });
+});
+
+describe("allocateBetaTrialCredits (D-081)", () => {
+  it("closes the month, then refills the trial credits with a month-scoped key", async () => {
+    const closeBuilder = makeQueryBuilder({ data: null, error: null });
+    const insertBuilder = makeQueryBuilder({ data: null, error: null });
+    serviceFrom
+      .mockReturnValueOnce(
+        makeQueryBuilder({
+          data: [
+            { event_type: "allocation", amount: 50, idempotency_key: "trial:user-1", metadata: {} },
+          ],
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(closeBuilder)
+      .mockReturnValueOnce(insertBuilder);
+
+    await allocateBetaTrialCredits("user-1", "trial:user-1:month-1");
+
+    expect(closeBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ event_type: "expiration", amount: -50 }),
+    );
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_type: "allocation",
+        amount: TRIAL_CREDITS,
+        idempotency_key: "beta:allocation:trial:user-1:month-1",
+      }),
     );
   });
 });

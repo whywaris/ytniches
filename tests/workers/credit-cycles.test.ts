@@ -3,10 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const allocateCycleCredits = vi.fn<
   (userId: string, tier: string, cycleKey: string) => Promise<void>
 >(async () => undefined);
+const allocateBetaTrialCredits = vi.fn<(userId: string, cycleKey: string) => Promise<void>>(
+  async () => undefined,
+);
 vi.mock("@/lib/services/billing", () => ({
   allocateCycleCredits: (userId: string, tier: string, cycleKey: string) =>
     allocateCycleCredits(userId, tier, cycleKey),
+  allocateBetaTrialCredits: (userId: string, cycleKey: string) =>
+    allocateBetaTrialCredits(userId, cycleKey),
 }));
+
+const beta = vi.hoisted(() => ({ BETA_MODE: true, BETA_BANNER: "beta" }));
+vi.mock("@/lib/billing/beta", () => beta);
 
 let rows: unknown[] = [];
 vi.mock("@/lib/supabase/service", () => {
@@ -14,11 +22,14 @@ vi.mock("@/lib/supabase/service", () => {
     select: () => builder,
     eq: () => builder,
     not: () => Promise.resolve({ data: rows, error: null }),
+    then: (resolve: (value: { data: unknown[]; error: null }) => void) =>
+      resolve({ data: rows, error: null }),
   };
   return { createServiceClient: () => ({ from: () => builder }) };
 });
 
-const { allocateAnnualMonthlyCredits, dueAnnualMonth } = await import("@/workers/credit-cycles");
+const { allocateAnnualMonthlyCredits, dueAnnualMonth, refillBetaTrialCredits } =
+  await import("@/workers/credit-cycles");
 const { monthsElapsed } = await import("@/lib/billing/cycles");
 
 const annual = {
@@ -89,5 +100,33 @@ describe("allocateAnnualMonthlyCredits", () => {
     await allocateAnnualMonthlyCredits(fakeStep(), new Date("2026-04-05T01:00:00Z"));
     const keys = allocateCycleCredits.mock.calls.map((call) => call[2]);
     expect(new Set(keys).size).toBe(1);
+  });
+});
+
+describe("refillBetaTrialCredits (D-081)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    beta.BETA_MODE = true;
+  });
+
+  it("refills each trial once per whole month since it started, keyed by month", async () => {
+    rows = [
+      { user_id: "u-new", current_period_start: "2026-09-10T00:00:00.000Z" },
+      { user_id: "u-old", current_period_start: "2026-07-15T00:00:00.000Z" },
+    ];
+    const step = fakeStep();
+
+    const result = await refillBetaTrialCredits(step, new Date("2026-09-28T00:00:00.000Z"));
+
+    expect(result).toEqual({ due: 1 });
+    expect(allocateBetaTrialCredits).toHaveBeenCalledWith("u-old", "trial:u-old:month-2");
+  });
+
+  it("does nothing once the beta is over", async () => {
+    beta.BETA_MODE = false;
+    rows = [{ user_id: "u-old", current_period_start: "2026-07-15T00:00:00.000Z" }];
+
+    expect(await refillBetaTrialCredits(fakeStep())).toEqual({ due: 0 });
+    expect(allocateBetaTrialCredits).not.toHaveBeenCalled();
   });
 });

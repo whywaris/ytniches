@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 
 import { createCheckoutAction } from "@/app/(app)/settings/billing/actions";
 import type { BillingFrequency, Tier } from "@/lib/billing";
+import { BETA_MODE } from "@/lib/billing/beta";
+import { BetaBanner } from "@/components/features/billing/beta-banner";
 import { capture } from "@/lib/analytics/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
@@ -43,17 +45,25 @@ function UpgradeModal({ open, onOpenChange, reason }: UpgradeModalProps) {
   }
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange} title="Upgrade your plan" size="xl">
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={BETA_MODE ? "Plans" : "Upgrade your plan"}
+      size="xl"
+    >
       <div className="flex flex-col gap-4">
         {reason ? (
           <p role="alert" className="text-body-sm text-warning">
             {reason}
           </p>
         ) : null}
+        {/* D-081: no checkout during the beta; plans are shown for reference. */}
+        {BETA_MODE ? <BetaBanner /> : null}
         <TierCards
           billingFrequency={billingFrequency}
           onBillingFrequencyChange={setBillingFrequency}
-          ctaLabel="Continue"
+          ctaLabel={BETA_MODE ? "Coming soon" : "Continue"}
+          ctaDisabled={BETA_MODE}
           onSelectTier={(tier) => void handleSelectTier(tier)}
           loadingTier={loadingTier}
         />

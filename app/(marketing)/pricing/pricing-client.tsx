@@ -5,6 +5,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import type { BillingFrequency } from "@/lib/billing";
+import { BETA_MODE } from "@/lib/billing/beta";
 import { TierCards } from "@/components/features/billing/tier-cards";
 
 // Monetization.md §5.4: "Start free trial" -> /signup. The trial itself
@@ -21,7 +22,7 @@ function PricingClient() {
     <TierCards
       billingFrequency={billingFrequency}
       onBillingFrequencyChange={setBillingFrequency}
-      ctaLabel="Start free trial"
+      ctaLabel={BETA_MODE ? "Start free" : "Start free trial"}
       onSelectTier={() => router.push("/signup")}
     />
   );

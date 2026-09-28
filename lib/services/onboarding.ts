@@ -167,7 +167,7 @@ async function activateTrial(userId: string): Promise<void> {
     user_id: userId,
     event_type: "allocation",
     amount: TRIAL_CREDITS,
-    reason: "14-day trial credits",
+    reason: "Trial credits",
     idempotency_key: `trial:${userId}`,
   });
   if (creditError) {

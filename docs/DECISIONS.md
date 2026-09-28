@@ -989,3 +989,20 @@ Decisions that still need to close before their dependent docs / features can be
     - Engaged is hidden when any recent upload hides its likes.
 - **Impacts:** `lib/services/discovery/classify.ts`, `lib/services/admin.ts`, `app/(admin)/admin/discovery`, `lib/discovery/{config,insights}.ts`, Backend-Schema.md, Niche-Discovery-Engine §6.
 - **Follow-up:** `niches.embedding`, `match_niche` and `createEmbedding` are now unused; drop them in a later migration.
+
+### D-081: Free public beta (BETA_MODE)
+
+- **Status:** Resolved (2026-09-28). Pauses D-057 (trial expiry) while on.
+- **Final call:** `BETA_MODE` in `lib/billing/beta.ts`. While it's on:
+  - **Trial:** every new account gets the trial (Pro features, trial limits) with **no expiry**; `computeAccountState` never returns `expired_trial`.
+  - **Credits:** trial credits (`TRIAL.credits`) refill monthly from the trial start. The credit-cycles cron closes each month and allocates, keyed per month so it never double-allocates.
+  - **No checkout anywhere:**
+    - /pricing keeps plans and prices with the banner "Free during beta — paid plans coming soon"; plan buttons say "Start free" and go to signup.
+    - The in-app upgrade modal shows the plans with the banner and disabled "Coming soon" buttons; Billing shows the banner and the next refill date instead of Upgrade and "Trial ends".
+    - `createCheckout` refuses with `beta`, whatever the UI does.
+  - **Copy:** the trial pitch (`TRIAL_PITCH`, `trialSummary`) says "free during beta"; so do the landing page, FAQ and JSON-LD, and the help center (Free during beta, Upgrading, Understanding credits).
+- **When billing goes live (not built yet):**
+  1. Email every beta user `BETA_NOTICE_DAYS` (14) days' notice.
+  2. Turn `BETA_MODE` off; normal trial rules (and D-057) then apply.
+  3. Restore the trial and upgrade help articles.
+- **Impacts:** `lib/billing/{beta,plans,cycles}.ts`, `lib/services/billing.ts`, `workers/credit-cycles.ts`, billing UI, /pricing, help center, Monetization.md.

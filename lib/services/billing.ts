@@ -1,4 +1,5 @@
 import * as billing from "@/lib/billing";
+import { BETA_MODE } from "@/lib/billing/beta";
 import type { ProviderSubscription, Tier as BillingTier } from "@/lib/billing";
 import { getBalance } from "@/lib/credits";
 import { createClient } from "@/lib/supabase/server";
@@ -61,6 +62,8 @@ function computeAccountState(
   now: Date = new Date(),
 ): AccountState {
   if (sub.status === "trialing") {
+    // D-081: the trial doesn't expire during the beta (D-057 paused).
+    if (BETA_MODE) return "trialing";
     const trialOver = sub.trialEndsAt
       ? new Date(sub.trialEndsAt) <= now
       : new Date(sub.currentPeriodEnd) <= now;
@@ -122,7 +125,9 @@ export async function createCheckout(
   ctx: RequestContext,
   tier: Tier,
   billingFrequency: billing.BillingFrequency,
-): Promise<Result<{ checkoutUrl: string }, { type: "no_email" }>> {
+): Promise<Result<{ checkoutUrl: string }, { type: "no_email" } | { type: "beta" }>> {
+  // D-081: no checkout during the beta, whatever the UI shows.
+  if (BETA_MODE) return err({ type: "beta" });
   const supabase = await createClient();
   const {
     data: { user },
@@ -386,6 +391,27 @@ export async function allocateCycleCredits(
   if (error) {
     if (error.code === "23505") return; // already allocated for this cycle
     throw new Error(`allocateCycleCredits insert failed: ${error.message}`);
+  }
+}
+
+// D-081: during the beta the trial never ends, and its credits refill
+// monthly -- the same close-then-allocate as a paid cycle, for
+// TRIAL.credits. Month 0 is the grant at trial start; cycleKey names the
+// month, so a re-run never allocates twice.
+export async function allocateBetaTrialCredits(userId: string, cycleKey: string): Promise<void> {
+  await closeCreditCycle(userId, cycleKey);
+  const { error } = await createServiceClient()
+    .from("credit_events")
+    .insert({
+      user_id: userId,
+      event_type: "allocation",
+      amount: TRIAL.credits,
+      reason: "Monthly beta trial credits",
+      idempotency_key: `beta:allocation:${cycleKey}`,
+      metadata: { tier: TRIAL.tier, rolloverCap: 0 },
+    });
+  if (error && error.code !== "23505") {
+    throw new Error(`allocateBetaTrialCredits insert failed: ${error.message}`);
   }
 }
 

@@ -1,4 +1,6 @@
+import { BETA_MODE } from "@/lib/billing/beta";
 import { TRIAL_PITCH } from "@/lib/billing/plans";
+import { BetaBanner } from "@/components/features/billing/beta-banner";
 import { PricingClient } from "@/app/(marketing)/pricing/pricing-client";
 
 import type { Metadata } from "next";
@@ -18,6 +20,7 @@ export default function PricingPage() {
           {TRIAL_PITCH}. No credit card required.
         </p>
       </div>
+      {BETA_MODE ? <BetaBanner className="mx-auto w-full max-w-xl" /> : null}
       <PricingClient />
     </div>
   );

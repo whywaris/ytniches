@@ -18,6 +18,13 @@ vi.mock("@/app/(app)/settings/billing/actions", () => ({
   createCheckoutAction: vi.fn(),
 }));
 
+// D-081: off by default (the paid path); beta tests switch it on.
+const beta = vi.hoisted(() => ({
+  BETA_MODE: false,
+  BETA_BANNER: "Free during beta — paid plans coming soon",
+}));
+vi.mock("@/lib/billing/beta", () => beta);
+
 const { BillingClient } = await import("@/app/(app)/settings/billing/billing-client");
 
 const TRIALING: SubscriptionStatus = {
@@ -67,6 +74,31 @@ describe("BillingClient", () => {
   it("has no accessibility violations while trialing", async () => {
     const { container } = renderClient(TRIALING);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  describe("during the beta (D-081)", () => {
+    beforeEach(() => {
+      beta.BETA_MODE = true;
+    });
+    afterEach(() => {
+      beta.BETA_MODE = false;
+    });
+
+    it("shows the beta trial, when credits next refill, the banner and no Upgrade", () => {
+      renderClient(TRIALING, 42);
+      expect(screen.getByText("Free during beta")).toBeInTheDocument();
+      expect(screen.getByText("Credits refill")).toBeInTheDocument();
+      expect(screen.queryByText("Trial ends")).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Free during beta — paid plans coming soon",
+      );
+      expect(screen.queryByRole("button", { name: "Upgrade" })).not.toBeInTheDocument();
+    });
+
+    it("offers no Upgrade with no subscription either", () => {
+      renderClient(null);
+      expect(screen.queryByRole("button", { name: "Upgrade" })).not.toBeInTheDocument();
+    });
   });
 
   it("shows an Upgrade button and no Manage/Cancel buttons with no subscription", () => {

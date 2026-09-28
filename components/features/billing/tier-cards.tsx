@@ -54,6 +54,8 @@ export interface TierCardsProps {
   onSelectTier: (tier: Tier) => void;
   selectedTier?: Tier;
   loadingTier?: Tier | null;
+  /** D-081: plans shown for reference only (no checkout during the beta). */
+  ctaDisabled?: boolean;
   className?: string;
 }
 
@@ -68,6 +70,7 @@ function TierCards({
   onSelectTier,
   selectedTier,
   loadingTier,
+  ctaDisabled = false,
   className,
 }: TierCardsProps) {
   return (
@@ -122,6 +125,7 @@ function TierCards({
                 fullWidth
                 variant={recommended ? "primary" : "secondary"}
                 loading={loadingTier === tier}
+                disabled={ctaDisabled}
                 onClick={() => onSelectTier(tier)}
               >
                 {ctaLabel}

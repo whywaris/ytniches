@@ -4,6 +4,8 @@
 
 ---
 
+> **Beta (D-081, 2026-09-28):** while `BETA_MODE` is on (`lib/billing/beta.ts`), there is no checkout. Every new account gets the trial (Pro features, trial limits) with no expiry, and its credits refill monthly. /pricing shows the plans below with a "Free during beta" banner. The rest of this document describes billing once it goes live.
+
 ## 1. Overview & Business Model
 
 YTNiches is a subscription SaaS with credit-metered usage on top of the base plan. Users pay a monthly (or annual) fee for tier access + a monthly credit allocation. Credits meter the expensive actions (AI generation, high-cost API calls) so heavy users don't blow up unit economics.

@@ -1,3 +1,4 @@
+import { BETA_MODE } from "@/lib/billing/beta";
 import type { Tier } from "@/lib/billing/products";
 
 // Monetization.md §2. The single source for per-plan numbers: prices
@@ -95,11 +96,17 @@ export const TRIAL = {
 } as const satisfies { days: number; tier: Tier; credits: number; refreshCadenceHours: number };
 
 // The one way the trial is marketed (pricing, landing, VS pages, help):
-// "Try every Pro feature free for 14 days", the only trial wording.
-export const TRIAL_PITCH = `Try every ${TIER_INFO[TRIAL.tier].label} feature free for ${TRIAL.days} days`;
+// "Try every Pro feature free for 14 days", the only trial wording. During
+// the beta (D-081) the trial doesn't expire and its credits refill monthly,
+// so the pitch says that instead.
+export const TRIAL_PITCH = BETA_MODE
+  ? `Every ${TIER_INFO[TRIAL.tier].label} feature free during beta, with ${TRIAL.credits} credits a month`
+  : `Try every ${TIER_INFO[TRIAL.tier].label} feature free for ${TRIAL.days} days`;
 
 export function trialSummary(): string {
-  return `${TRIAL.days} days of ${TIER_INFO[TRIAL.tier].label}, no card`;
+  return BETA_MODE
+    ? `free during beta, ${TRIAL.credits} credits a month, no card`
+    : `${TRIAL.days} days of ${TIER_INFO[TRIAL.tier].label}, no card`;
 }
 
 // No subscription, or one that has lapsed.

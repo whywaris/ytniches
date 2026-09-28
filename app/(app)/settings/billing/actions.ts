@@ -12,7 +12,7 @@ import type { Result } from "@/lib/result";
 export async function createCheckoutAction(
   tier: Tier,
   billingFrequency: BillingFrequency,
-): Promise<Result<{ checkoutUrl: string }, { type: "no_email" }>> {
+): Promise<Result<{ checkoutUrl: string }, { type: "no_email" } | { type: "beta" }>> {
   const ctx = await getRequestContext();
   return createCheckout(ctx, tier, billingFrequency);
 }
