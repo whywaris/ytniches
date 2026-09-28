@@ -6,6 +6,7 @@ import {
   CLASSIFY_BATCHES_PER_RUN,
   ENRICHMENT_BATCH_SIZE,
   ENRICHMENT_BATCHES_PER_TICK,
+  searchVariant,
   SEEDS_PER_RUN_MAX,
   TIER_INTERVAL_DAYS,
   VIDEOS_KEPT_PER_CHANNEL,
@@ -138,9 +139,9 @@ export async function runDiscovery(
 
   const searched: SeedSearchOutcome[] = [];
   let stoppedForBudget = false;
-  for (const seed of seeds) {
+  for (const [index, seed] of seeds.entries()) {
     const outcome = (await step.run(`search-${seed.id}`, () =>
-      withQuotaSource("discovery", () => searchSeeds([seed], now)),
+      withQuotaSource("discovery", () => searchSeeds([seed], now, searchVariant(index))),
     )) as Awaited<ReturnType<typeof searchSeeds>>;
     searched.push(...outcome.searched);
     if (outcome.stoppedForBudget) {

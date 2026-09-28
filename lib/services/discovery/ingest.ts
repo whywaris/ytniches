@@ -2,6 +2,7 @@ import {
   DAY_MS,
   DISCOVERY_PREFILTER_MIN_LIFETIME_AVG_VIEWS,
   DISCOVERY_PUBLISHED_WITHIN_DAYS,
+  type SearchVariant,
 } from "@/lib/discovery/config";
 import { upsertChannels } from "@/lib/services/channels";
 import type { DiscoverySeed } from "@/lib/services/discovery/seeds";
@@ -41,6 +42,7 @@ function isBudgetStop(error: DiscoveryYouTubeError): boolean {
 export async function searchSeeds(
   seeds: DiscoverySeed[],
   now: Date = new Date(),
+  variant: SearchVariant = {},
 ): Promise<DiscoverSeedsResult> {
   const publishedAfter = new Date(
     now.getTime() - DISCOVERY_PUBLISHED_WITHIN_DAYS * DAY_MS,
@@ -48,7 +50,7 @@ export async function searchSeeds(
   const searched: SeedSearchOutcome[] = [];
 
   for (const seed of seeds) {
-    const result = await discoverChannelIdsForKeyword(seed.keyword, publishedAfter);
+    const result = await discoverChannelIdsForKeyword(seed.keyword, publishedAfter, variant);
     if (!result.ok) {
       if (isBudgetStop(result.error)) return { searched, stoppedForBudget: true };
       // A bad response for one keyword shouldn't sink the whole run.

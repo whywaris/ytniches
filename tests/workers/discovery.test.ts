@@ -206,6 +206,25 @@ describe("runDiscovery", () => {
     expect(spent).toEqual({ seedsSearched: 0, newChannels: 0, stoppedForBudget: true });
   });
 
+  it("cycles search variants over the run's seeds: 4 of 6 English, 3 of 6 medium/long (D-079)", async () => {
+    const six = [1, 2, 3, 4, 5, 6].map((i) => ({ id: `s${i}`, keyword: `k${i}` }));
+    pickDueSeeds.mockResolvedValue(six);
+    searchSeeds.mockResolvedValue({ searched: [], stoppedForBudget: false });
+    ingestDiscoveredChannels.mockResolvedValue(ingestOk);
+
+    await runDiscovery(makeStep(), NOW);
+
+    const variants = searchSeeds.mock.calls.map((call) => call[2]);
+    expect(variants).toEqual([
+      { relevanceLanguage: "en" },
+      { relevanceLanguage: "en", videoDuration: "medium" },
+      {},
+      { relevanceLanguage: "en", videoDuration: "long" },
+      { relevanceLanguage: "en", videoDuration: "medium" },
+      {},
+    ]);
+  });
+
   it("honours a manual maxSeeds below the budget cap", async () => {
     pickDueSeeds.mockResolvedValue([]);
     await runDiscovery(makeStep(), NOW, 3);

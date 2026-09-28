@@ -99,6 +99,7 @@ export async function searchChannels(query: string): Promise<Result<string[], Yo
 export async function searchRecentVideos(
   query: string,
   publishedAfter: string,
+  variant: { relevanceLanguage?: string; videoDuration?: string } = {},
 ): Promise<Result<{ videoId: string; channelId: string }[], YouTubeClientError>> {
   const result = await fetchYouTube("search", {
     part: "snippet",
@@ -107,6 +108,7 @@ export async function searchRecentVideos(
     order: "viewCount",
     publishedAfter,
     maxResults: "50",
+    ...variant,
   });
   if (!result.ok) return result;
 

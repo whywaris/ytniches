@@ -1,3 +1,4 @@
+import type { SearchVariant } from "@/lib/discovery/config";
 import { setCachedChannel } from "@/lib/youtube/cache";
 import {
   BATCH_SIZE,
@@ -32,11 +33,12 @@ async function spend(cost: number): Promise<DiscoveryYouTubeError | null> {
 export async function discoverChannelIdsForKeyword(
   keyword: string,
   publishedAfter: string,
+  variant: SearchVariant = {},
 ): Promise<Result<string[], DiscoveryYouTubeError>> {
   const denied = await spend(SEARCH_COST);
   if (denied) return err(denied);
 
-  const result = await searchRecentVideos(keyword, publishedAfter);
+  const result = await searchRecentVideos(keyword, publishedAfter, variant);
   if (!result.ok) return result;
   return ok([...new Set(result.value.map((item) => item.channelId))]);
 }

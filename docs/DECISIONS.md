@@ -955,3 +955,13 @@ Decisions that still need to close before their dependent docs / features can be
   - Seeds are marked run only after ingest has stored their channels. An ingest that fails or runs out of budget leaves them due for the next run.
   - A manual run may cap its seeds (`maxSeeds`) for small test runs.
 - **Impacts:** `lib/discovery/config.ts`, `workers/discovery.ts`, `lib/services/discovery/{ingest,seeds}.ts`, Niche-Discovery-Engine §6.
+
+### D-079: Discovery search variants: mostly English, part medium/long
+
+- **Status:** Resolved (2026-09-28)
+- **Context:** Unrestricted `order=viewCount` searches over the last 7 days came back ~85% Shorts, and about half non-English (test run of 2026-09-28: 62 of 73 kept channels Shorts, 35 of 73 not English).
+- **Final call:** each run cycles its seeds through six search variants: `en/any`, `en/medium`, `any/any`, `en/long`, `en/medium`, `any/any`.
+  - 4 of 6 set `relevanceLanguage=en`, which ranks English higher without excluding other languages.
+  - 3 of 6 set `videoDuration` to `medium` (4–20 min) or `long` (>20 min).
+  - The rest are unrestricted, so Shorts and other languages still come in.
+- **Impacts:** `lib/discovery/config.ts` (`searchVariant`), `lib/youtube/client.ts`, `lib/youtube/discovery.ts`, `lib/services/discovery/ingest.ts`, `workers/discovery.ts`, Niche-Discovery-Engine §6.

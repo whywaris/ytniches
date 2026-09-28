@@ -68,6 +68,27 @@ export const SEEDS_PER_RUN_MAX = 30;
 export const SEARCH_COST_UNITS = 100;
 export const DISCOVERY_SEARCH_BUDGET_SHARE = 0.5;
 
+// D-079: search variants cycle over a run's seeds in this order. 4 of 6
+// bias to English (relevanceLanguage ranks, it doesn't exclude); 3 of 6
+// ask for medium (4-20 min) or long (>20 min) uploads, since unrestricted
+// searches came back ~85% Shorts.
+export interface SearchVariant {
+  relevanceLanguage?: "en";
+  videoDuration?: "medium" | "long";
+}
+const SEARCH_VARIANT_CYCLE: SearchVariant[] = [
+  { relevanceLanguage: "en" },
+  { relevanceLanguage: "en", videoDuration: "medium" },
+  {},
+  { relevanceLanguage: "en", videoDuration: "long" },
+  { relevanceLanguage: "en", videoDuration: "medium" },
+  {},
+];
+
+export function searchVariant(seedIndex: number): SearchVariant {
+  return SEARCH_VARIANT_CYCLE[seedIndex % SEARCH_VARIANT_CYCLE.length]!;
+}
+
 // Seeds today's run can afford: the search share of the discovery budget,
 // less what the discovery job (searches + ingest) already spent today.
 export function affordableSeeds(discoveryBudget: number, discoveryJobUsed: number): number {

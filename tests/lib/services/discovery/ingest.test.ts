@@ -48,10 +48,25 @@ describe("searchSeeds", () => {
 
     const result = await searchSeeds([seed("s1"), seed("s2")], NOW);
 
-    expect(discoverChannelIdsForKeyword).toHaveBeenCalledWith("kw s1", "2026-09-19T20:00:00.000Z");
+    expect(discoverChannelIdsForKeyword).toHaveBeenCalledWith(
+      "kw s1",
+      "2026-09-19T20:00:00.000Z",
+      {},
+    );
     expect(result.searched).toHaveLength(2);
     // Marked only after ingest stores the results (workers/discovery.ts).
     expect(fake.queriesFor("discovery_seeds")).toHaveLength(0);
+  });
+
+  it("passes the run's search variant through to the search", async () => {
+    discoverChannelIdsForKeyword.mockResolvedValue({ ok: true, value: [] });
+
+    await searchSeeds([seed("s1")], NOW, { relevanceLanguage: "en", videoDuration: "medium" });
+
+    expect(discoverChannelIdsForKeyword).toHaveBeenCalledWith("kw s1", "2026-09-19T20:00:00.000Z", {
+      relevanceLanguage: "en",
+      videoDuration: "medium",
+    });
   });
 
   it("stops at the budget line without marking the unsearched seed", async () => {

@@ -6,6 +6,7 @@ import {
   fetchPlaylistItemVideoIds,
   fetchVideosByIds,
   searchChannels,
+  searchRecentVideos,
 } from "@/lib/youtube/client";
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -62,6 +63,37 @@ describe("searchChannels", () => {
     if (!result.ok) {
       expect(result.error.type).toBe("invalid_response");
     }
+  });
+});
+
+describe("searchRecentVideos (D-079 variants)", () => {
+  const body = { items: [{ id: { videoId: "v1" }, snippet: { channelId: "UC1" } }] };
+
+  it("adds relevanceLanguage and videoDuration when the variant sets them", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await searchRecentVideos("mafia history", "2026-09-21T00:00:00Z", {
+      relevanceLanguage: "en",
+      videoDuration: "long",
+    });
+
+    expect(result).toEqual({ ok: true, value: [{ videoId: "v1", channelId: "UC1" }] });
+    const params = urlOf(fetchMock.mock.calls[0]!).searchParams;
+    expect(params.get("relevanceLanguage")).toBe("en");
+    expect(params.get("videoDuration")).toBe("long");
+    expect(params.get("order")).toBe("viewCount");
+  });
+
+  it("sends neither parameter for the plain variant", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await searchRecentVideos("mafia history", "2026-09-21T00:00:00Z");
+
+    const params = urlOf(fetchMock.mock.calls[0]!).searchParams;
+    expect(params.has("relevanceLanguage")).toBe(false);
+    expect(params.has("videoDuration")).toBe(false);
   });
 });
 
