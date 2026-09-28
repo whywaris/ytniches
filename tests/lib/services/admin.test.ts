@@ -19,6 +19,8 @@ function makeBuilder(table: string) {
     eq: vi.fn(() => builder),
     insert: vi.fn(() => builder),
     update: vi.fn(() => builder),
+    is: vi.fn(() => builder),
+    not: vi.fn(() => builder),
     maybeSingle: vi.fn(() => Promise.resolve(results[table]?.maybeSingle ?? EMPTY)),
     single: vi.fn(() => Promise.resolve(results[table]?.single ?? EMPTY)),
     then: (resolve: (value: QueryResult) => void) => resolve(results[table]?.then ?? EMPTY),
@@ -76,6 +78,8 @@ const {
   suspendUser,
   triggerDiscoveryJob,
   addDiscoverySeed,
+  approveNicheSuggestion,
+  rejectNicheSuggestion,
   getQuotaReport,
 } = await import("@/lib/services/admin");
 
@@ -230,5 +234,69 @@ describe("getQuotaReport (D-075)", () => {
     expect(report.byCategory.discovery).toEqual({ used: 3_000, budget: 3_000 });
     expect(report.byCategory.free_tools).toEqual({ used: 0, budget: 1_500 });
     expect(report.bySource).toEqual({ discovery: 3_000 });
+  });
+});
+
+describe("niche suggestions (D-080)", () => {
+  const pending = {
+    id: "s1",
+    slug: "knitting-tutorials",
+    name: "Knitting Tutorials",
+    description: "Learn to knit",
+  };
+
+  it("approve adds the niche with its category, seeds it and re-queues unclassified channels", async () => {
+    results.niche_suggestions = { maybeSingle: { data: pending, error: null } };
+
+    expect(await approveNicheSuggestion("s1", "Food")).toEqual({ ok: true, value: undefined });
+
+    expect(builders.niches?.insert).toHaveBeenCalledWith({
+      slug: "knitting-tutorials",
+      name: "Knitting Tutorials",
+      description: "Learn to knit",
+      category: "Food",
+      seed_keywords: ["knitting tutorials"],
+    });
+    expect(builders.niche_suggestions?.update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "approved", reviewed_by: "admin-1" }),
+    );
+    expect(addManualSeed).toHaveBeenCalledWith("knitting tutorials", 5);
+    expect(builders.channels?.update).toHaveBeenCalledWith({ classified_at: null });
+    expect(builders.channels?.is).toHaveBeenCalledWith("niche_id", null);
+    expect(builders.admin_actions?.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "niche_suggestion_approve" }),
+    );
+  });
+
+  it("approve reports a slug that already exists and a suggestion already reviewed", async () => {
+    results.niche_suggestions = { maybeSingle: { data: pending, error: null } };
+    results.niches = { then: { data: null, error: { code: "23505", message: "dupe" } } };
+    expect(await approveNicheSuggestion("s1", "Food")).toEqual({
+      ok: false,
+      error: { type: "duplicate" },
+    });
+
+    results.niche_suggestions = { maybeSingle: { data: null, error: null } };
+    expect(await approveNicheSuggestion("s1", "Food")).toEqual({
+      ok: false,
+      error: { type: "not_found" },
+    });
+  });
+
+  it("reject marks the suggestion and never adds a niche", async () => {
+    results.niche_suggestions = { maybeSingle: { data: pending, error: null } };
+
+    expect(await rejectNicheSuggestion("s1")).toEqual({ ok: true, value: undefined });
+
+    expect(builders.niche_suggestions?.update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rejected" }),
+    );
+    expect(builders.niches).toBeUndefined();
+  });
+
+  it("both require a super admin", async () => {
+    signedInAs({ role: "user", suspended_at: null });
+    expect((await approveNicheSuggestion("s1", "Food")).ok).toBe(false);
+    expect((await rejectNicheSuggestion("s1")).ok).toBe(false);
   });
 });

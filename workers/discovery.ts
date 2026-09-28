@@ -188,8 +188,11 @@ export async function runDiscovery(
 
 // --- classify ---------------------------------------------------------------
 
-export async function runClassify(step: JobStep): Promise<{ classified: number; batches: number }> {
+export async function runClassify(
+  step: JobStep,
+): Promise<{ classified: number; unclassified: number; batches: number }> {
   let classified = 0;
+  let unclassified = 0;
   let batches = 0;
   for (let i = 0; i < CLASSIFY_BATCHES_PER_RUN; i += 1) {
     const result = (await step.run(`classify-${i}`, async () => {
@@ -200,11 +203,14 @@ export async function runClassify(step: JobStep): Promise<{ classified: number; 
     if (result === null) break;
     batches += 1;
     classified += result.classified;
-    // A batch the model couldn't parse would be picked again immediately;
-    // stop rather than loop on it (it retries tomorrow).
-    if (result.failed || result.classified === 0) break;
+    unclassified += result.unclassified;
+    // A batch the model couldn't parse (or answered for none of the
+    // channels) would be picked again immediately; stop rather than loop
+    // on it (it retries tomorrow). Unclassified channels are progress:
+    // they're marked and wait for the stale window.
+    if (result.failed || result.classified + result.unclassified === 0) break;
   }
-  return { classified, batches };
+  return { classified, unclassified, batches };
 }
 
 // --- snapshot -----------------------------------------------------------------

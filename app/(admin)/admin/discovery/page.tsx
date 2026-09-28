@@ -1,6 +1,7 @@
 import { getDiscoveryAdminReport } from "@/lib/services/admin";
 import { StatCard } from "@/components/features/admin/stat-card";
 import { DiscoveryControls } from "@/app/(admin)/admin/discovery/discovery-controls";
+import { NicheSuggestions } from "@/app/(admin)/admin/discovery/niche-suggestions";
 
 // Niche-Discovery-Engine.md §6 / D-069: seed management + manual job
 // triggers. Quota usage per job lives on API Quotas.
@@ -25,6 +26,8 @@ export default async function AdminDiscoveryPage() {
           }
         />
       </div>
+
+      <NicheSuggestions suggestions={report.suggestions} />
 
       <DiscoveryControls seeds={report.seeds} />
     </div>

@@ -108,8 +108,24 @@ export const EXPANSION_SEEDS_PER_DAY = 20;
 export const USER_SEARCH_SEED_PRIORITY = 5;
 export const EXPANSION_SEED_PRIORITY = 8;
 
-// --- Niche matching (D-074) ------------------------------------------------
-export const NICHE_MATCH_MIN_SIMILARITY = 0.85;
+// --- Niche taxonomy (D-080) ------------------------------------------------
+// Mirrors the niches.category check constraint.
+export const NICHE_CATEGORIES = [
+  "History & Mythology",
+  "Geography & World",
+  "Mystery & Crime",
+  "Science & Space",
+  "Nature & Animals",
+  "Facts & Knowledge",
+  "Tech & AI",
+  "Money & Business",
+  "Self-Improvement",
+  "Relaxation & Sleep",
+  "Entertainment & Stories",
+  "Sports & Games",
+  "Food",
+] as const;
+export type NicheCategory = (typeof NICHE_CATEGORIES)[number];
 // A niche slug can't shadow a static route under /niches (today:
 // /niches/channels/[id]). tests/lib/discovery/reserved-slugs.test.ts fails
 // if a new static folder appears under app/(app)/niches without being

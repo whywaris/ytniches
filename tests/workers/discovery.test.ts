@@ -278,16 +278,28 @@ describe("runClassify", () => {
       .mockResolvedValueOnce([{ id: "c1" }])
       .mockResolvedValueOnce([{ id: "c2" }])
       .mockResolvedValueOnce([]);
-    classifyBatch.mockResolvedValue({ classified: 1, failed: false, expansionSeeds: 0 });
+    classifyBatch.mockResolvedValue({ classified: 1, unclassified: 0, failed: false });
 
-    expect(await runClassify(makeStep())).toEqual({ classified: 2, batches: 2 });
+    expect(await runClassify(makeStep())).toEqual({ classified: 2, unclassified: 0, batches: 2 });
+  });
+
+  it("keeps going through batches that were all unclassified (D-080)", async () => {
+    listChannelsToClassify
+      .mockResolvedValueOnce([{ id: "c1" }])
+      .mockResolvedValueOnce([{ id: "c2" }])
+      .mockResolvedValueOnce([]);
+    classifyBatch
+      .mockResolvedValueOnce({ classified: 0, unclassified: 1, failed: false })
+      .mockResolvedValueOnce({ classified: 1, unclassified: 0, failed: false });
+
+    expect(await runClassify(makeStep())).toEqual({ classified: 1, unclassified: 1, batches: 2 });
   });
 
   it("stops instead of looping on a batch the model can't parse", async () => {
     listChannelsToClassify.mockResolvedValue([{ id: "c1" }]);
-    classifyBatch.mockResolvedValue({ classified: 0, failed: true, expansionSeeds: 0 });
+    classifyBatch.mockResolvedValue({ classified: 0, unclassified: 0, failed: true });
 
-    expect(await runClassify(makeStep())).toEqual({ classified: 0, batches: 1 });
+    expect(await runClassify(makeStep())).toEqual({ classified: 0, unclassified: 0, batches: 1 });
     expect(classifyBatch).toHaveBeenCalledTimes(1);
   });
 });

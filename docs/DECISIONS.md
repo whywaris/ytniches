@@ -887,7 +887,7 @@ Decisions that still need to close before their dependent docs / features can be
   - User-facing generation stays on `gpt-4o`.
   - Background classification uses `gpt-4o-mini` through the same `generateStructuredOutput` wrapper, which now takes a `model` option.
   - Niche labels are embedded with `text-embedding-3-small` (1536 dims) and stored in `niches.embedding` (pgvector).
-  - A label joins an existing niche at cosine similarity ≥ 0.85; otherwise a new niche is created.
+  - A label joins an existing niche at cosine similarity ≥ 0.85; otherwise a new niche is created. **Superseded by D-080:** niches are a curated list and the classifier never creates one.
 - **Impacts:** `lib/ai/client.ts`, TRD §6.2.
 
 ### D-075: Per-category YouTube quota budgets
@@ -969,3 +969,23 @@ Decisions that still need to close before their dependent docs / features can be
   - 3 of 6 set `videoDuration` to `medium` (4–20 min) or `long` (>20 min).
   - The rest are unrestricted, so Shorts and other languages still come in.
 - **Impacts:** `lib/discovery/config.ts` (`searchVariant`), `lib/youtube/client.ts`, `lib/youtube/discovery.ts`, `lib/services/discovery/ingest.ts`, `workers/discovery.ts`, Niche-Discovery-Engine §6.
+
+### D-080: Curated niche taxonomy; the classifier picks, never creates
+
+- **Status:** Resolved (2026-09-28). Supersedes the auto-create part of D-074; the model choice stands.
+- **Context:** The first run's auto-created niches fragmented: 71 niches for 73 channels. Near-duplicates ("Geographic Education" / "Geographical Education") embedded at only ~0.69 similarity, so nothing reached the 3 performing channels a score needs, and the snapshot stored nothing.
+- **Final call:**
+  - **The list:** 74 owner-approved niches in 13 categories (migration `20260928100010`), each with a name, one-line description and seed keywords.
+    - A niche is something a creator would choose to start a channel in, broad enough for 3 or more channels.
+    - Language and format (Shorts/long) are filters, never part of a niche name.
+    - Mythology stays one niche; Bible Stories and Islamic History & Stories are separate.
+  - **Classifier:** `gpt-4o-mini` gets the list and picks up to 3 slugs (primary first; extras need 0.6 confidence), or none.
+    - A channel with no fit is stored as unclassified (`niche_id` null, `classified_at` set) and retried after the stale window.
+    - It never creates a niche. It may suggest a missing one into `niche_suggestions`.
+  - **Review queue:** a super admin approves a suggestion on /admin/discovery (choosing its category) or rejects it. Approving adds the niche, seeds discovery with its name and re-queues unclassified channels.
+  - **Replacing the auto niches:** the 71 AI niches were replaced and every stored channel is reclassified (no YouTube quota).
+  - **Card chips (same change):**
+    - Breakout needs 10× (was 3×, which matched ~86% of discovered channels) and shows the multiple ("Breakout 29×").
+    - Engaged is hidden when any recent upload hides its likes.
+- **Impacts:** `lib/services/discovery/classify.ts`, `lib/services/admin.ts`, `app/(admin)/admin/discovery`, `lib/discovery/{config,insights}.ts`, Backend-Schema.md, Niche-Discovery-Engine §6.
+- **Follow-up:** `niches.embedding`, `match_niche` and `createEmbedding` are now unused; drop them in a later migration.

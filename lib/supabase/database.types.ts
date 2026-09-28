@@ -509,36 +509,96 @@ export type Database = {
       };
       niches: {
         Row: {
+          category: string;
           created_at: string;
           description: string | null;
           embedding: string | null;
           id: string;
           name: string;
+          seed_keywords: string[];
           slug: string;
           status: string;
           updated_at: string;
         };
         Insert: {
+          category: string;
           created_at?: string;
           description?: string | null;
           embedding?: string | null;
           id?: string;
           name: string;
+          seed_keywords?: string[];
           slug: string;
           status?: string;
           updated_at?: string;
         };
         Update: {
+          category?: string;
           created_at?: string;
           description?: string | null;
           embedding?: string | null;
           id?: string;
           name?: string;
+          seed_keywords?: string[];
           slug?: string;
           status?: string;
           updated_at?: string;
         };
         Relationships: [];
+      };
+      niche_suggestions: {
+        Row: {
+          created_at: string;
+          description: string;
+          example_channel_id: string | null;
+          id: string;
+          name: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          slug: string;
+          status: string;
+          times_suggested: number;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string;
+          example_channel_id?: string | null;
+          id?: string;
+          name: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          slug: string;
+          status?: string;
+          times_suggested?: number;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          example_channel_id?: string | null;
+          id?: string;
+          name?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          slug?: string;
+          status?: string;
+          times_suggested?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "niche_suggestions_example_channel_id_fkey";
+            columns: ["example_channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "niche_suggestions_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       notification_channel_overrides: {
         Row: {
@@ -1505,6 +1565,10 @@ export type Database = {
         }[];
       };
       touch_last_active: { Args: never; Returns: undefined };
+      suggest_niche: {
+        Args: { p_channel_id: string; p_description: string; p_name: string; p_slug: string };
+        Returns: undefined;
+      };
       match_niche: {
         Args: { p_embedding: string; p_min_similarity: number };
         Returns: {

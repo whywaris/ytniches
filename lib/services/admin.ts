@@ -22,6 +22,7 @@ import {
   getQuotaHistory,
   type QuotaDay,
 } from "@/lib/youtube/quota";
+import type { NicheCategory } from "@/lib/discovery/config";
 import { MANUAL_EVENTS, type ManualJob } from "@/lib/discovery/events";
 import { inngest } from "@/lib/inngest/client";
 import {
@@ -655,6 +656,7 @@ export async function getQuotaReport(now: Date = new Date()) {
 
 export interface DiscoveryAdminReport {
   seeds: DiscoverySeed[];
+  suggestions: NicheSuggestion[];
   channelsDiscovered: number;
   channelsEnriched: number;
   channelsClassified: number;
@@ -681,24 +683,27 @@ export async function getDiscoveryAdminReport(): Promise<DiscoveryAdminReport> {
     if (error) throw new Error(`getDiscoveryAdminReport ${column} failed: ${error.message}`);
     return count ?? 0;
   };
-  const [seeds, discovered, enriched, classified, niches, outliers, latest] = await Promise.all([
-    listSeeds(),
-    countWhere("discovered_at"),
-    countWhere("enriched_at"),
-    countWhere("classified_at"),
-    countRows("niches"),
-    countRows("outliers_feed"),
-    supabase
-      .from("niche_snapshots")
-      .select("snapshot_date")
-      .order("snapshot_date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [seeds, suggestions, discovered, enriched, classified, niches, outliers, latest] =
+    await Promise.all([
+      listSeeds(),
+      listPendingSuggestions(),
+      countWhere("discovered_at"),
+      countWhere("enriched_at"),
+      countWhere("classified_at"),
+      countRows("niches"),
+      countRows("outliers_feed"),
+      supabase
+        .from("niche_snapshots")
+        .select("snapshot_date")
+        .order("snapshot_date", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
   if (latest.error)
     throw new Error(`getDiscoveryAdminReport snapshot failed: ${latest.error.message}`);
   return {
     seeds,
+    suggestions,
     channelsDiscovered: discovered,
     channelsEnriched: enriched,
     channelsClassified: classified,
@@ -741,6 +746,117 @@ export async function removeDiscoverySeed(seedId: string): Promise<Result<void, 
     targetType: "discovery_seed",
     targetId: seedId,
     metadata: {},
+  });
+  return ok(undefined);
+}
+
+// ---------- Niche suggestions (D-080) ----------
+
+export interface NicheSuggestion {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  timesSuggested: number;
+  exampleChannel: string | null;
+}
+
+async function listPendingSuggestions(): Promise<NicheSuggestion[]> {
+  const { data, error } = await createServiceClient()
+    .from("niche_suggestions")
+    .select("id, slug, name, description, times_suggested, example:channels(name)")
+    .eq("status", "pending")
+    .order("times_suggested", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(`listPendingSuggestions failed: ${error.message}`);
+  return data.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    timesSuggested: row.times_suggested,
+    exampleChannel: row.example?.name ?? null,
+  }));
+}
+
+export type SuggestionError = ForbiddenError | { type: "not_found" } | { type: "duplicate" };
+
+async function pendingSuggestion(id: string) {
+  const { data, error } = await createServiceClient()
+    .from("niche_suggestions")
+    .select("id, slug, name, description")
+    .eq("id", id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (error) throw new Error(`pendingSuggestion failed: ${error.message}`);
+  return data;
+}
+
+async function markSuggestion(id: string, status: "approved" | "rejected", adminId: string) {
+  const { error } = await createServiceClient()
+    .from("niche_suggestions")
+    .update({ status, reviewed_by: adminId, reviewed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`markSuggestion failed: ${error.message}`);
+}
+
+// Adds the suggested niche to the curated list, seeds discovery with its
+// name, and sends unclassified channels back through classify so they can
+// land in it.
+export async function approveNicheSuggestion(
+  suggestionId: string,
+  category: NicheCategory,
+): Promise<Result<void, SuggestionError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const suggestion = await pendingSuggestion(suggestionId);
+  if (!suggestion) return err({ type: "not_found" });
+
+  const supabase = createServiceClient();
+  const keyword = normalizeKeyword(suggestion.name);
+  const { error } = await supabase.from("niches").insert({
+    slug: suggestion.slug,
+    name: suggestion.name,
+    description: suggestion.description,
+    category,
+    seed_keywords: keyword ? [keyword] : [],
+  });
+  if (error?.code === "23505") return err({ type: "duplicate" });
+  if (error) throw new Error(`approveNicheSuggestion insert failed: ${error.message}`);
+
+  await markSuggestion(suggestionId, "approved", admin.value.adminId);
+  if (keyword) await addManualSeed(keyword, 5);
+  const { error: resetError } = await supabase
+    .from("channels")
+    .update({ classified_at: null })
+    .is("niche_id", null)
+    .not("classified_at", "is", null);
+  if (resetError) throw new Error(`approveNicheSuggestion reset failed: ${resetError.message}`);
+
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "niche_suggestion_approve",
+    targetType: "niche_suggestion",
+    targetId: suggestionId,
+    metadata: { slug: suggestion.slug, category },
+  });
+  return ok(undefined);
+}
+
+export async function rejectNicheSuggestion(
+  suggestionId: string,
+): Promise<Result<void, SuggestionError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const suggestion = await pendingSuggestion(suggestionId);
+  if (!suggestion) return err({ type: "not_found" });
+  await markSuggestion(suggestionId, "rejected", admin.value.adminId);
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "niche_suggestion_reject",
+    targetType: "niche_suggestion",
+    targetId: suggestionId,
+    metadata: { slug: suggestion.slug },
   });
   return ok(undefined);
 }

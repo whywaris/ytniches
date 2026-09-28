@@ -4,8 +4,15 @@ import { revalidatePath } from "next/cache";
 
 import { z } from "zod";
 
+import { NICHE_CATEGORIES } from "@/lib/discovery/config";
 import { MANUAL_JOBS } from "@/lib/discovery/events";
-import { addDiscoverySeed, removeDiscoverySeed, triggerDiscoveryJob } from "@/lib/services/admin";
+import {
+  addDiscoverySeed,
+  approveNicheSuggestion,
+  rejectNicheSuggestion,
+  removeDiscoverySeed,
+  triggerDiscoveryJob,
+} from "@/lib/services/admin";
 import { err, type Result } from "@/lib/result";
 
 // Same shape as users/[userId]/actions.ts: Zod at the trust boundary, then
@@ -34,6 +41,24 @@ export async function removeSeedAction(input: { seedId: string }) {
   const parsed = z.object({ seedId: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const result = await removeDiscoverySeed(parsed.data.seedId);
+  if (result.ok) revalidatePath("/admin/discovery");
+  return result;
+}
+
+const SuggestionIdSchema = z.object({ suggestionId: z.string().uuid() });
+
+export async function approveSuggestionAction(input: { suggestionId: string; category: string }) {
+  const parsed = SuggestionIdSchema.extend({ category: z.enum(NICHE_CATEGORIES) }).safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const result = await approveNicheSuggestion(parsed.data.suggestionId, parsed.data.category);
+  if (result.ok) revalidatePath("/admin/discovery");
+  return result;
+}
+
+export async function rejectSuggestionAction(input: { suggestionId: string }) {
+  const parsed = SuggestionIdSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const result = await rejectNicheSuggestion(parsed.data.suggestionId);
   if (result.ok) revalidatePath("/admin/discovery");
   return result;
 }
