@@ -4,7 +4,8 @@ import {
   YouTubePlaylistItemsResponseSchema,
   YouTubeSearchResponseSchema,
   YouTubeVideoSearchResponseSchema,
-  YouTubeVideoResponseSchema,
+  YouTubeVideoEnvelopeSchema,
+  YouTubeVideoItemSchema,
   type YouTubeChannelItem,
   type YouTubeVideoItem,
 } from "@/lib/youtube/schemas";
@@ -184,12 +185,26 @@ async function fetchVideosBatch(
   });
   if (!result.ok) return result;
 
-  const parsed = YouTubeVideoResponseSchema.safeParse(result.value);
-  if (!parsed.success) {
-    return err({ type: "invalid_response", message: parsed.error.message });
+  const envelope = YouTubeVideoEnvelopeSchema.safeParse(result.value);
+  if (!envelope.success) {
+    return err({ type: "invalid_response", message: envelope.error.message });
   }
 
-  return ok(parsed.data.items);
+  const items: YouTubeVideoItem[] = [];
+  for (const raw of envelope.data.items) {
+    const item = YouTubeVideoItemSchema.safeParse(raw);
+    if (item.success) {
+      items.push(item.data);
+      continue;
+    }
+    const id = typeof raw === "object" && raw !== null && "id" in raw ? String(raw.id) : "?";
+    console.warn(
+      "videos.list: skipped malformed item",
+      id,
+      item.error.issues.map((issue) => issue.path.join(".")).join(", "),
+    );
+  }
+  return ok(items);
 }
 
 export async function fetchVideosByIds(

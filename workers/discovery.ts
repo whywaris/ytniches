@@ -27,11 +27,13 @@ import {
 } from "@/lib/services/discovery/niche-notifications";
 import { snapshotNiches, type SnapshotResult } from "@/lib/services/discovery/snapshot";
 import { createServiceClient } from "@/lib/supabase/service";
+import type { StepRunner } from "@/lib/discovery/steps";
 import {
   getQuotaBudgets,
   getQuotaBySource,
   hasJobBudget,
   withQuotaSource,
+  type QuotaSource,
 } from "@/lib/youtube/quota";
 
 // Niche-Discovery-Engine.md §6 (D-069). Same shape as workers/cron.ts: a
@@ -102,11 +104,17 @@ export const EnrichRequestedSchema = z.object({
   batchKey: z.string(),
 });
 
+// D-078: services run each paid YouTube call as its own step, billed to the
+// job's quota source, so a retry resumes where it failed.
+function stepsFor(step: JobStep, source: QuotaSource): StepRunner {
+  return (id, fn) => step.run(id, () => withQuotaSource(source, fn));
+}
+
 export async function runEnrichmentBatch(step: JobStep, data: unknown): Promise<EnrichResult> {
   const { channelIds } = EnrichRequestedSchema.parse(data);
-  return (await step.run("enrich", () =>
-    withQuotaSource("enrichment", () => enrichChannels(channelIds)),
-  )) as EnrichResult;
+  // One timestamp for the whole run: the body re-executes per step.
+  const startedAt = (await step.run("started-at", async () => new Date().toISOString())) as string;
+  return enrichChannels(channelIds, new Date(startedAt), stepsFor(step, "enrichment"));
 }
 
 // --- discovery --------------------------------------------------------------
@@ -150,9 +158,7 @@ export async function runDiscovery(
     }
   }
 
-  const ingest = (await step.run("ingest-channels", () =>
-    withQuotaSource("discovery", () => ingestDiscoveredChannels(searched, now)),
-  )) as Awaited<ReturnType<typeof ingestDiscoveredChannels>>;
+  const ingest = await ingestDiscoveredChannels(searched, now, stepsFor(step, "discovery"));
 
   // D-078: only now are the searches' results stored. An ingest that threw
   // or ran out of budget leaves the seeds due, so their channels are

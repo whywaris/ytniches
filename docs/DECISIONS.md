@@ -954,6 +954,10 @@ Decisions that still need to close before their dependent docs / features can be
   - A run searches at most `floor((budget × 50% − discovery-job units already spent today) / 100)` seeds, capped at 30. That's 15 seeds at the default 3,000 budget. The other half covers ingest and first enrichment (~81 units per 50 channels).
   - Seeds are marked run only after ingest has stored their channels. An ingest that fails or runs out of budget leaves them due for the next run.
   - A manual run may cap its seeds (`maxSeeds`) for small test runs.
+  - **Retries never re-pay** (added 2026-09-28, after a malformed `videos.list` response made two enrichment batches retry and waste ~900 units):
+    - Every paid YouTube call in discovery and enrichment runs in its own Inngest step: each search, each 50-ID `channels.list`, each channel's `playlistItems`, each 50-ID `videos.list`. The DB writes follow in one store step, so a retry resumes at the failed step.
+    - `videos.list` items are validated one at a time; a malformed item is skipped and logged.
+    - A malformed response (`invalid_response`) fails the job without retrying; transient errors retry only their own step.
 - **Impacts:** `lib/discovery/config.ts`, `workers/discovery.ts`, `lib/services/discovery/{ingest,seeds}.ts`, Niche-Discovery-Engine §6.
 
 ### D-079: Discovery search variants: mostly English, part medium/long

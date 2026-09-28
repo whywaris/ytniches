@@ -14,11 +14,14 @@ import { upsertChannels } from "@/lib/services/channels";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseIso8601Duration, upsertVideos } from "@/workers/channel-sync";
 import {
-  fetchChannelsFresh,
-  fetchUploadIdsFresh,
-  fetchVideosFresh,
-  type DiscoveryYouTubeError,
-} from "@/lib/youtube/discovery";
+  budgetStopOrThrow,
+  inStep,
+  isBudgetStop,
+  runDirect,
+  type StepRunner,
+} from "@/lib/discovery/steps";
+import { BATCH_SIZE } from "@/lib/youtube/client";
+import { fetchChannelsFresh, fetchUploadIdsFresh, fetchVideosFresh } from "@/lib/youtube/discovery";
 import type { YouTubeChannelItem, YouTubeVideoItem } from "@/lib/youtube/schemas";
 
 // Niche-Discovery-Engine.md §6 enrichment: refresh a batch of channels and
@@ -180,10 +183,6 @@ export interface EnrichResult {
   stoppedForBudget: boolean;
 }
 
-function isBudgetStop(error: DiscoveryYouTubeError): boolean {
-  return error.type === "budget_exhausted" || error.type === "quota_exceeded";
-}
-
 async function loadChannels(channelIds: string[]): Promise<ChannelRow[]> {
   const { data, error } = await createServiceClient()
     .from("channels")
@@ -251,9 +250,27 @@ async function dropUnqualified(channelIds: string[]): Promise<number> {
   return doomed.length;
 }
 
+async function markUnavailable(rows: ChannelRow[], now: Date): Promise<number> {
+  if (rows.length === 0) return 0;
+  const { error } = await createServiceClient()
+    .from("channels")
+    .update({ unavailable_since: now.toISOString(), enriched_at: now.toISOString() })
+    .in(
+      "id",
+      rows.map((row) => row.id),
+    )
+    .is("unavailable_since", null);
+  if (error) throw new Error(`enrichChannels unavailable failed: ${error.message}`);
+  return rows.length;
+}
+
+// D-078: each paid YouTube call is its own step (channels.list, one
+// playlistItems per channel, one videos.list per 50 IDs), then one step
+// stores everything. A retry resumes at the failed step.
 export async function enrichChannels(
   channelIds: string[],
   now: Date = new Date(),
+  run: StepRunner = runDirect,
 ): Promise<EnrichResult> {
   const result: EnrichResult = {
     enriched: 0,
@@ -264,32 +281,26 @@ export async function enrichChannels(
   };
   if (channelIds.length === 0) return result;
 
-  const supabase = createServiceClient();
-  const rows = await loadChannels(channelIds);
+  const rows = await inStep(run, "load-channels", () => loadChannels(channelIds));
   const rowByYoutubeId = new Map(rows.map((row) => [row.youtube_channel_id, row]));
 
-  const fetched = await fetchChannelsFresh([...rowByYoutubeId.keys()]);
-  if (!fetched.ok) {
-    if (isBudgetStop(fetched.error)) return { ...result, stoppedForBudget: true };
-    throw new Error(`enrichChannels channels fetch failed: ${fetched.error.type}`);
-  }
-  await upsertChannels(fetched.value);
+  const fetched = await inStep(run, "fetch-channels", async () =>
+    budgetStopOrThrow(
+      await fetchChannelsFresh([...rowByYoutubeId.keys()]),
+      "enrichChannels channels fetch",
+    ),
+  );
+  if (!fetched.ok) return { ...result, stoppedForBudget: true };
 
-  // Requested but not returned: deleted/suspended on YouTube.
-  const returned = new Set(fetched.value.map((channel) => channel.id));
-  const missing = rows.filter((row) => !returned.has(row.youtube_channel_id));
-  if (missing.length > 0) {
-    const { error } = await supabase
-      .from("channels")
-      .update({ unavailable_since: now.toISOString(), enriched_at: now.toISOString() })
-      .in(
-        "id",
-        missing.map((row) => row.id),
-      )
-      .is("unavailable_since", null);
-    if (error) throw new Error(`enrichChannels unavailable failed: ${error.message}`);
-    result.unavailable = missing.length;
-  }
+  result.unavailable = await inStep(run, "store-channels", async () => {
+    await upsertChannels(fetched.value);
+    // Requested but not returned: deleted/suspended on YouTube.
+    const returned = new Set(fetched.value.map((channel) => channel.id));
+    return markUnavailable(
+      rows.filter((row) => !returned.has(row.youtube_channel_id)),
+      now,
+    );
+  });
 
   // Uploads: one playlistItems call per channel. Stop at the budget line
   // and only finish the channels we already have uploads for.
@@ -300,7 +311,9 @@ export async function enrichChannels(
       uploadIds.set(channel.id, []);
       continue;
     }
-    const ids = await fetchUploadIdsFresh(playlistId, VIDEOS_KEPT_PER_CHANNEL);
+    const ids = await inStep(run, `uploads-${channel.id}`, () =>
+      fetchUploadIdsFresh(playlistId, VIDEOS_KEPT_PER_CHANNEL),
+    );
     if (!ids.ok) {
       if (isBudgetStop(ids.error)) {
         result.stoppedForBudget = true;
@@ -314,17 +327,38 @@ export async function enrichChannels(
   }
 
   const allVideoIds = [...uploadIds.values()].flat();
-  const videos = await fetchVideosFresh(allVideoIds);
-  if (!videos.ok) {
-    if (isBudgetStop(videos.error)) return { ...result, stoppedForBudget: true };
-    throw new Error(`enrichChannels videos fetch failed: ${videos.error.type}`);
+  const videos: YouTubeVideoItem[] = [];
+  for (let i = 0; i < allVideoIds.length; i += BATCH_SIZE) {
+    const chunk = allVideoIds.slice(i, i + BATCH_SIZE);
+    const fetchedVideos = await inStep(run, `videos-${i / BATCH_SIZE}`, async () =>
+      budgetStopOrThrow(await fetchVideosFresh(chunk), "enrichChannels videos fetch"),
+    );
+    if (!fetchedVideos.ok) return { ...result, stoppedForBudget: true };
+    videos.push(...fetchedVideos.value);
   }
-  const videoById = new Map(videos.value.map((video) => [video.id, video]));
+
+  return inStep(run, "store", () =>
+    storeEnrichment(rows, fetched.value, uploadIds, videos, now, result),
+  );
+}
+
+async function storeEnrichment(
+  rows: ChannelRow[],
+  channels: YouTubeChannelItem[],
+  uploadIds: Map<string, string[]>,
+  videos: YouTubeVideoItem[],
+  now: Date,
+  counts: EnrichResult,
+): Promise<EnrichResult> {
+  const result = { ...counts };
+  const supabase = createServiceClient();
+  const rowByYoutubeId = new Map(rows.map((row) => [row.youtube_channel_id, row]));
+  const videoById = new Map(videos.map((video) => [video.id, video]));
 
   const tracked = await loadTrackedIds(rows.map((row) => row.id));
   const toDrop: string[] = [];
 
-  for (const channel of fetched.value) {
+  for (const channel of channels) {
     const ids = uploadIds.get(channel.id);
     const row = rowByYoutubeId.get(channel.id);
     if (!ids || !row) continue; // Not reached before the budget stop.

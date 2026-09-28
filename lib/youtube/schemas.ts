@@ -117,54 +117,56 @@ export type YouTubeChannelResponse = z.infer<typeof YouTubeChannelResponseSchema
 export type YouTubeChannelItem = YouTubeChannelResponse["items"][number];
 
 // videos.list?part=snippet,statistics,contentDetails — 1 unit, batched up
-// to 50 IDs per call (TRD.md §5.3).
-export const YouTubeVideoResponseSchema = z
+// to 50 IDs per call (TRD.md §5.3). Items are validated one at a time
+// (client.ts): one odd video -- an upcoming premiere, a live stream --
+// must not sink the other 49.
+export const YouTubeVideoItemSchema = z
   .object({
-    items: z.array(
-      z
-        .object({
-          id: z.string(),
-          snippet: z
-            .object({
-              title: z.string(),
-              description: z.string().default(""),
-              publishedAt: z.string(),
-              thumbnails: youtubeThumbnailsSchema.optional(),
-              tags: z.array(z.string()).default([]),
-              defaultLanguage: z.string().optional(),
-              // Not needed by workers/channel-sync.ts (the channel is
-              // already known from context there), but AI Prompts' "From
-              // URL" entry path (Phase 1 Task 3) discovers a standalone
-              // video with no prior channel context, so it needs this to
-              // upsert the video's channel before the video itself
-              // (videos.channel_id is a NOT NULL FK).
-              channelId: z.string(),
-              channelTitle: z.string().optional(),
-            })
-            .passthrough(),
-          statistics: z
-            .object({
-              viewCount: z.coerce.number().default(0),
-              likeCount: z.coerce.number().optional(),
-              commentCount: z.coerce.number().optional(),
-            })
-            .passthrough()
-            .optional(),
-          contentDetails: z
-            .object({
-              // ISO 8601 duration ("PT12M34S") — parsed to seconds in
-              // client.ts, not here; this schema only asserts the shape.
-              duration: z.string(),
-            })
-            .passthrough(),
-        })
-        .passthrough(),
-    ),
+    id: z.string(),
+    snippet: z
+      .object({
+        title: z.string(),
+        description: z.string().default(""),
+        publishedAt: z.string(),
+        thumbnails: youtubeThumbnailsSchema.optional(),
+        tags: z.array(z.string()).default([]),
+        defaultLanguage: z.string().optional(),
+        // Not needed by workers/channel-sync.ts (the channel is
+        // already known from context there), but AI Prompts' "From
+        // URL" entry path (Phase 1 Task 3) discovers a standalone
+        // video with no prior channel context, so it needs this to
+        // upsert the video's channel before the video itself
+        // (videos.channel_id is a NOT NULL FK).
+        channelId: z.string(),
+        channelTitle: z.string().optional(),
+      })
+      .passthrough(),
+    statistics: z
+      .object({
+        viewCount: z.coerce.number().default(0),
+        likeCount: z.coerce.number().optional(),
+        commentCount: z.coerce.number().optional(),
+      })
+      .passthrough()
+      .optional(),
+    contentDetails: z
+      .object({
+        // ISO 8601 duration ("PT12M34S") — parsed to seconds in
+        // client.ts, not here; this schema only asserts the shape.
+        duration: z.string(),
+      })
+      .passthrough(),
   })
   .passthrough();
 
-export type YouTubeVideoResponse = z.infer<typeof YouTubeVideoResponseSchema>;
-export type YouTubeVideoItem = YouTubeVideoResponse["items"][number];
+export const YouTubeVideoResponseSchema = z
+  .object({ items: z.array(YouTubeVideoItemSchema) })
+  .passthrough();
+
+// The envelope alone, for per-item parsing.
+export const YouTubeVideoEnvelopeSchema = z.object({ items: z.array(z.unknown()) }).passthrough();
+
+export type YouTubeVideoItem = z.infer<typeof YouTubeVideoItemSchema>;
 
 // playlistItems.list?part=contentDetails&playlistId={uploads} — 1 unit.
 // Cheap way to enumerate a channel's videos (see YouTubeChannelResponseSchema

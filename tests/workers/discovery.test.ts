@@ -120,7 +120,7 @@ describe("runEnrichmentBatch", () => {
 
     await runEnrichmentBatch(step, { channelIds: [uuid(1)], batchKey: "k" });
 
-    expect(enrichChannels).toHaveBeenCalledWith([uuid(1)]);
+    expect(enrichChannels).toHaveBeenCalledWith([uuid(1)], expect.any(Date), expect.any(Function));
     await expect(runEnrichmentBatch(step, { channelIds: [], batchKey: "k" })).rejects.toThrow();
   });
 });
@@ -150,6 +150,7 @@ describe("runDiscovery", () => {
     expect(ingestDiscoveredChannels).toHaveBeenCalledWith(
       [{ seedId: "s1", channelIds: ["UC1"] }],
       NOW,
+      expect.any(Function),
     );
     expect(result).toEqual({ seedsSearched: 1, newChannels: 1, stoppedForBudget: true });
     expect(step.sendEvent).toHaveBeenCalledWith("enrich-new-channels", [

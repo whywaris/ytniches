@@ -139,7 +139,33 @@ describe("ingestDiscoveredChannels", () => {
       .map((q) => q.calls.find((c) => c.method === "in")?.args[1] as string[]);
     expect(lookups.map((list) => list.length)).toEqual([100, 100, 50]);
     expect(result.skippedExisting).toBe(2);
-    expect(fetchChannelsFresh.mock.calls[0]?.[0]).toHaveLength(248);
+    // One channels.list step per 50 IDs (D-078).
+    expect(fetchChannelsFresh.mock.calls.map((call) => (call[0] as string[]).length)).toEqual([
+      50, 50, 50, 50, 48,
+    ]);
+  });
+
+  it("a retry after a failed store does not re-pay the channel lookups (D-078)", async () => {
+    const memo = new Map<string, unknown>();
+    const run = async (id: string, fn: () => Promise<unknown>) => {
+      if (!memo.has(id)) memo.set(id, JSON.parse(JSON.stringify((await fn()) ?? null)));
+      return memo.get(id);
+    };
+    fake.on("channels", { data: [] });
+    fetchChannelsFresh.mockResolvedValue({
+      ok: true,
+      value: [channelItem("UC-good", 100_000, 10)],
+    });
+    upsertChannels
+      .mockRejectedValueOnce(new Error("db blip"))
+      .mockResolvedValue(new Map([["UC-good", "c-good"]]));
+
+    const searched = [{ seedId: "s1", channelIds: ["UC-good"] }];
+    await expect(ingestDiscoveredChannels(searched, NOW, run)).rejects.toThrow("db blip");
+    const result = await ingestDiscoveredChannels(searched, NOW, run);
+
+    expect(result.newChannelIds).toEqual(["c-good"]);
+    expect(fetchChannelsFresh).toHaveBeenCalledTimes(1);
   });
 
   it("spends nothing when every channel is already known", async () => {

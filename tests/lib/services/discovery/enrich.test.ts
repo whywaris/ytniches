@@ -1,3 +1,4 @@
+import { NonRetriableError } from "inngest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createFakeSupabase } from "@/tests/helpers/fake-supabase";
@@ -258,6 +259,75 @@ describe("enrichChannels", () => {
       .flatMap((q) => q.calls)
       .find((c) => c.method === "update")?.args[0] as Record<string, unknown>;
     expect(update).toMatchObject({ refresh_tier: "hot", enriched_at: NOW.toISOString() });
+  });
+
+  describe("steps and retries (D-078)", () => {
+    // Inngest-like step runner: a finished step's output is memoised
+    // (through JSON, like the real thing); a step that threw is not.
+    function memoRunner() {
+      const memo = new Map<string, unknown>();
+      return async (id: string, fn: () => Promise<unknown>) => {
+        if (!memo.has(id)) memo.set(id, JSON.parse(JSON.stringify((await fn()) ?? null)));
+        return memo.get(id);
+      };
+    }
+
+    const row = {
+      id: "c1",
+      youtube_channel_id: "UC1",
+      niche_id: null,
+      discovered_at: null,
+      enriched_at: null,
+    };
+
+    it("a retry after a failed store spends no quota on calls that already succeeded", async () => {
+      fake.on("channels", { data: [row] });
+      fetchChannelsFresh.mockResolvedValue({ ok: true, value: [channel()] });
+      const uploads = breakoutUploads();
+      fetchUploadIdsFresh.mockResolvedValue({ ok: true, value: uploads.map((v) => v.id) });
+      fetchVideosFresh.mockResolvedValue({ ok: true, value: uploads });
+      fake.on("tracked_channels", { error: { message: "db blip" } }, { data: [] });
+      const run = memoRunner();
+
+      await expect(enrichChannels(["c1"], NOW, run)).rejects.toThrow("db blip");
+      const result = await enrichChannels(["c1"], NOW, run); // the retry
+
+      expect(result).toMatchObject({ enriched: 1 });
+      expect(fetchChannelsFresh).toHaveBeenCalledTimes(1);
+      expect(fetchUploadIdsFresh).toHaveBeenCalledTimes(1);
+      expect(fetchVideosFresh).toHaveBeenCalledTimes(1);
+      expect(upsertChannels).toHaveBeenCalledTimes(1);
+    });
+
+    it("fetches videos 50 IDs per step, so a retry re-pays only the chunk that failed", async () => {
+      fake.on("channels", { data: [row] });
+      fetchChannelsFresh.mockResolvedValue({ ok: true, value: [channel()] });
+      const ids = Array.from({ length: 60 }, (_, i) => `v${i}`);
+      fetchUploadIdsFresh.mockResolvedValue({ ok: true, value: ids });
+      fetchVideosFresh
+        .mockResolvedValueOnce({ ok: true, value: [] })
+        .mockResolvedValueOnce({ ok: false, error: { type: "network_error", message: "reset" } })
+        .mockResolvedValue({ ok: true, value: [] });
+      fake.on("tracked_channels", { data: [] });
+      const run = memoRunner();
+
+      await expect(enrichChannels(["c1"], NOW, run)).rejects.toThrow("network_error");
+      await enrichChannels(["c1"], NOW, run);
+
+      expect(fetchVideosFresh.mock.calls.map((call) => (call[0] as string[]).length)).toEqual([
+        50, 10, 10,
+      ]);
+    });
+
+    it("fails without retrying on a malformed response", async () => {
+      fake.on("channels", { data: [row] });
+      fetchChannelsFresh.mockResolvedValue({
+        ok: false,
+        error: { type: "invalid_response", message: "bad shape" },
+      });
+
+      await expect(enrichChannels(["c1"], NOW)).rejects.toBeInstanceOf(NonRetriableError);
+    });
   });
 
   it("drops a freshly discovered channel that fails qualification", async () => {
