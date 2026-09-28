@@ -36,7 +36,7 @@ describe("DiscoveryChannelCard (D-077)", () => {
       .getAllByRole("link")
       .filter((link) => link.getAttribute("href")?.startsWith("https://www.youtube.com/watch"));
     expect(links).toHaveLength(3);
-    expect(within(links[0]!).getByText("Outlier 6.2x")).toBeInTheDocument();
+    expect(within(links[0]!).getByText("Outlier 12x")).toBeInTheDocument();
     expect(within(links[1]!).queryByText(/Outlier/)).not.toBeInTheDocument();
   });
 
@@ -61,8 +61,8 @@ describe("DiscoveryChannelCard (D-077)", () => {
 
   it("explains each insight chip in a tooltip on focus", async () => {
     render(<DiscoveryChannelCard channel={CHANNEL} />);
-    screen.getByRole("button", { name: "Breakout" }).focus();
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(/3× the channel's usual views/);
+    screen.getByRole("button", { name: "Breakout 12×" }).focus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(/12× the channel's usual views/);
   });
 
   it("tracks by channel id, and disables once tracked", async () => {

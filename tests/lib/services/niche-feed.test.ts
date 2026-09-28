@@ -213,7 +213,7 @@ describe("listFeedChannels", () => {
     like_count: 10,
     comment_count: 1,
     published_at: new Date(Date.now() - (i + 1) * 86_400_000).toISOString(),
-    outlier_multiple: i === 0 ? 5 : 1,
+    outlier_multiple: i === 0 ? 12 : 1,
   }));
 
   it("applies filters (niche via channel_niches), hot/warm only, and builds the card data", async () => {

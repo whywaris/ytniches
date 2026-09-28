@@ -46,13 +46,13 @@ const CHANNEL: FeedChannel = {
     viewCount: 400_000 / i,
     publishedAt: "2026-09-01T00:00:00Z",
     isOutlier: i === 1,
-    outlierMultiple: i === 1 ? 6.2 : 1.4,
+    outlierMultiple: i === 1 ? 12.4 : 1.4,
   })),
   insights: [
     {
       id: "breakout",
-      label: "Breakout",
-      hint: "An upload reached 3× the channel's usual views in the last 30 days.",
+      label: "Breakout 12×",
+      hint: "An upload reached 12× the channel's usual views in the last 30 days (a breakout is 10× or more).",
     },
     { id: "new", label: "New channel", hint: "First upload within the last 12 months." },
     {

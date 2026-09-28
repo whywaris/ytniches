@@ -161,6 +161,9 @@ export const SECONDARY_NICHE_MIN_CONFIDENCE = 0.6;
 
 // D-077 channel-card insight chips (lib/discovery/insights.ts).
 export const BREAKOUT_WINDOW_DAYS = 30;
+// D-080: 3× (the outlier line) matched ~86% of discovered channels, since
+// discovery searches for breakout videos; the chip marks the rare ones.
+export const BREAKOUT_MIN_MULTIPLE = 10;
 export const CONSISTENT_UPLOAD_WEEKS = 4;
 export const ENGAGED_MIN_RATE = 0.04;
 export const ENGAGED_MIN_VIDEOS = 3;
