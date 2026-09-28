@@ -4,6 +4,8 @@
 
 ---
 
+> **Superseded in part by D-082 (2026-09-28):** the current landing copy is in `components/features/landing/content.ts`. The voice rules below still apply. In addition, there are no income, revenue or profitability claims, and every number comes from a constant (`tests/components/features/landing/content.test.ts`).
+
 ## 1. Overview & Voice Guidelines
 
 Every text element on the landing page is specced here. Structure comes from Landing-Page-Spec.md; this doc fills in the words.

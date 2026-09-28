@@ -4,20 +4,22 @@
 
 ---
 
+> **Superseded in part by D-082 (2026-09-28).** The landing page is now 9 sections: navbar, hero, what YTNiches does, how it works, founder story, pricing teaser, FAQ, final CTA and footer. It uses the marketing glass system (Design-System.md §2.8), and all copy lives in `components/features/landing/content.ts`. Sections 3–10, 12 and 13 below were removed from `/`; the VS pages are linked from the footer instead. The founder story (§11) is kept word for word.
+
 ## 1. Overview
 
 This doc specs the STRUCTURE of the landing page — sections, layout, components, behavior. Content (copy, illustrations, video) is specced in dependent docs.
 
 **How this doc works with others:**
 
-| Doc | Provides |
-| --- | --- |
-| **This doc** | Section structure, layout, components, interactions, breakpoints |
-| **Landing-Copy.md** | Every headline, subhead, body line, CTA text (in Mac's voice) |
-| **Illustration-Brief.md** | Visual asset list + style guide + generation prompts |
-| **Interaction-Spec.md** | Detailed behavior of interactive elements (drag, hover, toggle) |
-| **Hero-Video-Script.md** | 60–90s hero video script + storyboard |
-| **Design-System.md** | Colors, typography, components, motion tokens |
+| Doc                       | Provides                                                         |
+| ------------------------- | ---------------------------------------------------------------- |
+| **This doc**              | Section structure, layout, components, interactions, breakpoints |
+| **Landing-Copy.md**       | Every headline, subhead, body line, CTA text (in Mac's voice)    |
+| **Illustration-Brief.md** | Visual asset list + style guide + generation prompts             |
+| **Interaction-Spec.md**   | Detailed behavior of interactive elements (drag, hover, toggle)  |
+| **Hero-Video-Script.md**  | 60–90s hero video script + storyboard                            |
+| **Design-System.md**      | Colors, typography, components, motion tokens                    |
 
 **Style direction:** Fibery-inspired Option A (see DECISIONS.md D-003). Founder-first voice (D-004). Emerald accent (Design-System §2.4, pending Mac's confirmation).
 
@@ -344,14 +346,14 @@ Last push before footer. Should feel confident, not desperate.
 
 **Responsive breakpoints (Tailwind defaults):**
 
-| Breakpoint | Min width | Layout behavior |
-| --- | --- | --- |
-| Mobile | 0px | Single column, hamburger nav, stacked sections |
-| `sm` | 640px | Slight scaling; still mostly single-column |
-| `md` | 768px | Two-column layouts start |
-| `lg` | 1024px | Full desktop layout |
-| `xl` | 1280px | Wider content, more breathing room |
-| `2xl` | 1440px | Max-width container centered |
+| Breakpoint | Min width | Layout behavior                                |
+| ---------- | --------- | ---------------------------------------------- |
+| Mobile     | 0px       | Single column, hamburger nav, stacked sections |
+| `sm`       | 640px     | Slight scaling; still mostly single-column     |
+| `md`       | 768px     | Two-column layouts start                       |
+| `lg`       | 1024px    | Full desktop layout                            |
+| `xl`       | 1280px    | Wider content, more breathing room             |
+| `2xl`      | 1440px    | Max-width container centered                   |
 
 **Analytics events (fire from landing):**
 

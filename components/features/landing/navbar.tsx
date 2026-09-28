@@ -2,17 +2,22 @@
 
 import * as React from "react";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import { Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
-import { NAV_LINKS, withBlogLink } from "@/components/features/landing/content";
+import { NAV_LINKS, PRIMARY_CTA, withBlogLink } from "@/components/features/landing/content";
 import { CtaLink } from "@/components/features/landing/cta-link";
 import { SoonLink } from "@/components/features/landing/soon-link";
 import { Logo } from "@/components/features/brand/logo";
+
+// D-082 performance: the mobile menu dialog (Radix) loads on the first tap.
+const Modal = dynamic(() => import("@/components/ui/modal").then((m) => m.Modal), {
+  ssr: false,
+});
 
 function Wordmark() {
   return (
@@ -22,13 +27,14 @@ function Wordmark() {
   );
 }
 
-// Landing-Page-Spec §1: 72px, sticky; transparent over the hero, bg-base +
-// border + blur once scrolled. Mobile: full-screen overlay (Radix Dialog
+// Landing-Page-Spec §1 / D-082: 72px, sticky; transparent over the hero,
+// glass (translucent fill, hairline border, blur) once scrolled. Mobile: full-screen overlay (Radix Dialog
 // via ui/Modal -- focus trap, Esc, focus return for free).
 function Navbar({ blogLive = false }: { blogLive?: boolean }) {
   const links = withBlogLink(NAV_LINKS, blogLive);
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [menuLoaded, setMenuLoaded] = React.useState(false);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -42,7 +48,7 @@ function Navbar({ blogLive = false }: { blogLive?: boolean }) {
       className={cn(
         "sticky top-0 z-40 h-[72px] border-b transition-colors duration-default",
         scrolled
-          ? "border-border-subtle bg-bg-base/80 backdrop-blur-md"
+          ? "border-(--glass-border) bg-(--glass-bg-strong) backdrop-blur-(--glass-blur)"
           : "border-transparent bg-transparent",
       )}
     >
@@ -69,7 +75,7 @@ function Navbar({ blogLive = false }: { blogLive?: boolean }) {
             eventProps={{ source: "navbar" }}
             size="sm"
           >
-            Sign up free
+            {PRIMARY_CTA}
           </CtaLink>
         </div>
         <Button
@@ -78,33 +84,38 @@ function Navbar({ blogLive = false }: { blogLive?: boolean }) {
           iconOnly
           className="md:hidden"
           aria-label="Open menu"
-          onClick={() => setMenuOpen(true)}
+          onClick={() => {
+            setMenuLoaded(true);
+            setMenuOpen(true);
+          }}
         >
           <Menu />
         </Button>
       </nav>
 
-      <Modal open={menuOpen} onOpenChange={setMenuOpen} title="Menu" size="full">
-        <ul className="flex flex-col gap-5 text-h3 text-text-primary">
-          {links.map((item) => (
-            <li key={item.label}>
-              <SoonLink item={item} onClick={() => setMenuOpen(false)} />
-            </li>
-          ))}
-        </ul>
-        <div className="mt-10 flex flex-col gap-3">
-          <CtaLink href="/login" event="landing_nav_login_click" variant="secondary">
-            Log in
-          </CtaLink>
-          <CtaLink
-            href="/signup"
-            event="landing_hero_cta_click"
-            eventProps={{ source: "mobile_menu" }}
-          >
-            Sign up free
-          </CtaLink>
-        </div>
-      </Modal>
+      {menuLoaded ? (
+        <Modal open={menuOpen} onOpenChange={setMenuOpen} title="Menu" size="full">
+          <ul className="flex flex-col gap-5 text-h3 text-text-primary">
+            {links.map((item) => (
+              <li key={item.label}>
+                <SoonLink item={item} onClick={() => setMenuOpen(false)} />
+              </li>
+            ))}
+          </ul>
+          <div className="mt-10 flex flex-col gap-3">
+            <CtaLink href="/login" event="landing_nav_login_click" variant="secondary">
+              Log in
+            </CtaLink>
+            <CtaLink
+              href="/signup"
+              event="landing_hero_cta_click"
+              eventProps={{ source: "mobile_menu" }}
+            >
+              {PRIMARY_CTA}
+            </CtaLink>
+          </div>
+        </Modal>
+      ) : null}
     </header>
   );
 }

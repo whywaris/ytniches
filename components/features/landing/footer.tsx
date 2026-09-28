@@ -1,19 +1,23 @@
-import { Sparkles } from "lucide-react";
-
-import { FOOTER, askAiLinks, withBlogLink } from "@/components/features/landing/content";
+import { FOOTER, withBlogLink } from "@/components/features/landing/content";
 import { SoonLink } from "@/components/features/landing/soon-link";
 import { Logo } from "@/components/features/brand/logo";
 
-// Landing-Page-Spec §15. Social row omitted with Mac's handles (call F).
+// Landing-Page-Spec §15 / D-082: legal, contact, blog, tools, help and the
+// /vs/* pages (named from content/vs).
 function Footer({ blogLive = false }: { blogLive?: boolean }) {
   return (
-    <footer className="border-t border-border-subtle bg-bg-base px-6 py-20 md:px-10">
-      <div className="mx-auto max-w-[1440px]">
+    <footer className="border-t border-(--glass-border) px-6 py-16 md:px-10">
+      <div className="mx-auto max-w-[1200px]">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Logo className="h-7 text-text-primary" />
             <p className="mt-3 text-body-sm text-text-secondary">{FOOTER.tagline}</p>
-            <p className="mt-6 text-body-sm text-text-secondary">{FOOTER.madeIn}</p>
+            <a
+              href={`mailto:${FOOTER.email}`}
+              className="mt-6 inline-block text-body-sm text-text-secondary hover:text-text-primary"
+            >
+              {FOOTER.email}
+            </a>
           </div>
           {FOOTER.columns.map((column) => (
             <nav key={column.heading} aria-label={column.heading}>
@@ -29,24 +33,9 @@ function Footer({ blogLive = false }: { blogLive?: boolean }) {
           ))}
         </div>
 
-        <div className="mt-16 flex flex-col gap-6 border-t border-border-subtle pt-8 md:flex-row md:items-center md:justify-between">
-          <ul className="flex flex-wrap gap-2" aria-label="Ask AI about YTNiches">
-            {askAiLinks(FOOTER.askAiQuery).map((link) => (
-              <li key={link.label}>
-                <a
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-full border border-border-default px-3 py-1.5 text-body-sm text-text-secondary transition-colors duration-fast hover:bg-bg-hover hover:text-text-primary"
-                >
-                  <Sparkles className="size-3.5 text-accent-text" aria-hidden="true" />
-                  {link.label}
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="text-body-sm text-text-secondary">{FOOTER.copyright}</p>
+        <div className="mt-12 flex flex-col gap-2 border-t border-(--glass-border) pt-8 text-body-sm text-text-secondary md:flex-row md:justify-between">
+          <p>{FOOTER.independence}</p>
+          <p>{FOOTER.copyright}</p>
         </div>
       </div>
     </footer>

@@ -102,10 +102,10 @@ function TierCards({
                 <h3 className="text-h4 text-text-primary">{info.label}</h3>
                 <p className="text-h3 text-text-primary">
                   ${price}
-                  <span className="text-body-sm font-normal text-text-tertiary">/mo</span>
+                  <span className="text-body-sm font-normal text-text-secondary">/mo</span>
                 </p>
                 {billingFrequency === "yearly" ? (
-                  <p className="text-caption text-text-tertiary">
+                  <p className="text-caption text-text-secondary">
                     ${info.yearlyPrice} billed annually
                   </p>
                 ) : null}

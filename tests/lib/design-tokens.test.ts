@@ -57,3 +57,54 @@ describe.each([
     expect(contrast(t["object-niches"], t["bg-base"])).toBeGreaterThanOrEqual(3);
   });
 });
+
+// D-082: marketing glass. Text sits on translucent glass over the warm
+// page background, sometimes over a soft orange glow. Composite each
+// layer (source-over) and check the text tokens on the result.
+describe("marketing glass tokens (D-082)", () => {
+  const start = css.indexOf(".marketing {");
+  const body = css.slice(start, css.indexOf("}", start));
+  const token = (name: string) => {
+    const match = new RegExp(`--${name}:\s*([^;]+);`).exec(body);
+    if (!match) throw new Error(`--${name} missing from .marketing`);
+    return match[1]!.trim();
+  };
+
+  type Rgb = [number, number, number];
+  const hexRgb = (hex: string): Rgb =>
+    [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as Rgb;
+  const toHex = (rgb: Rgb) =>
+    `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`;
+  // rgba(r, g, b, a) or color-mix(in srgb, var(--accent) N%, transparent).
+  function layer(value: string): { rgb: Rgb; alpha: number } {
+    const rgba = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(value);
+    if (rgba) return { rgb: [+rgba[1]!, +rgba[2]!, +rgba[3]!], alpha: +rgba[4]! };
+    const mix = /color-mix\(in srgb, var\(--accent\) (\d+)%, transparent\)/.exec(value);
+    if (mix) return { rgb: hexRgb(dark.accent!), alpha: +mix[1]! / 100 };
+    throw new Error(`unparsed layer ${value}`);
+  }
+  const over = (base: Rgb, value: string): Rgb => {
+    const { rgb, alpha } = layer(value);
+    return base.map((c, i) => c * (1 - alpha) + rgb[i]! * alpha) as Rgb;
+  };
+
+  const pageBg = hexRgb(token("mk-bg"));
+  const surfaces = {
+    "glass on the page": toHex(over(pageBg, token("glass-bg"))),
+    "strong glass on the page": toHex(over(pageBg, token("glass-bg-strong"))),
+    "strong glass on the soft glow": toHex(
+      over(over(pageBg, token("glow-accent-soft")), token("glass-bg-strong")),
+    ),
+  };
+
+  it.each(Object.entries(surfaces))("text passes 4.5:1 on %s", (_name, surface) => {
+    for (const text of ["text-primary", "text-secondary", "accent-text"]) {
+      expect(contrast(dark[text]!, surface), text).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("CTA text on the orange button still passes on the warm page", () => {
+    expect(contrast(dark["text-inverse"]!, dark.accent!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(dark.accent!, toHex(pageBg))).toBeGreaterThanOrEqual(3);
+  });
+});

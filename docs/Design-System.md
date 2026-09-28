@@ -109,6 +109,28 @@ Muted, distinguishable colors per object type. Used for icons, category badges, 
 
 Complete mapping of every dark token to a light equivalent — same semantics, inverted brightness. `bg-base` → #ffffff, `text-primary` → #0a0a0b, `text-secondary` → #3c3c43, `border-default` → #d1d1d6, and so on. Full mapping ships as part of the Tailwind config.
 
+### 2.8 Marketing glass (D-082)
+
+Marketing pages only (the `.marketing` scope on the marketing layout, which is always dark). The app keeps §2.1–§2.7 and its elevation tokens.
+
+| Token                | Value                           | Use                                              |
+| -------------------- | ------------------------------- | ------------------------------------------------ |
+| `--mk-bg`            | `#0d0a09`                       | Page background: near-black with a warm tint     |
+| `--glass-bg`         | white 5%                        | Glass cards                                      |
+| `--glass-bg-strong`  | white 8%                        | Scrolled navbar, tiles inside illustrations      |
+| `--glass-border`     | white 10%                       | 1px border on glass; section dividers            |
+| `--glass-highlight`  | white 14%                       | 1px top inner edge; faint illustration details   |
+| `--glass-blur`       | 8px (16px from 768px)           | Backdrop blur, navbar and cards only             |
+| `--glow-accent`      | `--accent` at 35% (`color-mix`) | Final CTA glow, the one orange point in the hero |
+| `--glow-accent-soft` | `--accent` at 12% (`color-mix`) | Background radial glows                          |
+
+- **Utilities:** `glass` (fill, border, top highlight, blur) and `mk-noise` (an inline SVG grain at 3.5% opacity, no request).
+- **Components:** `GlassCard` (`components/features/landing/glass-card.tsx`) and `SectionHeading` (Instrument Serif h2).
+- **Orange:** only for CTAs, key accents and glows. Orange text uses `--accent-text`.
+- **Contrast:** `tests/lib/design-tokens.test.ts` composites the glass over `--mk-bg`, and over the soft glow, and checks primary text, secondary text and `--accent-text` against WCAG AA (4.5:1).
+- **Illustrations (concept A):** glass tiles, a thin white outline, and exactly one orange element per picture, the "signal". Colours are CSS variables only, and there are no SVG filters. No YouTube logo, play buttons or other YouTube brand features. See `components/features/landing/illustrations.tsx`.
+- **Motion:** CSS only. The only animation is the anchor's smooth scroll, and it's off under `prefers-reduced-motion`.
+
 ## 3. Typography & Iconography
 
 ### 3.1 Font families
@@ -119,7 +141,7 @@ Complete mapping of every dark token to a light equivalent — same semantics, i
 | Display (marketing hero only) | Instrument Serif | Georgia, serif          |
 | Monospace (code, IDs)         | JetBrains Mono   | ui-monospace, monospace |
 
-Inter serves the app; Instrument Serif adds Fibery-style personality on the landing page only (never in-app).
+Inter serves the app; Instrument Serif adds Fibery-style personality on the landing page only (never in-app). It's loaded with `next/font` in the marketing layout only and used for h1/h2 (`font-display`, D-082).
 
 ### 3.2 Type scale
 

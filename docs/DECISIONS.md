@@ -1006,3 +1006,18 @@ Decisions that still need to close before their dependent docs / features can be
   2. Turn `BETA_MODE` off; normal trial rules (and D-057) then apply.
   3. Restore the trial and upgrade help articles.
 - **Impacts:** `lib/billing/{beta,plans,cycles}.ts`, `lib/services/billing.ts`, `workers/credit-cycles.ts`, billing UI, /pricing, help center, Monetization.md.
+
+### D-082: Landing redesign: glass on warm near-black, 9 sections, SVG illustrations
+
+- **Status:** Resolved (2026-09-28).
+- **Final call:**
+  - **Sections of `/`, in order:** navbar, hero, what YTNiches does (Find / Understand / Plan), how it works (3 steps), founder story (copy unchanged), pricing teaser (free during beta, D-081), FAQ (6 items, FAQPage JSON-LD), final CTA, footer.
+  - **Removed:** the creator explorer, bento features, view switcher, templates showcase, beginner toggle, AI demo, integrations, changelog and VS section. They were used only on `/`, so they're deleted, with their helpers. The marketing pages no longer load framer-motion.
+  - **Kept:** the `/vs/*` pages, now linked by name from the footer.
+  - **Visual system:** marketing glass tokens scoped to `.marketing` (Design-System.md §2.8). Glows are mixed from `--accent`, there's a warm near-black background and a subtle grain, and blur is used only on the navbar and cards (lighter on mobile). The navbar and footer glass apply to every marketing page. Instrument Serif via `next/font` in the marketing layout only, for h1/h2.
+  - **Illustrations:** concept A for every picture, as coded SVGs. No screenshots, YouTube marks or play buttons. The founder section takes an optional photo later.
+  - **Copy rules:** no income, revenue or profitability claims; every number comes from a constant. Both are enforced by `content.test.ts`.
+  - **SEO:**
+    - Title: "YTNiches — Spot rising YouTube channels, plan your content".
+    - Description: "Find fast-growing faceless YouTube channels every day, see which videos beat their channel's usual views, and turn it into a content plan." (The old one said "profitable".)
+- **Impacts:** `app/(marketing)/`, `components/features/landing/`, `app/globals.css`, Design-System.md §2.8/§3.1, Landing-Page-Spec.md and Landing-Copy.md (superseded notes).
