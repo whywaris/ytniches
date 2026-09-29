@@ -182,6 +182,12 @@ Update the losing doc after resolution.
 - **A separate dev Supabase project** comes back once the old project is retired; until then, local development has no safe database for jobs.
 - The deploy runbook is `docs/Deploy.md`.
 
+### 4.2.2 CI status (2026-09-29)
+
+- **Never report CI as green without checking the latest run** on the latest commit (`gh run list --limit 1` or the Actions page), both jobs (`ci` and `sql`). A local `pnpm test` pass is not CI: CI also runs `pnpm test:sql` against Postgres, and test order differs.
+- **Don't stack new work on a red CI.** When the latest run is red, fixing it is the next task; new features and production migrations wait until it's green.
+- **A test that fails in the full suite but passes alone is not a flake** until proven otherwise; with `isolate: false`, suspect state leaking between files.
+
 ### 4.3 Pre-ship checklist
 
 Before opening a PR:

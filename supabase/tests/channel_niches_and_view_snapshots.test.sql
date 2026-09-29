@@ -4,9 +4,9 @@
 
 begin;
 
-insert into public.niches (id, slug, name)
-values ('00000000-0000-0000-0000-00000000f001', 'ai-stories', 'AI stories'),
-       ('00000000-0000-0000-0000-00000000f002', 'war-history', 'War history');
+insert into public.niches (id, slug, name, category)
+values ('00000000-0000-0000-0000-00000000f001', 'ai-stories', 'AI stories', 'Entertainment & Stories'),
+       ('00000000-0000-0000-0000-00000000f002', 'war-history', 'War history', 'History & Mythology');
 
 insert into public.channels (id, youtube_channel_id, name, youtube_created_at, last_synced_at, subscriber_count)
 values ('00000000-0000-0000-0000-00000000f101', 'UCfresh', 'Fresh', '2020-01-01', now(), 1000),
