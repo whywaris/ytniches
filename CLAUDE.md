@@ -182,6 +182,18 @@ Update the losing doc after resolution.
 - **A separate dev Supabase project** comes back once the old project is retired; until then, local development has no safe database for jobs.
 - The deploy runbook is `docs/Deploy.md`.
 
+#### How production migrations are applied and matched
+
+- **Never run `supabase db push`, `supabase db reset`, `supabase migration up` or `supabase link` against production.** The CLI decides what to run by comparing migration _versions_. Production's recorded versions don't match the repo's filenames (below). So `db push` would treat every repo migration as new and re-run all of them, including `curated_niche_taxonomy`'s `delete from public.niches`. Even with matching versions it would skip the CI-first and owner-approval steps. The repo is deliberately not linked to any Supabase project.
+- **How a migration reaches production:**
+  1. CI is green on the latest commit (§4.2.2).
+  2. The owner approves.
+  3. Confirm every earlier repo migration is already in production's history.
+  4. Apply the repo file's SQL verbatim with the Supabase MCP `apply_migration`, named after the file without its version prefix.
+  5. Verify the result: grants, `search_path`, and a read-only smoke query.
+- **Matching history to the repo:** `apply_migration` records the apply time as the version, not the file's version. Until the history is reconciled (proposal pending the owner's approval), match production rows to repo files by **name**. One name differs: the repo's `20260923100002_add_workspace_rls_policies` is recorded as `fix_workspace_members_rls_recursion`.
+- **Known history drift (checked 2026-09-29):** ignoring comments, production's recorded SQL matches the repo file for 47 of 50 migrations. The three that differ are `create_workspace_tables`, `add_workspace_rls_policies` and `create_discovery_functions`: those were applied as earlier drafts, and production was brought in line outside the history. Production's live policies, workspace functions, grants and `purge_stale_youtube_data` match the repo, so the live schema matches even where the recorded SQL doesn't.
+
 ### 4.2.2 CI status (2026-09-29)
 
 - **Never report CI as green without checking the latest run** on the latest commit (`gh run list --limit 1` or the Actions page), both jobs (`ci` and `sql`). A local `pnpm test` pass is not CI: CI also runs `pnpm test:sql` against Postgres, and test order differs.
