@@ -5,6 +5,9 @@ import { Resend } from "resend";
 // module); notifications + digests use "updates@ytniches.com" per TRD's
 // own from-address split, since they're the easy-opt-out category.
 export const NOTIFICATIONS_FROM_ADDRESS = "YTNiches <updates@ytniches.com>";
+// Account-security mail the app sends itself (D-083 lockout alert); the
+// same address Supabase Auth's own emails use.
+export const SECURITY_FROM_ADDRESS = "YTNiches <hello@ytniches.com>";
 
 let client: Resend | undefined;
 

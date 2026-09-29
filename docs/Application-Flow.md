@@ -64,43 +64,43 @@ Next.js App Router. Routes grouped by access requirement. Dynamic segments use `
 
 ### 2.3 Authenticated routes (require session)
 
-| Route                           | Page                         | Notes                                         |
-| ------------------------------- | ---------------------------- | --------------------------------------------- |
-| `/dashboard`                    | Dashboard                    | Default post-login landing                    |
-| `/onboarding`                   | Onboarding                   | Only if not yet completed; skippable          |
+| Route                           | Page                         | Notes                                                             |
+| ------------------------------- | ---------------------------- | ----------------------------------------------------------------- |
+| `/dashboard`                    | Dashboard                    | Default post-login landing                                        |
+| `/onboarding`                   | Onboarding                   | Only if not yet completed; skippable                              |
 | `/niches`                       | Niche Finder                 | `?tab=niches` (default), `channels`, `outliers`, `search` (D-069) |
-| `/niches/[slug]`                | Niche detail                 | Score breakdown + trend; slug `channels` reserved |
-| `/niches/channels/[channelId]`  | Channel detail               | Deep-linkable                                 |
-| `/outliers`                     | Outliers (tracked channels)  | Per-user feed (D-037); global feed is `/niches?tab=outliers` |
-| `/tracking`                     | Competitor Tracking overview | Activity feed                                 |
-| `/tracking/[channelId]`         | Per-channel tracking         | Deep-linkable                                 |
-| `/tracking/compare?ids=id1,id2` | Compare view                 | Multi-channel                                 |
-| `/prompts`                      | AI Prompts                   | Library + generator                           |
-| `/prompts/[promptId]`           | Prompt detail                | Deep-linkable                                 |
-| `/calendar`                     | Content Calendar             | Phase 3, redirects to `/dashboard` in Phase 1 |
-| `/workspace`                    | Workspace overview           | Phase 3                                       |
-| `/settings`                     | Settings redirect            | → `/settings/profile`                         |
-| `/settings/profile`             | Profile settings             |                                               |
-| `/settings/notifications`       | Notification settings        |                                               |
-| `/settings/billing`             | Billing settings             |                                               |
-| `/settings/connections`         | Connections settings         |                                               |
-| `/settings/preferences`         | Preferences                  |                                               |
-| `/settings/danger`              | Danger zone                  |                                               |
+| `/niches/[slug]`                | Niche detail                 | Score breakdown + trend; slug `channels` reserved                 |
+| `/niches/channels/[channelId]`  | Channel detail               | Deep-linkable                                                     |
+| `/outliers`                     | Outliers (tracked channels)  | Per-user feed (D-037); global feed is `/niches?tab=outliers`      |
+| `/tracking`                     | Competitor Tracking overview | Activity feed                                                     |
+| `/tracking/[channelId]`         | Per-channel tracking         | Deep-linkable                                                     |
+| `/tracking/compare?ids=id1,id2` | Compare view                 | Multi-channel                                                     |
+| `/prompts`                      | AI Prompts                   | Library + generator                                               |
+| `/prompts/[promptId]`           | Prompt detail                | Deep-linkable                                                     |
+| `/calendar`                     | Content Calendar             | Phase 3, redirects to `/dashboard` in Phase 1                     |
+| `/workspace`                    | Workspace overview           | Phase 3                                                           |
+| `/settings`                     | Settings redirect            | → `/settings/profile`                                             |
+| `/settings/profile`             | Profile settings             |                                                                   |
+| `/settings/notifications`       | Notification settings        |                                                                   |
+| `/settings/billing`             | Billing settings             |                                                                   |
+| `/settings/connections`         | Connections settings         |                                                                   |
+| `/settings/preferences`         | Preferences                  |                                                                   |
+| `/settings/danger`              | Danger zone                  |                                                                   |
 
 ### 2.4 Admin routes (super-admin role only)
 
-| Route                   | Page                     | Notes                   |
-| ----------------------- | ------------------------ | ----------------------- |
-| `/admin`                | Admin dashboard redirect | → `/admin/dashboard`    |
-| `/admin/dashboard`      | Admin dashboard          | KPIs + health           |
-| `/admin/users`          | Users list               | Search + filter         |
-| `/admin/users/[userId]` | User detail              | Impersonate action      |
-| `/admin/blog`           | Blog CMS                 | Post management         |
-| `/admin/revenue`        | Revenue                  | MRR + charts            |
+| Route                   | Page                     | Notes                               |
+| ----------------------- | ------------------------ | ----------------------------------- |
+| `/admin`                | Admin dashboard redirect | → `/admin/dashboard`                |
+| `/admin/dashboard`      | Admin dashboard          | KPIs + health                       |
+| `/admin/users`          | Users list               | Search + filter                     |
+| `/admin/users/[userId]` | User detail              | Impersonate action                  |
+| `/admin/blog`           | Blog CMS                 | Post management                     |
+| `/admin/revenue`        | Revenue                  | MRR + charts                        |
 | `/admin/api-quotas`     | API Quotas               | YouTube usage, per-source breakdown |
 | `/admin/discovery`      | Discovery Engine         | Seeds + manual job triggers (D-069) |
-| `/admin/tools`          | Admin tools              | Recompute, cache, flags |
-| `/admin/automation`     | Automation Tools         | Job control             |
+| `/admin/tools`          | Admin tools              | Recompute, cache, flags             |
+| `/admin/automation`     | Automation Tools         | Job control                         |
 
 ### 2.5 Query param conventions
 
@@ -134,6 +134,8 @@ flowchart TD
   J --> E
 ```
 
+As built (D-083): the email link opens `/auth/confirm?token_hash=…&type=email`, which verifies the token (any browser) and then follows the same path as Google. "Check your email" is `/check-email`. The address rides in a short-lived HttpOnly cookie, not the URL, and resends are capped at 3 per hour.
+
 ### 3.2 Login
 
 - User lands on `/login`
@@ -153,8 +155,8 @@ flowchart TD
 ### 3.4 Password reset (email + password users only)
 
 - `/forgot-password` → email input → send reset link
-- Reset link expires in 60 minutes
-- `/reset-password?token=...` → new password form → verify token → update password → auto-login → `/dashboard`
+- Reset link expires in 60 minutes (the same 1-hour setting as verification links)
+- The reset link opens `/auth/confirm?token_hash=…&type=recovery` → verify token → session plus a 15-minute recovery cookie → `/reset-password` → new password form → update password → `/dashboard` (D-083)
 - All existing sessions for the account invalidated on password change
 
 ### 3.5 Email change

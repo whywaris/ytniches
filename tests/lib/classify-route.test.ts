@@ -15,8 +15,11 @@ describe("classifyRoute", () => {
     ["/login", "auth"],
     ["/signup", "auth"],
     ["/forgot-password", "auth"],
-    ["/reset-password", "auth"],
-    ["/verify", "auth"],
+    ["/check-email", "auth"],
+    // D-083: a reset link signs the user in first, so this page must not
+    // bounce signed-in users; it checks the recovery cookie itself.
+    ["/reset-password", "public"],
+    ["/auth/confirm", "public"],
   ])("classifies %s as %s", (pathname, expected) => {
     expect(classifyRoute(pathname)).toBe(expected);
   });

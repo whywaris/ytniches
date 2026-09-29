@@ -1565,6 +1565,11 @@ export type Database = {
         }[];
       };
       touch_last_active: { Args: never; Returns: undefined };
+      admin_signup_counts: {
+        Args: { p_since: string };
+        Returns: { verified: number; verified_since: number; pending: number }[];
+      };
+      auth_user_exists: { Args: { p_email: string }; Returns: boolean };
       suggest_niche: {
         Args: { p_channel_id: string; p_description: string; p_name: string; p_slug: string };
         Returns: undefined;

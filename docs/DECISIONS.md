@@ -211,7 +211,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-015: OAuth as primary auth
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-29) by D-083
 - **Impacts:** Onboarding spec, Security.md, Backend auth logic
 - **Options:**
   - A: Google-only (no email/password option)
@@ -219,7 +219,7 @@ Decisions that still need to close before their dependent docs / features can be
   - C: Google + email/password + Apple
 - **Trade-offs:** Google-only = simpler build, faster signup for most, alienates users without Google account or those who avoid Google. Multiple providers = more code, better inclusion.
 - **Recommendation:** Option B. Google reduces signup friction for the majority; email/password serves the minority who need it, adds \~1 day of work.
-- **Final call:** —
+- **Final call:** Option B, Google + email/password (2026-09-29). Built as D-083.
 
 ---
 
@@ -1021,3 +1021,24 @@ Decisions that still need to close before their dependent docs / features can be
     - Title: "YTNiches — Spot rising YouTube channels, plan your content".
     - Description: "Find fast-growing faceless YouTube channels every day, see which videos beat their channel's usual views, and turn it into a content plan." (The old one said "profitable".)
 - **Impacts:** `app/(marketing)/`, `components/features/landing/`, `app/globals.css`, Design-System.md §2.8/§3.1, Landing-Page-Spec.md and Landing-Copy.md (superseded notes).
+
+### D-083: Email + password sign-in alongside Google
+
+- **Status:** Resolved (2026-09-29). Resolves D-015 (option B).
+- **Final call:**
+  - **Flows:** sign-up, "check your email", verification, log in, forgot password, reset password (Application-Flow §3). The Terms/Privacy consent line sits under both ways to create an account.
+  - **Verification required:** no session, so no onboarding, trial or credits, until the email is verified. Verification and reset links go to `/auth/confirm` (token hash, any browser) and expire after **1 hour** (one Supabase setting for both; Security.md updated).
+  - **Passwords:** 12+ characters with lowercase, uppercase and a number, enforced in the form, the server action and Supabase. HaveIBeenPwned via Supabase leaked-password protection (needs **Pro**; the org is on Free as of this date).
+  - **CAPTCHA:** Cloudflare Turnstile through Supabase's built-in CAPTCHA, on every password flow.
+  - **Emails:** from `hello@ytniches.com` through Resend SMTP, with branded templates in `supabase/templates/`.
+  - **Errors:**
+    - Login never reveals whether an account exists: one generic error plus a static "Signed up with Google?" hint. "Verify your email first" shows only after a correct password.
+    - Sign-up **does** say "account exists" (owner's call) and points to Google or a reset.
+    - Forgot password is always neutral.
+  - **Lockout:** 5 failures per email in 15 minutes locks password sign-in for 15 minutes. It's checked before Supabase is called, applies to any address, sends one alert email per window to an existing account, and leaves Google sign-in working.
+  - **One account per email:** Google and password identities link automatically once the email is verified.
+  - **Admin:** "Total signups" counts verified accounts; "Pending verification" is shown separately (`admin_signup_counts`).
+- **Impacts:**
+  - Code: `app/(auth)/*`, `app/auth/confirm`, `lib/auth/*`, `middleware.ts`, `lib/services/admin.ts`.
+  - Database: migration `20260929100001`.
+  - Docs: Security.md §2, Application-Flow §3, the privacy, cookie and terms pages, and the help article "Signing in".

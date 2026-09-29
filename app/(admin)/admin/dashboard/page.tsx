@@ -21,7 +21,12 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Total signups"
           value={kpis.totalSignups}
-          hint={`${kpis.signupsLast30d} in the last 30 days`}
+          hint={`Verified. ${kpis.signupsLast30d} in the last 30 days`}
+        />
+        <StatCard
+          label="Pending verification"
+          value={kpis.pendingVerification}
+          hint="Email sign-ups that haven't verified yet"
         />
         <StatCard
           label="Active users"

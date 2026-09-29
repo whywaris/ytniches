@@ -1,3 +1,12 @@
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/credentials";
+import {
+  AUTH_EMAILS_PER_HOUR,
+  AUTH_LINK_EXPIRY_HOURS,
+  LOCKOUT_MAX_FAILURES,
+  LOCKOUT_WINDOW_SECONDS,
+  PENDING_EMAIL_MINUTES,
+  RECOVERY_MINUTES,
+} from "@/lib/auth/forms";
 import { BETA_NOTICE_DAYS } from "@/lib/billing/beta";
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
@@ -61,6 +70,15 @@ export const FACTS: Record<string, string | number> = {
 
   "trial.pitch": TRIAL_PITCH,
   "beta.noticeDays": BETA_NOTICE_DAYS,
+
+  // D-083 email + password sign-in.
+  "auth.passwordMinLength": PASSWORD_MIN_LENGTH,
+  "auth.linkExpiryHours": AUTH_LINK_EXPIRY_HOURS,
+  "auth.lockoutFailures": LOCKOUT_MAX_FAILURES,
+  "auth.lockoutMinutes": LOCKOUT_WINDOW_SECONDS / 60,
+  "auth.emailsPerHour": AUTH_EMAILS_PER_HOUR,
+  "auth.pendingEmailMinutes": PENDING_EMAIL_MINUTES,
+  "auth.recoveryMinutes": RECOVERY_MINUTES,
   "trial.days": TRIAL.days,
   "trial.credits": TRIAL.credits,
   "trial.plan": TIER_INFO[TRIAL.tier].label,

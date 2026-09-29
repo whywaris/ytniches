@@ -3,7 +3,7 @@ title: Privacy Policy
 slug: privacy
 description: What data YTNiches collects, why, who we share it with, and your choices.
 order: 2
-lastUpdated: 2026-09-27
+lastUpdated: 2026-09-29
 ---
 
 This policy explains what personal data YTNiches collects, how we use it, and the choices you have. We keep it in plain language. If something isn't clear, email <SupportLink />.
@@ -16,7 +16,7 @@ Contact: <SupportLink />.
 
 ## The short version
 
-- You sign in with Google. We get your name, email and profile picture, and nothing from your YouTube account.
+- You sign in with Google, or with an email address and password. With Google we get your name, email and profile picture, and nothing from your YouTube account. Passwords are stored only in hashed form by our sign-in provider; we never see them.
 - The YouTube data we show is public data about channels and videos. We keep it for <Fact k="youtube.maxAgeDays" unit="day" /> at most.
 - We never see your card details. Our payment processor handles payments.
 - We don't sell your data, and we don't use advertising cookies.
@@ -25,6 +25,8 @@ Contact: <SupportLink />.
 ## What we collect
 
 **When you sign in with Google:** your name, email address and profile picture. We don't ask for access to your YouTube account, your Google Drive, or anything else.
+
+**When you sign up with an email address and password:** your email address and your password. The password is stored only as a salted hash by Supabase, our sign-in provider, so nobody at YTNiches can read it. We email you a link to verify the address before the account can be used. To stop password guessing, we count failed sign-in attempts for <Fact k="auth.lockoutMinutes" unit="minute" /> against a one-way hash of the email address, not the address itself.
 
 **Your profile:** your time zone (read from your browser the first time you open the app, or chosen in Settings), your onboarding answers, your theme, and, if you add one, your own YouTube channel.
 
@@ -37,8 +39,9 @@ Contact: <SupportLink />.
 - **Product analytics (PostHog):** pages you view, clicks, and events like "ran a first search", linked to your account once you've signed in. It runs without cookies (see the [Cookie Policy](/legal/cookies)).
 - **Error reports (Sentry):** when something breaks, a report of the error, your browser and the page. We turn off Sentry's collection of personal data, and we strip secrets before sending.
 - **IP address:** used briefly to rate-limit the free tools, the newsletter form and searches, then discarded.
+- **Bot protection (Cloudflare Turnstile):** on the email sign-up, log-in and password-reset forms, Cloudflare checks signals from your browser, including your IP address, to tell people from automated abuse.
 
-**Email:** if you subscribe to our newsletter, your email address. Transactional emails (invites, digests, notifications) go to your account email.
+**Email:** if you subscribe to our newsletter, your email address. Transactional emails (verification and password-reset links, a notice if password sign-in is paused after failed attempts, invites, digests, notifications) go to your account email.
 
 ## YouTube API Services
 
@@ -74,7 +77,8 @@ We use these providers to run YTNiches. Each processes data only to provide its 
 
 - **[Google](http://www.google.com/policies/privacy):** sign-in, and YouTube API Services.
 - **[Vercel](https://vercel.com/legal/privacy-policy):** hosting the website and app.
-- **[Supabase](https://supabase.com/privacy):** our database and sign-in sessions.
+- **[Supabase](https://supabase.com/privacy):** our database, sign-in (including hashed passwords) and sessions.
+- **[Cloudflare](https://www.cloudflare.com/privacypolicy/):** bot protection (Turnstile) on the email sign-in forms.
 - **[Upstash](https://upstash.com/trust/privacy.pdf):** short-lived caching and rate limiting.
 - **[Inngest](https://www.inngest.com/privacy):** running background jobs, like channel syncs and digests.
 - **[Resend](https://resend.com/legal/privacy-policy):** sending email.

@@ -102,8 +102,11 @@ async function loadSubscriptionFacts(): Promise<SubscriptionFact[]> {
 // ---------- Dashboard ----------
 
 export interface AdminKpis {
+  /** D-083: verified accounts only (Google accounts arrive verified). */
   totalSignups: number;
   signupsLast30d: number;
+  /** Email sign-ups that haven't clicked their verification link yet. */
+  pendingVerification: number;
   activeLast7d: number;
   activeLast30d: number;
   mrrCents: number;
@@ -129,9 +132,8 @@ export async function getAdminKpis(now: Date = new Date()): Promise<AdminKpis> {
     return query;
   };
 
-  const [total, signups30, active7, active30, webhookErrors, subs, quota] = await Promise.all([
-    countProfiles("created_at"),
-    countProfiles("created_at", 30),
+  const [signups, active7, active30, webhookErrors, subs, quota] = await Promise.all([
+    supabase.rpc("admin_signup_counts", { p_since: daysAgoIso(30, now) }).single(),
     countProfiles("last_active_at", 7),
     countProfiles("last_active_at", 30),
     supabase
@@ -143,13 +145,14 @@ export async function getAdminKpis(now: Date = new Date()): Promise<AdminKpis> {
     loadSubscriptionFacts(),
     getQuotaHistory(1, now),
   ]);
-  for (const result of [total, signups30, active7, active30, webhookErrors]) {
+  for (const result of [signups, active7, active30, webhookErrors]) {
     if (result.error) throw new Error(`getAdminKpis query failed: ${result.error.message}`);
   }
 
   return {
-    totalSignups: total.count ?? 0,
-    signupsLast30d: signups30.count ?? 0,
+    totalSignups: Number(signups.data?.verified ?? 0),
+    signupsLast30d: Number(signups.data?.verified_since ?? 0),
+    pendingVerification: Number(signups.data?.pending ?? 0),
     activeLast7d: active7.count ?? 0,
     activeLast30d: active30.count ?? 0,
     mrrCents: mrrCentsAt(subs, now),

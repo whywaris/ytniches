@@ -36,7 +36,18 @@ In the Supabase dashboard → the project → **Authentication**:
    - Site URL: the new Vercel URL from step 5 for now; `https://ytniches.com` at cutover (step 8).
    - Redirect URLs: keep `http://localhost:3000/**`, and add `https://<new-project>.vercel.app/**` and `https://ytniches.com/**`.
 2. **Providers → Google:** already set up for local; nothing changes. The callback is Supabase's own URL.
-3. **Emails (SMTP):** the Resend SMTP settings stay. Check that the sender is on `ytniches.com`.
+3. **Providers → Email (D-083):**
+   - Enabled; **Confirm email: ON**; Secure email change: ON.
+   - Password: minimum length **12**; requirements **lowercase, uppercase letters and digits**; **leaked password protection ON** (needs the Pro plan).
+   - Email OTP expiration: **3600** seconds.
+4. **Emails → SMTP settings:**
+   - Custom SMTP on. Sender `hello@ytniches.com`, name `YTNiches`.
+   - Host `smtp.resend.com`, port `465`, username `resend`.
+   - Password: a Resend API key with **Sending access** for the `ytniches.com` domain.
+   - Minimum interval between emails: 60 s.
+5. **Emails → Templates:** paste `supabase/templates/confirm-signup.html` into "Confirm signup" and `supabase/templates/reset-password.html` into "Reset password". The subjects are in each file's header comment.
+6. **Rate limits:** emails sent per hour **100**; sign-ups and sign-ins per IP at the default.
+7. **Attack Protection → CAPTCHA:** on, provider **Cloudflare Turnstile**, the Turnstile **secret key**. Turn this on only once the deployed code includes the Turnstile widget: from then on, every password sign-in without a token fails, locally too. The public **site key** goes in Vercel and `.env.local` as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
 ## Step 4 — Inngest Cloud (owner)
 
@@ -55,6 +66,7 @@ In the Supabase dashboard → the project → **Authentication**:
    | `YOUTUBE_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                  | same as `.env.local` (one quota, one counter)                                 |
    | `OPENAI_API_KEY`, `RESEND_API_KEY`, `RESEND_NEWSLETTER_SEGMENT_ID`                       | same as `.env.local`                                                          |
    | `NEXT_PUBLIC_ADMIN_EMAIL`                                                                | your admin email                                                              |
+   | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                                                         | Cloudflare → Turnstile → the `YTNiches auth` widget → **Site key** (public)   |
    | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`                                                   | same as `.env.local`                                                          |
    | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`                                    | optional (analytics off without them)                                         |
    | `INNGEST_SIGNING_KEY`, `INNGEST_EVENT_KEY`                                               | step 4                                                                        |

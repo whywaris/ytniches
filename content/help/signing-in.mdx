@@ -1,0 +1,34 @@
+---
+title: Signing in
+slug: signing-in
+category: getting-started
+order: 4
+excerpt: Sign in with Google or with an email and password, verify your email, and reset a forgotten password.
+popular: false
+---
+
+You can sign in two ways: **Continue with Google**, or an **email address and password**. Both lead to the same account if they use the same email.
+
+## Signing up with email
+
+1. On the sign-up page, enter your email and a password.
+2. Your password needs at least <Fact k="auth.passwordMinLength" unit="character" />, with a lowercase letter, an uppercase letter and a number. We also reject passwords that have appeared in known data breaches.
+3. We email you a verification link. Click it to start using YTNiches. The link works once, for <Fact k="auth.linkExpiryHours" unit="hour" />.
+
+You can't use the account, and your free plan doesn't start, until the email is verified. Didn't get the email? Check your spam folder, or use **Resend the link** on the "Check your email" page. You can resend up to <Fact k="auth.emailsPerHour" unit="time" /> an hour.
+
+## Forgot your password
+
+1. On the log-in page, click **Forgot password?**
+2. Enter your email. If there's an account, we send a link to set a new password. It works once, for <Fact k="auth.linkExpiryHours" unit="hour" />.
+3. Choose a new password. Saving it signs you out on your other devices.
+
+Signed up with Google? Resetting your password adds one to the same account, so you can use either way after that.
+
+## Too many attempts
+
+After <Fact k="auth.lockoutFailures" unit="wrong password" /> in <Fact k="auth.lockoutMinutes" unit="minute" />, password sign-in for that email pauses for <Fact k="auth.lockoutMinutes" unit="minute" />, and we email the account owner. **Continue with Google** still works during the pause.
+
+## Still stuck?
+
+Email us at <SupportLink />.
