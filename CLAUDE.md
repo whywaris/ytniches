@@ -81,20 +81,20 @@ See TRD.md §1.4 for the full tree. Quick reference:
 
 Every non-trivial change must reference at least one of these. If none fit, the change probably needs a spec first — file it in DECISIONS.md before writing code.
 
-| Doc | When to read | When to update |
-| --- | --- | --- |
-| **PRD.md** | Building any feature; understanding scope | New feature added or removed from a phase |
-| **DECISIONS.md** | Any question about "why did we choose X?" | Every open question that must resolve; every resolution |
-| **Design-System.md** | Any UI change (component composition, colors, spacing) | New primitive component added; token change |
-| **Implementation-Plan.md** | Phase planning, checkpoints, timeline | Phase gate outcome; scope change |
-| **UI-UX-Flow.md** | Building any screen; understanding layout + states | Screen behavior changes |
-| **Application-Flow.md** | Routing, auth, state machines, error handling | New route added; state machine change |
-| **Backend-Schema.md** | Any DB touch (queries, migrations, RLS) | Every migration; index or RLS change |
-| **TRD.md** | Architecture, integrations, caching, jobs | New integration; caching strategy change |
-| **Security.md** | Auth, RLS, PII, sensitive endpoints | Threat model change; new sensitive surface |
-| **Landing-Page-Spec.md** | Landing page build (once written) | Landing structure change |
-| **Landing-Copy.md** | All marketing copy (once written) | Copy revisions |
-| **Monetization.md** | Billing, credits, tiers (once written) | Pricing / tier change |
+| Doc                        | When to read                                           | When to update                                          |
+| -------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
+| **PRD.md**                 | Building any feature; understanding scope              | New feature added or removed from a phase               |
+| **DECISIONS.md**           | Any question about "why did we choose X?"              | Every open question that must resolve; every resolution |
+| **Design-System.md**       | Any UI change (component composition, colors, spacing) | New primitive component added; token change             |
+| **Implementation-Plan.md** | Phase planning, checkpoints, timeline                  | Phase gate outcome; scope change                        |
+| **UI-UX-Flow.md**          | Building any screen; understanding layout + states     | Screen behavior changes                                 |
+| **Application-Flow.md**    | Routing, auth, state machines, error handling          | New route added; state machine change                   |
+| **Backend-Schema.md**      | Any DB touch (queries, migrations, RLS)                | Every migration; index or RLS change                    |
+| **TRD.md**                 | Architecture, integrations, caching, jobs              | New integration; caching strategy change                |
+| **Security.md**            | Auth, RLS, PII, sensitive endpoints                    | Threat model change; new sensitive surface              |
+| **Landing-Page-Spec.md**   | Landing page build (once written)                      | Landing structure change                                |
+| **Landing-Copy.md**        | All marketing copy (once written)                      | Copy revisions                                          |
+| **Monetization.md**        | Billing, credits, tiers (once written)                 | Pricing / tier change                                   |
 
 ### 3.1 Referencing specs from PRs
 
@@ -171,6 +171,16 @@ Update the losing doc after resolution.
 - **Never mix icon libraries.** Lucide only (per Design-System.md §3.4).
 - **Do not add JS to marketing pages** unless the page is genuinely interactive. Landing + blog should hydrate minimally for Core Web Vitals.
 - **PostgreSQL enums are hard to change.** When you need to modify one, use a migration that adds new values first, migrates data, then removes old values in a later PR.
+
+### 4.2.1 Production database (2026-09-29)
+
+- **`ossrqwoorqxbgyzzoosz` (formerly ytniches-dev) is PRODUCTION.** Treat every write to it as a production write.
+- **`keafgjfqekrbgkohhcnm` (the old live product) is never touched,** not even for reads.
+- **Migrations:** run in CI's test Postgres first (`pnpm test:sql`), then apply to production.
+- **Never point local jobs at production:** don't run `pnpm dev:inngest` against it, and never run the purge, discovery or enrichment jobs, or their tests, against it from a laptop. Production jobs run only through Inngest Cloud.
+- **Data changes on production:** list what will change first, and change it only after the owner approves.
+- **A separate dev Supabase project** comes back once the old project is retired; until then, local development has no safe database for jobs.
+- The deploy runbook is `docs/Deploy.md`.
 
 ### 4.3 Pre-ship checklist
 
