@@ -174,6 +174,5 @@ export const FOOTER = {
     },
   ] satisfies { heading: string; links: NavLinkItem[] }[],
   email: SUPPORT_EMAIL,
-  independence: "Independent tool. Not affiliated with YouTube or Google.",
   copyright: `© ${new Date().getFullYear()} YTNiches. All rights reserved.`,
 };

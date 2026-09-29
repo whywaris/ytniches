@@ -34,7 +34,6 @@ function Footer({ blogLive = false }: { blogLive?: boolean }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-2 border-t border-(--glass-border) pt-8 text-body-sm text-text-secondary md:flex-row md:justify-between">
-          <p>{FOOTER.independence}</p>
           <p>{FOOTER.copyright}</p>
         </div>
       </div>
