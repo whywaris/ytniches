@@ -184,15 +184,18 @@ Update the losing doc after resolution.
 
 #### How production migrations are applied and matched
 
-- **Never run `supabase db push`, `supabase db reset`, `supabase migration up` or `supabase link` against production.** The CLI decides what to run by comparing migration _versions_. Production's recorded versions don't match the repo's filenames (below). So `db push` would treat every repo migration as new and re-run all of them, including `curated_niche_taxonomy`'s `delete from public.niches`. Even with matching versions it would skip the CI-first and owner-approval steps. The repo is deliberately not linked to any Supabase project.
+- **Never run `supabase db push`, `supabase db reset`, `supabase migration up` or `supabase link` against production.** Every migration must run in CI first and be approved by the owner; the CLI skips both. `db push` also decides what to run by comparing migration _versions_, so a single mismatched history row would make it re-run that migration against production (for example `curated_niche_taxonomy` starts with `delete from public.niches`). The repo is deliberately not linked to any Supabase project.
+- **Production's history matches the repo (reconciled 2026-09-29):** `supabase_migrations.schema_migrations` has exactly one row per file in `supabase/migrations/`, with the file's version and name. Keep it that way: every file gets exactly one row with its own version.
 - **How a migration reaches production:**
   1. CI is green on the latest commit (§4.2.2).
   2. The owner approves.
-  3. Confirm every earlier repo migration is already in production's history.
+  3. Confirm production's history has a row for every earlier repo file, with the same version and name.
   4. Apply the repo file's SQL verbatim with the Supabase MCP `apply_migration`, named after the file without its version prefix.
-  5. Verify the result: grants, `search_path`, and a read-only smoke query.
-- **Matching history to the repo:** `apply_migration` records the apply time as the version, not the file's version. Until the history is reconciled (proposal pending the owner's approval), match production rows to repo files by **name**. One name differs: the repo's `20260923100002_add_workspace_rls_policies` is recorded as `fix_workspace_members_rls_recursion`.
-- **Known history drift (checked 2026-09-29):** ignoring comments, production's recorded SQL matches the repo file for 47 of 50 migrations. The three that differ are `create_workspace_tables`, `add_workspace_rls_policies` and `create_discovery_functions`: those were applied as earlier drafts, and production was brought in line outside the history. Production's live policies, workspace functions, grants and `purge_stale_youtube_data` match the repo, so the live schema matches even where the recorded SQL doesn't.
+  5. `apply_migration` records the apply time as the version, so in the same session set that row to the file's version: `update supabase_migrations.schema_migrations set version = '<file version>' where version = '<recorded version>' and name = '<name>'`. Then confirm `list_migrations` matches the repo files one to one.
+  6. Verify the result: grants, `search_path`, and a read-only smoke query.
+- **History notes:**
+  - Before the reconciliation, rows carried apply-date versions, and `20260923100002_add_workspace_rls_policies` was recorded as `fix_workspace_members_rls_recursion`. Those rows are kept in `supabase_migrations.schema_migrations_backup_20260929`.
+  - Each row keeps the SQL production actually ran. Ignoring comments, that matches the repo file for 47 of 50 migrations. `create_workspace_tables`, `add_workspace_rls_policies` and `create_discovery_functions` ran earlier drafts, and production was brought in line outside the history. Production's live policies, workspace functions, grants and `purge_stale_youtube_data` match the repo (checked 2026-09-29).
 
 ### 4.2.2 CI status (2026-09-29)
 
