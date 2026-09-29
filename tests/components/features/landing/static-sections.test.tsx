@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/analytics/client", () => ({ capture: vi.fn() }));
 
 const { Footer } = await import("@/components/features/landing/footer");
-const { FounderSection } = await import("@/components/features/landing/founder-section");
 const { SoonLink } = await import("@/components/features/landing/soon-link");
 const { FAQ, HOW_IT_WORKS } = await import("@/components/features/landing/content");
 const { faqJsonLd } = await import("@/components/features/landing/faq");
@@ -98,24 +97,6 @@ describe("Footer (D-082)", () => {
   });
 });
 
-describe("FounderSection", () => {
-  it("renders Mac's final story with the abstract art by default", () => {
-    const { container } = render(<FounderSection />);
-    expect(
-      screen.getByRole("heading", { name: "I made this because I needed it." }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/World War 2 faceless YouTube channel/)).toBeInTheDocument();
-    expect(screen.getByText("— Mac, founder")).toBeInTheDocument();
-    expect(container.querySelector("svg[aria-hidden='true']")).toBeInTheDocument();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
-  });
-
-  it("shows a photo instead when one is passed", () => {
-    render(<FounderSection photo={{ src: "/mac.jpg", alt: "Mac, the founder" }} />);
-    expect(screen.getByRole("img", { name: "Mac, the founder" })).toBeInTheDocument();
-  });
-});
-
 describe("Landing page (D-082)", () => {
   it("renders the sections in order and nothing else", () => {
     render(<LandingPage />);
@@ -123,7 +104,6 @@ describe("Landing page (D-082)", () => {
     expect(headings).toEqual([
       "What YTNiches does",
       "How it works",
-      "I made this because I needed it.",
       "Free during beta",
       "Questions, answered",
       "Find your next video idea today.",

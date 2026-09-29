@@ -4,7 +4,7 @@
 
 ---
 
-> **Superseded in part by D-082 (2026-09-28).** The landing page is now 9 sections: navbar, hero, what YTNiches does, how it works, founder story, pricing teaser, FAQ, final CTA and footer. It uses the marketing glass system (Design-System.md §2.8), and all copy lives in `components/features/landing/content.ts`. Sections 3–10, 12 and 13 below were removed from `/`; the VS pages are linked from the footer instead. The founder story (§11) is kept word for word.
+> **Superseded in part by D-082 (2026-09-28).** The landing page is now 8 sections: navbar, hero, what YTNiches does, how it works, pricing teaser, FAQ, final CTA and footer. It uses the marketing glass system (Design-System.md §2.8), and all copy lives in `components/features/landing/content.ts`. Sections 3–13 below were removed from `/`, the founder story (§11) included (it lives in the blog and author bio); the VS pages are linked from the footer instead.
 
 ## 1. Overview
 

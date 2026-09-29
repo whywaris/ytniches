@@ -61,20 +61,12 @@ describe("landing content", () => {
         TRIAL.credits,
         TRIAL.days,
         new Date().getFullYear(),
-        2, // "World War 2" in the founder story
         ...Object.values(TIER_INFO).flatMap((info) => [info.monthlyPrice, info.monthlyCredits]),
       ].map(String),
     );
     for (const number of text.match(/\d+/g) ?? []) {
       expect(allowed.has(number), `typed number ${number}`).toBe(true);
     }
-  });
-
-  it("ships Mac's final founder copy unchanged", () => {
-    const story = content.FOUNDER.paragraphs.join(" ");
-    expect(story).toContain("World War 2");
-    expect(story).not.toContain("a while back");
-    expect(content.FOUNDER.signature).toBe("— Mac, founder");
   });
 
   it("has 5-6 FAQs covering data source, independence, storage, pricing, deletion, contact", () => {

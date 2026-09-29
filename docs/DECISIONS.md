@@ -286,7 +286,7 @@ Decisions that still need to close before their dependent docs / features can be
   - Which "stuck" moment mattered most (competitor spying / outlier detection / content ideas / script writing / consistency)
   - Contrarian opinion — a strong take that most faceless-creator advice gets wrong
 - **Recommendation:** Book a 20-minute founder discovery to extract these, then draft copy in Mac's voice. Cannot fake this input.
-- **Final call:** Founder story confirmed — World War 2 faceless YouTube channel. Stuck moment: no system for topics, outliers, or prompts after finding the niche. Deployed in landing page (content.ts, founder-section.tsx).
+- **Final call:** Founder story confirmed — World War 2 faceless YouTube channel. Stuck moment: no system for topics, outliers, or prompts after finding the niche. Used in the blog and author bio; removed from the landing page on 2026-09-29 (D-082).
 
 ---
 
@@ -1011,11 +1011,12 @@ Decisions that still need to close before their dependent docs / features can be
 
 - **Status:** Resolved (2026-09-28).
 - **Final call:**
-  - **Sections of `/`, in order:** navbar, hero, what YTNiches does (Find / Understand / Plan), how it works (3 steps), founder story (copy unchanged), pricing teaser (free during beta, D-081), FAQ (6 items, FAQPage JSON-LD), final CTA, footer.
+  - **Sections of `/`, in order:** navbar, hero, what YTNiches does (Find / Understand / Plan), how it works (3 steps), pricing teaser (free during beta, D-081), FAQ (6 items, FAQPage JSON-LD), final CTA, footer.
   - **Removed:** the creator explorer, bento features, view switcher, templates showcase, beginner toggle, AI demo, integrations, changelog and VS section. They were used only on `/`, so they're deleted, with their helpers. The marketing pages no longer load framer-motion.
   - **Kept:** the `/vs/*` pages, now linked by name from the footer.
   - **Visual system:** marketing glass tokens scoped to `.marketing` (Design-System.md §2.8). Glows are mixed from `--accent`, there's a warm near-black background and a subtle grain, and blur is used only on the navbar and cards (lighter on mobile). The navbar and footer glass apply to every marketing page. Instrument Serif via `next/font` in the marketing layout only, for h1/h2.
-  - **Illustrations:** concept A for every picture, as coded SVGs. No screenshots, YouTube marks or play buttons. The founder section takes an optional photo later.
+  - **Illustrations:** concept A for every picture, as coded SVGs. No screenshots, YouTube marks or play buttons.
+  - **Founder story removed from `/` (2026-09-29, owner):** it stays in the blog and the author bio.
   - **Copy rules:** no income, revenue or profitability claims; every number comes from a constant. Both are enforced by `content.test.ts`.
   - **SEO:**
     - Title: "YTNiches — Spot rising YouTube channels, plan your content".

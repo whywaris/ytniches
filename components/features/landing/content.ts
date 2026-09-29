@@ -91,19 +91,6 @@ export const HOW_IT_WORKS = {
   ] satisfies { id: StepId; title: string; line: string }[],
 };
 
-export const FOUNDER = {
-  eyebrow: "Built by a creator who got tired",
-  headline: "I made this because I needed it.",
-  paragraphs: [
-    "I started a World War 2 faceless YouTube channel. Finding the niche was the easy part.",
-    "Then I got stuck. I had no idea which of my competitors’ videos were actually working. No way to find what topics were breaking out. No system for turning what worked into my own scripts.",
-    "I dropped the channel.",
-    "Then I decided: this tool should exist. Not another niche finder — one that keeps going, from finding the niche all the way to having something to film.",
-    "That’s YTNiches.",
-  ],
-  signature: "— Mac, founder",
-};
-
 export const PRICING_TEASER = {
   headline: BETA_MODE ? "Free during beta" : "Simple plans",
   body: `${TRIAL_PITCH}. No credit card.`,

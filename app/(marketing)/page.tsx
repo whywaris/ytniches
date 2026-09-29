@@ -3,7 +3,6 @@ import { TIER_INFO, TIERS } from "@/lib/billing/plans";
 import { SEO } from "@/components/features/landing/content";
 import { FaqSection, faqJsonLd } from "@/components/features/landing/faq";
 import { FinalCta } from "@/components/features/landing/final-cta";
-import { FounderSection } from "@/components/features/landing/founder-section";
 import { Hero } from "@/components/features/landing/hero";
 import { HowItWorks } from "@/components/features/landing/how-it-works";
 import { PricingTeaser } from "@/components/features/landing/pricing-teaser";
@@ -69,7 +68,6 @@ export default function LandingPage() {
       <Hero />
       <WhatItDoes />
       <HowItWorks />
-      <FounderSection />
       <PricingTeaser />
       <FaqSection />
       <FinalCta />

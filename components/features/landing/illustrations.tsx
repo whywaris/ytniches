@@ -285,26 +285,3 @@ export function CalendarStepArt() {
     </Art>
   );
 }
-
-// Founder section placeholder until a real photo exists: concentric
-// "signal" arcs in a glass frame.
-export function FounderArt({ className }: { className?: string }) {
-  return (
-    <Art viewBox="0 0 320 400" className={className}>
-      <Glow id="founder-glow" cx={160} cy={220} r={170} />
-      <rect x={20} y={20} width={280} height={360} rx={24} {...glassTile} />
-      {[120, 90, 60].map((r) => (
-        <circle
-          key={r}
-          cx={160}
-          cy={220}
-          r={r}
-          fill="none"
-          stroke="var(--glass-highlight)"
-          strokeWidth={1.5}
-        />
-      ))}
-      <circle cx={160} cy={220} r={12} fill="var(--accent)" />
-    </Art>
-  );
-}
