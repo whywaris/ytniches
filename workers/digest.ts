@@ -8,7 +8,9 @@ import { sendWeeklyDigestEmail, type WeeklyDigestData } from "@/lib/email/notifi
 import { createServiceClient } from "@/lib/supabase/service";
 import { inngest } from "@/lib/inngest/client";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+// Read per call, not at import: a module-level copy freezes whatever the env
+// held when the module first loaded (in tests, another file's stub).
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RISING_NICHES_IN_DIGEST = 3;
 
@@ -127,7 +129,7 @@ export async function buildDigestData(
     .map((item) => ({
       title: item.videoTitle,
       channelName: item.channelName,
-      url: `${SITE_URL}/prompts?channelId=${item.channelId}&videoId=${item.videoId}`,
+      url: `${siteUrl()}/prompts?channelId=${item.channelId}&videoId=${item.videoId}`,
       viewCount: item.viewCount,
     }));
 
@@ -144,7 +146,7 @@ export async function buildDigestData(
   const newVideos = (newVideoRows ?? []).slice(0, DIGEST_ITEM_LIMIT).map((video) => ({
     title: video.title,
     channelName: channelNameById.get(video.channel_id) ?? "Unknown channel",
-    url: `${SITE_URL}/tracking/${video.channel_id}`,
+    url: `${siteUrl()}/tracking/${video.channel_id}`,
   }));
 
   const risingNiches = cadence === "weekly" ? await loadRisingNiches() : [];
@@ -175,7 +177,7 @@ async function loadRisingNiches(): Promise<NonNullable<WeeklyDigestData["risingN
   if (error) throw new Error(`loadRisingNiches failed: ${error.message}`);
   return data.map((row) => ({
     name: row.niches.name,
-    url: `${SITE_URL}/niches/${row.niches.slug}`,
+    url: `${siteUrl()}/niches/${row.niches.slug}`,
     score: row.opportunity_score,
     trend: row.trend ?? 0,
   }));
