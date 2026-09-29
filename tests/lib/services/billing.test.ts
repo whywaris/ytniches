@@ -40,7 +40,10 @@ let affectedUsers: string[] | null = null;
 // D-081: off by default so these tests cover the paid path; beta tests
 // switch it on.
 const beta = vi.hoisted(() => ({ BETA_MODE: false, BETA_BANNER: "beta" }));
-vi.mock("@/lib/billing/beta", () => beta);
+// Every real export, with BETA_MODE switchable per test (same object).
+vi.mock("@/lib/billing/beta", async (importOriginal) =>
+  Object.assign(beta, { ...(await importOriginal<object>()), BETA_MODE: beta.BETA_MODE }),
+);
 
 vi.mock("@/lib/billing/effective-plan", () => ({
   getEffectivePlans: async (ids: string[]) =>

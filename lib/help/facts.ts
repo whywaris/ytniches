@@ -7,7 +7,7 @@ import {
   PENDING_EMAIL_MINUTES,
   RECOVERY_MINUTES,
 } from "@/lib/auth/forms";
-import { BETA_NOTICE_DAYS } from "@/lib/billing/beta";
+import { BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
 import { LEGAL } from "@/lib/legal/policy";
@@ -70,6 +70,7 @@ export const FACTS: Record<string, string | number> = {
 
   "trial.pitch": TRIAL_PITCH,
   "beta.noticeDays": BETA_NOTICE_DAYS,
+  "beta.price": dollars(BETA_PRICE),
 
   // D-083 email + password sign-in.
   "auth.passwordMinLength": PASSWORD_MIN_LENGTH,

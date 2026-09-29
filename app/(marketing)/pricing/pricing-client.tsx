@@ -5,7 +5,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import type { BillingFrequency } from "@/lib/billing";
-import { BETA_MODE } from "@/lib/billing/beta";
 import { TierCards } from "@/components/features/billing/tier-cards";
 
 // Monetization.md §5.4: "Start free trial" -> /signup. The trial itself
@@ -13,7 +12,8 @@ import { TierCards } from "@/components/features/billing/tier-cards";
 // onboarding completion (lib/services/onboarding.ts's completeOnboarding/
 // skipOnboarding), not at checkout -- picking a tier here is just
 // pre-selecting intent for signup, not an actual Creem checkout, so this
-// page needs no Server Action of its own.
+// page needs no Server Action of its own. Only shown once BETA_MODE is off;
+// during the beta /pricing shows components/features/billing/beta-pricing.
 function PricingClient() {
   const router = useRouter();
   const [billingFrequency, setBillingFrequency] = React.useState<BillingFrequency>("monthly");
@@ -22,7 +22,7 @@ function PricingClient() {
     <TierCards
       billingFrequency={billingFrequency}
       onBillingFrequencyChange={setBillingFrequency}
-      ctaLabel={BETA_MODE ? "Start free" : "Start free trial"}
+      ctaLabel="Start free trial"
       onSelectTier={() => router.push("/signup")}
     />
   );

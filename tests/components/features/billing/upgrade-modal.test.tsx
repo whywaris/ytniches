@@ -27,7 +27,10 @@ const beta = vi.hoisted(() => ({
   BETA_MODE: false,
   BETA_BANNER: "Free during beta — paid plans coming soon",
 }));
-vi.mock("@/lib/billing/beta", () => beta);
+// Every real export, with BETA_MODE switchable per test (same object).
+vi.mock("@/lib/billing/beta", async (importOriginal) =>
+  Object.assign(beta, { ...(await importOriginal<object>()), BETA_MODE: beta.BETA_MODE }),
+);
 
 const { UpgradeModal } = await import("@/components/features/billing/upgrade-modal");
 
@@ -45,15 +48,18 @@ beforeEach(() => {
 });
 
 describe("UpgradeModal", () => {
-  it("during the beta shows the plans with the banner and no way to check out (D-081)", async () => {
+  it("during the beta shows the Beta plan as yours and the paid plans with no way to check out (D-081)", async () => {
     beta.BETA_MODE = true;
     const { baseElement } = renderModal();
 
-    expect(screen.getByText("Free during beta — paid plans coming soon")).toBeInTheDocument();
-    const buttons = screen.getAllByRole("button", { name: "Coming soon" });
-    expect(buttons).toHaveLength(3);
-    for (const button of buttons) expect(button).toBeDisabled();
-    await userEvent.setup().click(buttons[0]!);
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+    expect(screen.getByText("Your plan")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Plans after beta" })).toBeInTheDocument();
+    expect(screen.getAllByText("Coming soon")).toHaveLength(3);
+    // Only the monthly/annual toggle is a button -- no plan can be bought.
+    expect(screen.getAllByRole("button").map((button) => button.textContent?.trim())).not.toContain(
+      "Continue",
+    );
     expect(createCheckoutAction).not.toHaveBeenCalled();
     expect(await axe(baseElement)).toHaveNoViolations();
   });

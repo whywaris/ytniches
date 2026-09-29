@@ -47,32 +47,35 @@ function BillingFrequencyToggle({
   );
 }
 
-export interface TierCardsProps {
+interface TierCardsBaseProps {
   billingFrequency: BillingFrequency;
   onBillingFrequencyChange: (value: BillingFrequency) => void;
-  ctaLabel: string;
-  onSelectTier: (tier: Tier) => void;
   selectedTier?: Tier;
-  loadingTier?: Tier | null;
-  /** D-081: plans shown for reference only (no checkout during the beta). */
-  ctaDisabled?: boolean;
   className?: string;
 }
+
+interface TierCardsCtaProps {
+  comingSoon?: false;
+  ctaLabel: string;
+  onSelectTier: (tier: Tier) => void;
+  loadingTier?: Tier | null;
+}
+
+/** D-081: "Plans after beta" -- real prices, muted, no buttons. */
+interface TierCardsComingSoonProps {
+  comingSoon: true;
+}
+
+export type TierCardsProps = TierCardsBaseProps & (TierCardsCtaProps | TierCardsComingSoonProps);
 
 // UI-UX-Flow.md §8.1.3 / Monetization.md §5.4: 3 tiers side-by-side,
 // recommended (Pro) highlighted, monthly/annual toggle. Shared between
 // /pricing (public) and the in-app upgrade modal -- only the CTA's
-// behavior differs between the two call sites.
-function TierCards({
-  billingFrequency,
-  onBillingFrequencyChange,
-  ctaLabel,
-  onSelectTier,
-  selectedTier,
-  loadingTier,
-  ctaDisabled = false,
-  className,
-}: TierCardsProps) {
+// behavior differs between the two call sites. During the beta both show
+// them as "coming soon" instead (D-081).
+function TierCards(props: TierCardsProps) {
+  const { billingFrequency, onBillingFrequencyChange, selectedTier, className } = props;
+  const comingSoon = props.comingSoon === true;
   return (
     <div className={cn("flex flex-col gap-6", className)}>
       <div className="flex justify-center">
@@ -84,7 +87,7 @@ function TierCards({
           const info = TIER_INFO[tier];
           const price =
             billingFrequency === "monthly" ? info.monthlyPrice : Math.round(info.yearlyPrice / 12);
-          const recommended = tier === RECOMMENDED_TIER;
+          const recommended = !comingSoon && tier === RECOMMENDED_TIER;
 
           return (
             <Card
@@ -98,9 +101,19 @@ function TierCards({
                   Recommended
                 </Tag>
               ) : null}
+              {comingSoon ? (
+                <Tag tone="neutral" className="w-fit">
+                  Coming soon
+                </Tag>
+              ) : null}
               <div>
                 <h3 className="text-h4 text-text-primary">{info.label}</h3>
-                <p className="text-h3 text-text-primary">
+                <p
+                  className={cn(
+                    "text-h3",
+                    comingSoon ? "text-text-secondary" : "text-text-primary",
+                  )}
+                >
                   ${price}
                   <span className="text-body-sm font-normal text-text-secondary">/mo</span>
                 </p>
@@ -116,20 +129,27 @@ function TierCards({
                     key={feature}
                     className="flex items-start gap-2 text-body-sm text-text-secondary"
                   >
-                    <Check className="mt-0.5 size-4 shrink-0 text-accent-text" aria-hidden="true" />
+                    <Check
+                      className={cn(
+                        "mt-0.5 size-4 shrink-0",
+                        comingSoon ? "text-text-secondary" : "text-accent-text",
+                      )}
+                      aria-hidden="true"
+                    />
                     {feature}
                   </li>
                 ))}
               </ul>
-              <Button
-                fullWidth
-                variant={recommended ? "primary" : "secondary"}
-                loading={loadingTier === tier}
-                disabled={ctaDisabled}
-                onClick={() => onSelectTier(tier)}
-              >
-                {ctaLabel}
-              </Button>
+              {props.comingSoon ? null : (
+                <Button
+                  fullWidth
+                  variant={recommended ? "primary" : "secondary"}
+                  loading={props.loadingTier === tier}
+                  onClick={() => props.onSelectTier(tier)}
+                >
+                  {props.ctaLabel}
+                </Button>
+              )}
             </Card>
           );
         })}

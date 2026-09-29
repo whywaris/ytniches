@@ -1,4 +1,4 @@
-import { BETA_MODE } from "@/lib/billing/beta";
+import { BETA_MODE, BETA_PRICE } from "@/lib/billing/beta";
 import type { Tier } from "@/lib/billing/products";
 
 // Monetization.md §2. The single source for per-plan numbers: prices
@@ -100,14 +100,30 @@ export const TRIAL = {
 // the beta (D-081) the trial doesn't expire and its credits refill monthly,
 // so the pitch says that instead.
 export const TRIAL_PITCH = BETA_MODE
-  ? `Every ${TIER_INFO[TRIAL.tier].label} feature free during beta, with ${TRIAL.credits} credits a month`
+  ? `$${BETA_PRICE} during beta: every ${TIER_INFO[TRIAL.tier].label} feature, with ${TRIAL.credits} credits every month`
   : `Try every ${TIER_INFO[TRIAL.tier].label} feature free for ${TRIAL.days} days`;
 
 export function trialSummary(): string {
   return BETA_MODE
-    ? `free during beta, ${TRIAL.credits} credits a month, no card`
+    ? `$${BETA_PRICE} during beta, ${TRIAL.credits} credits every month, no card`
     : `${TRIAL.days} days of ${TIER_INFO[TRIAL.tier].label}, no card`;
 }
+
+// D-081: what a beta account gets -- the trial (the trial tier's features
+// and limits, so its tracked-channel cap and sync cadence) at $0, with the
+// trial credits refilled every month. /pricing's Beta card and the in-app
+// plans list both render this; every number comes from the constants.
+export const BETA_PLAN = {
+  label: "Beta",
+  price: BETA_PRICE,
+  monthlyCredits: TRIAL.credits,
+  features: [
+    `${TRIAL.credits.toLocaleString("en-US")} credits every month`,
+    `Track up to ${TIER_INFO[TRIAL.tier].trackedChannels} channels`,
+    cadenceLabel(TRIAL.refreshCadenceHours),
+    ...TIER_INFO[TRIAL.tier].extras,
+  ],
+};
 
 // No subscription, or one that has lapsed.
 export const DEFAULT_REFRESH_CADENCE_HOURS = TIER_INFO.starter.refreshCadenceHours;

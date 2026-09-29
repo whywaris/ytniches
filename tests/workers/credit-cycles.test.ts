@@ -14,7 +14,10 @@ vi.mock("@/lib/services/billing", () => ({
 }));
 
 const beta = vi.hoisted(() => ({ BETA_MODE: true, BETA_BANNER: "beta" }));
-vi.mock("@/lib/billing/beta", () => beta);
+// Every real export, with BETA_MODE switchable per test (same object).
+vi.mock("@/lib/billing/beta", async (importOriginal) =>
+  Object.assign(beta, { ...(await importOriginal<object>()), BETA_MODE: beta.BETA_MODE }),
+);
 
 let rows: unknown[] = [];
 vi.mock("@/lib/supabase/service", () => {

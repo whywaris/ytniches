@@ -4,7 +4,7 @@
 
 ---
 
-> **Beta (D-081, 2026-09-28):** while `BETA_MODE` is on (`lib/billing/beta.ts`), there is no checkout. Every new account gets the trial (Pro features, trial limits) with no expiry, and its credits refill monthly. /pricing shows the plans below with a "Free during beta" banner. The rest of this document describes billing once it goes live.
+> **Beta (D-081, 2026-09-28):** while `BETA_MODE` is on (`lib/billing/beta.ts`), there is no checkout. Every new account gets the trial (Pro features, trial limits) with no expiry, and its credits refill monthly. /pricing shows one $0 Beta card, then the plans below under "Plans after beta" at their real prices, marked "Coming soon" and with no buttons (D-081). The rest of this document describes billing once it goes live.
 
 ## 1. Overview & Business Model
 

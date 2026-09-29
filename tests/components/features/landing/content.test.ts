@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BETA_NOTICE_DAYS } from "@/lib/billing/beta";
+import { BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
 import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
 import { LEGAL } from "@/lib/legal/policy";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
@@ -25,7 +25,9 @@ const BANNED = [
 ];
 
 // D-082: payment and Google reviewers read the page -- no money claims.
-const MONEY_CLAIMS = /\b(profit\w*|revenue|income|earn\w*|monetiz\w*|make money|rpm|cpm)\b|\$/i;
+// The one amount allowed is the beta price, $0 (D-081); paid prices live on /pricing.
+const MONEY_CLAIMS =
+  /\b(profit\w*|revenue|income|earn\w*|monetiz\w*|make money|rpm|cpm)\b|\$[1-9]/i;
 
 function allStrings(value: unknown): string[] {
   if (typeof value === "string") return [value];
@@ -57,6 +59,7 @@ describe("landing content", () => {
       [
         YOUTUBE_DATA_MAX_AGE_DAYS,
         BETA_NOTICE_DAYS,
+        BETA_PRICE,
         LEGAL.dataRequestDays,
         TRIAL.credits,
         TRIAL.days,

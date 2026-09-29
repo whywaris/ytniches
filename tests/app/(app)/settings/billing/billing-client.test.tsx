@@ -23,7 +23,10 @@ const beta = vi.hoisted(() => ({
   BETA_MODE: false,
   BETA_BANNER: "Free during beta — paid plans coming soon",
 }));
-vi.mock("@/lib/billing/beta", () => beta);
+// Every real export, with BETA_MODE switchable per test (same object).
+vi.mock("@/lib/billing/beta", async (importOriginal) =>
+  Object.assign(beta, { ...(await importOriginal<object>()), BETA_MODE: beta.BETA_MODE }),
+);
 
 const { BillingClient } = await import("@/app/(app)/settings/billing/billing-client");
 
@@ -86,7 +89,10 @@ describe("BillingClient", () => {
 
     it("shows the beta trial, when credits next refill, the banner and no Upgrade", () => {
       renderClient(TRIALING, 42);
-      expect(screen.getByText("Free during beta")).toBeInTheDocument();
+      expect(screen.getByText("Beta")).toBeInTheDocument();
+      expect(
+        screen.getByText("$0/mo · Free during beta · 50 credits every month"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Credits refill")).toBeInTheDocument();
       expect(screen.queryByText("Trial ends")).not.toBeInTheDocument();
       expect(screen.getByRole("status")).toHaveTextContent(

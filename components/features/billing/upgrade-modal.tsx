@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation";
 import { createCheckoutAction } from "@/app/(app)/settings/billing/actions";
 import type { BillingFrequency, Tier } from "@/lib/billing";
 import { BETA_MODE } from "@/lib/billing/beta";
-import { BetaBanner } from "@/components/features/billing/beta-banner";
+import { BetaPricing } from "@/components/features/billing/beta-pricing";
 import { capture } from "@/lib/analytics/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
+import { Tag } from "@/components/ui/tag";
 import { TierCards } from "@/components/features/billing/tier-cards";
 
 export interface UpgradeModalProps {
@@ -57,16 +58,25 @@ function UpgradeModal({ open, onOpenChange, reason }: UpgradeModalProps) {
             {reason}
           </p>
         ) : null}
-        {/* D-081: no checkout during the beta; plans are shown for reference. */}
-        {BETA_MODE ? <BetaBanner /> : null}
-        <TierCards
-          billingFrequency={billingFrequency}
-          onBillingFrequencyChange={setBillingFrequency}
-          ctaLabel={BETA_MODE ? "Coming soon" : "Continue"}
-          ctaDisabled={BETA_MODE}
-          onSelectTier={(tier) => void handleSelectTier(tier)}
-          loadingTier={loadingTier}
-        />
+        {/* D-081: no checkout during the beta. The user is on the Beta plan;
+            the paid plans show as "Plans after beta", same as /pricing. */}
+        {BETA_MODE ? (
+          <BetaPricing
+            betaAction={
+              <Tag tone="success" className="w-fit">
+                Your plan
+              </Tag>
+            }
+          />
+        ) : (
+          <TierCards
+            billingFrequency={billingFrequency}
+            onBillingFrequencyChange={setBillingFrequency}
+            ctaLabel="Continue"
+            onSelectTier={(tier) => void handleSelectTier(tier)}
+            loadingTier={loadingTier}
+          />
+        )}
       </div>
     </Modal>
   );

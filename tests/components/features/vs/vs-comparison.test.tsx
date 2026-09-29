@@ -86,7 +86,7 @@ describe.each(COMPETITOR_PAGES)("/vs/$id", (page) => {
     expect(trial!.ours.text).toContain(trialSummary());
     expect(trialSummary()).toBe(
       BETA_MODE
-        ? `free during beta, ${TRIAL.credits} credits a month, no card`
+        ? `$0 during beta, ${TRIAL.credits} credits every month, no card`
         : `${TRIAL.days} days of Pro, no card`,
     );
   });

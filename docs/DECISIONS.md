@@ -997,8 +997,8 @@ Decisions that still need to close before their dependent docs / features can be
   - **Trial:** every new account gets the trial (Pro features, trial limits) with **no expiry**; `computeAccountState` never returns `expired_trial`.
   - **Credits:** trial credits (`TRIAL.credits`) refill monthly from the trial start. The credit-cycles cron closes each month and allocates, keyed per month so it never double-allocates.
   - **No checkout anywhere:**
-    - /pricing keeps plans and prices with the banner "Free during beta — paid plans coming soon"; plan buttons say "Start free" and go to signup.
-    - The in-app upgrade modal shows the plans with the banner and disabled "Coming soon" buttons; Billing shows the banner and the next refill date instead of Upgrade and "Trial ends".
+    - /pricing leads with one **Beta** card (`BETA_PLAN`: `BETA_PRICE` $0, `TRIAL.credits` every month, the trial tier's features, "Start free" to signup). Below it, **"Plans after beta"** lists Starter, Pro and Team at their real prices, muted, tagged "Coming soon", with no buttons, plus `BETA_NOTICE_LINE`. Real prices stay public because the payment-provider review requires them. The JSON-LD offers only the Beta plan at price 0. With `BETA_MODE` off the page returns to the normal plans (`PricingContent betaMode`, tested in both states).
+    - The in-app upgrade modal shows the same layout, with "Your plan" in place of the CTA. Billing shows "Beta · $0/mo · Free during beta · N credits every month", the banner and the next refill date instead of Upgrade and "Trial ends".
     - `createCheckout` refuses with `beta`, whatever the UI does.
   - **Copy:** the trial pitch (`TRIAL_PITCH`, `trialSummary`) says "free during beta"; so do the landing page, FAQ and JSON-LD, and the help center (Free during beta, Upgrading, Understanding credits).
 - **When billing goes live (not built yet):**

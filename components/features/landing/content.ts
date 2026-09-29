@@ -2,7 +2,7 @@
 // never typed; no income, revenue or "profitable" claims anywhere
 // (tests/components/features/landing/content.test.ts checks both).
 
-import { BETA_MODE, BETA_NOTICE_DAYS } from "@/lib/billing/beta";
+import { BETA_MODE, BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
 import { TIER_INFO, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { LEGAL } from "@/lib/legal/policy";
 import { SUPPORT_EMAIL } from "@/lib/site";
@@ -124,7 +124,7 @@ export const FAQ: FaqItem[] = [
   {
     question: "How much does it cost?",
     answer: BETA_MODE
-      ? `Nothing while we're in beta. You get every ${TIER_INFO[TRIAL.tier].label} feature with ${TRIAL.credits} credits a month, no credit card. We'll email you ${BETA_NOTICE_DAYS} days before paid plans start.`
+      ? `$${BETA_PRICE} while we're in beta. You get every ${TIER_INFO[TRIAL.tier].label} feature with ${TRIAL.credits} credits every month, no credit card. We'll email you ${BETA_NOTICE_DAYS} days before any paid plan starts.`
       : `${TRIAL_PITCH}. No credit card.`,
     link: { label: "See plans and pricing", href: "/pricing" },
   },

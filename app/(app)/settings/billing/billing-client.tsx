@@ -14,7 +14,7 @@ import { Tag } from "@/components/ui/tag";
 import { useToast } from "@/components/ui/toast-provider";
 import { BETA_MODE } from "@/lib/billing/beta";
 import { isAnnualPeriod, nextMonthlyAnniversary } from "@/lib/billing/cycles";
-import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
+import { BETA_PLAN, TIER_INFO, TRIAL } from "@/lib/billing/plans";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { BetaBanner } from "@/components/features/billing/beta-banner";
 import { UpgradeModal } from "@/components/features/billing/upgrade-modal";
@@ -117,11 +117,18 @@ function BillingClient({ subscription, creditsBalance }: BillingClientProps) {
         {subscription ? (
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-h3 text-text-primary">{TIER_INFO[subscription.tier].label}</p>
+              {/* D-081: a beta account's trial is the Beta plan ($0). */}
+              <p className="text-h3 text-text-primary">
+                {BETA_MODE && subscription.accountState === "trialing"
+                  ? BETA_PLAN.label
+                  : TIER_INFO[subscription.tier].label}
+              </p>
               {subscription.accountState === "trialing" ||
               subscription.accountState === "expired_trial" ? (
                 <p className="text-body-sm text-text-secondary">
-                  {BETA_MODE ? "Free during beta" : `Free ${TRIAL.days}-day trial`}
+                  {BETA_MODE
+                    ? `$${BETA_PLAN.price}/mo · Free during beta · ${BETA_PLAN.monthlyCredits} credits every month`
+                    : `Free ${TRIAL.days}-day trial`}
                 </p>
               ) : (
                 <p className="text-body-sm text-text-secondary">
