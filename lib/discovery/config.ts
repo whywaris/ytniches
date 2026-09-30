@@ -3,6 +3,7 @@
 // these as parameters instead of hard-coding them.
 
 import { OUTLIER_THRESHOLD_MULTIPLIER } from "@/lib/outliers/scoring";
+import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -143,11 +144,11 @@ export function isValidNicheSlug(slug: string): boolean {
   );
 }
 
-// --- Retention (D-073) -----------------------------------------------------
-// The 30-day window itself is main's YOUTUBE_DATA_MAX_AGE_DAYS
-// (lib/youtube/retention.ts); this is only how long daily snapshots stay
-// daily before the purge rolls them up to weekly.
-export const SNAPSHOT_DAILY_RETENTION_DAYS = 90;
+// --- Retention (D-073, D-084) ----------------------------------------------
+// Niche snapshots are statistics derived from YouTube API Data, so they
+// follow the same 30-day limit (Developer Policies III.E.4) until the
+// derived-metrics amendment is accepted. The purge deletes older ones.
+export const NICHE_SNAPSHOT_DAYS = YOUTUBE_DATA_MAX_AGE_DAYS;
 
 // D-077: per-channel total-views readings (channel_view_snapshots). Kept
 // this many days back from today (so today + 30 dated rows), inside the

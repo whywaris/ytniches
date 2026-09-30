@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Download, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 import { thumbnailOptions, type ThumbnailOption } from "@/lib/tools/calculators";
 import { parseVideoInput } from "@/lib/youtube/urls";
@@ -10,25 +10,10 @@ import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import { ResultCta, trackToolUsed } from "@/components/features/tools/tool-kit";
 
-// Straight from YouTube's fixed image URLs: no API call, nothing on our
-// server (D-055).
-async function download(option: ThumbnailOption, videoId: string) {
-  try {
-    const response = await fetch(option.url);
-    if (!response.ok) throw new Error(String(response.status));
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${videoId}-${option.key}.jpg`;
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch {
-    // Fall back to opening the image when the browser blocks the fetch.
-    window.open(option.url, "_blank", "noopener,noreferrer");
-  }
-}
-
-function ThumbnailCard({ option, videoId }: { option: ThumbnailOption; videoId: string }) {
+// D-084: a viewer, not a downloader -- YouTube's Developer Policies don't
+// allow enabling downloads of YouTube content. Images load straight from
+// YouTube's fixed image URLs: no API call, nothing on our server (D-055).
+function ThumbnailCard({ option }: { option: ThumbnailOption }) {
   // A missing maxres/sd image comes back as YouTube's 120×90 placeholder.
   const [missing, setMissing] = React.useState(false);
   return (
@@ -51,24 +36,18 @@ function ThumbnailCard({ option, videoId }: { option: ThumbnailOption; videoId: 
       {missing ? (
         <p className="text-caption text-text-secondary">Not available for this video.</p>
       ) : (
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => void download(option, videoId)}>
-            <Download />
-            Download
-          </Button>
-          <Button asChild size="sm" variant="secondary">
-            <a href={option.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink />
-              Open<span className="sr-only"> {option.label} (new tab)</span>
-            </a>
-          </Button>
-        </div>
+        <Button asChild size="sm" variant="secondary" className="self-start">
+          <a href={option.url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink />
+            View full size<span className="sr-only"> {option.label} (new tab)</span>
+          </a>
+        </Button>
       )}
     </li>
   );
 }
 
-export function ThumbnailDownloadTool() {
+export function ThumbnailViewerTool() {
   const [url, setUrl] = React.useState("");
   const [videoId, setVideoId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -102,7 +81,7 @@ export function ThumbnailDownloadTool() {
         <div className="flex flex-col gap-4">
           <ul className="grid gap-3 sm:grid-cols-2">
             {thumbnailOptions(videoId).map((option) => (
-              <ThumbnailCard key={option.key} option={option} videoId={videoId} />
+              <ThumbnailCard key={option.key} option={option} />
             ))}
           </ul>
           <ResultCta slug="youtube-thumbnail-download" />

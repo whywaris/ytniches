@@ -7,7 +7,7 @@ import { INVITE_EXPIRY_DAYS } from "@/lib/help/facts";
 import { EMBEDDING_DIMENSIONS } from "@/lib/ai/client";
 import {
   RESERVED_NICHE_SLUGS,
-  SNAPSHOT_DAILY_RETENTION_DAYS,
+  NICHE_SNAPSHOT_DAYS,
   TIER_INTERVAL_DAYS,
 } from "@/lib/discovery/config";
 
@@ -38,10 +38,10 @@ describe("TS constants mirror the SQL", () => {
     }
   });
 
-  it("SNAPSHOT_DAILY_RETENTION_DAYS matches the purge default", () => {
-    const sql = migration("20260928100006_extend_youtube_purge_for_discovery.sql");
+  it("NICHE_SNAPSHOT_DAYS matches the purge default", () => {
+    const sql = migration("20260930100001_niche_snapshots_30_day_cap.sql");
     const days = /p_snapshot_days integer default (\d+)/.exec(sql);
-    expect(Number(days?.[1])).toBe(SNAPSHOT_DAILY_RETENTION_DAYS);
+    expect(Number(days?.[1])).toBe(NICHE_SNAPSHOT_DAYS);
   });
 
   it("the purge never deletes a channel a user row points at (D-073)", () => {

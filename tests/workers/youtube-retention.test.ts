@@ -28,7 +28,7 @@ describe("purgeStaleYouTubeData", () => {
     expect(await purgeStaleYouTubeData()).toEqual({ events_deleted: 2, videos_deleted: 1 });
     expect(rpc).toHaveBeenCalledWith("purge_stale_youtube_data", {
       p_max_age_days: 30,
-      p_snapshot_days: 90,
+      p_snapshot_days: 30,
       p_view_snapshot_days: 30,
     });
   });
@@ -78,7 +78,7 @@ describe("purge failure alerts (D-073)", () => {
       extra: {
         details: expect.stringContaining("prompts"),
         maxAgeDays: 30,
-        snapshotDays: 90,
+        snapshotDays: 30,
       },
       fingerprint: ["youtube-retention", "23503"],
     });

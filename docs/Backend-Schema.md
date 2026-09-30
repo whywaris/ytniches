@@ -553,7 +553,7 @@ Background job (nightly) enforces:
 | `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                                                                                |
 | Failed webhook events               | 30 days                 | Delete after review                                                                                                                                    |
 | `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                                                                             |
-| `niche_snapshots`                   | 90 days daily           | Roll up to one row per week                                                                                                                            |
+| `niche_snapshots`                   | 30 days (D-084)         | Delete; no weekly rows kept                                                                                                                            |
 
 **GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 

@@ -22,6 +22,7 @@ import { NicheFinderClient } from "@/app/(app)/niches/niche-finder-client";
 import { toSearchState } from "@/app/(app)/niches/search-state";
 import { ChannelsSection, NichesSection, OutliersSection } from "@/app/(app)/niches/feed-sections";
 import { FeedTabs } from "@/components/features/niche-finder/feed-tabs";
+import { EstimateNote } from "@/components/features/youtube/estimate-note";
 import { FreshnessLine } from "@/components/features/niche-finder/freshness-line";
 
 import type { Metadata } from "next";
@@ -57,6 +58,7 @@ export default async function NichesPage({
         updatedAt={freshness.updatedAt}
         newChannelsThisWeek={freshness.newChannelsThisWeek}
       />
+      <EstimateNote what="Scores, niche tags and channel insights" />
       <FeedTabs active={tab} hrefs={TAB_HREFS}>
         <TabBody tab={tab} ctx={ctx} params={params} autoSearch={explicitTab === "search"} />
       </FeedTabs>

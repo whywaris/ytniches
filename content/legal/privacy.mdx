@@ -3,16 +3,15 @@ title: Privacy Policy
 slug: privacy
 description: What data YTNiches collects, why, who we share it with, and your choices.
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-09-30
 ---
 
 This policy explains what personal data YTNiches collects, how we use it, and the choices you have. We keep it in plain language. If something isn't clear, email <SupportLink />.
 
 ## Who's responsible
 
-<Fact k="legal.entity" /> runs YTNiches and is responsible for your data (the "controller" under the
-GDPR and UK GDPR). Address: <NeedsInput>business address, or confirm none is published</NeedsInput>.
-Contact: <SupportLink />.
+YTNiches is run by <Fact k="legal.entity" />, based in <Fact k="legal.country" />, who is responsible
+for your data (the "controller" under the GDPR and UK GDPR). Contact: <SupportLink />.
 
 ## The short version
 
@@ -45,14 +44,19 @@ Contact: <SupportLink />.
 
 ## YouTube API Services
 
-YTNiches uses **YouTube API Services** to show data about YouTube channels and videos. By using YTNiches you agree to the [YouTube Terms of Service](https://www.youtube.com/t/terms), and Google's handling of that data is covered by the [Google Privacy Policy](http://www.google.com/policies/privacy).
+YTNiches uses **YouTube API Services** to show data about YouTube channels and videos. By using YTNiches you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms). Google's handling of that data is covered by the [Google Privacy Policy](https://policies.google.com/privacy).
 
-- **What we access:** public channel and video data. That means names, descriptions, thumbnails, tags, publish dates, and view, subscriber and video counts. We fetch it with our own API key, not through your YouTube account.
-- **What we store:** the channels and videos you search for or track, and the events we detect for them (new videos, view milestones, outliers).
+- **What we access:** public channel and video data. That means names, descriptions, thumbnails, tags, publish dates, and view, subscriber and video counts. We fetch it with our own API key, not through your YouTube account. We never ask for access to your YouTube account, and signing in with Google shares only your name, email address and profile picture.
+- **What we store:**
+  - public data for the channels and videos you search for or track, and the events we detect for them (new videos, view milestones, outliers);
+  - public data for channels our nightly discovery finds by searching YouTube for public niche keywords;
+  - figures we calculate from that data: a daily total-views reading per channel, kept for <Fact k="youtube.viewReadingDays" unit="day" />, and daily niche totals (a niche's score, channel count and median views), kept for <Fact k="youtube.nicheSnapshotDays" unit="day" />. Niche totals contain no channel names, video titles or other channel details.
+- **Our own figures:** outlier scores, opportunity scores, niche tags and revenue estimates are calculated by YTNiches. They are our estimates, not data from YouTube, and we label them that way in the app.
 - **How we use it:** to run Niche Finder, Competitor Tracking, Outliers and AI Prompts for you. When you generate prompts, a video's title, description and tags are sent to our AI provider (see below).
 - **Sharing:** we don't sell YouTube data or share it with anyone beyond the service providers listed below.
-- **How long:** we refresh or delete stored YouTube data within <Fact k="youtube.maxAgeDays" unit="day" />. Channels you track are refreshed on a schedule. Everything else is deleted, or emptied if one of your saved prompts still points at it.
-- **Revoking access:** you can remove YTNiches' access to your Google account at any time from [Google's security settings](https://security.google.com/settings/security/permissions). When you do, you'll be signed out and can ask us to delete your data.
+- **How we refresh and delete it:** stored YouTube data is refreshed or deleted within <Fact k="youtube.maxAgeDays" unit="day" />. Channels you track are refreshed on your plan's schedule. Channels found by discovery are refreshed every <Fact k="youtube.refreshDays" /> days, depending on how active they are. Every day, we delete anything that hasn't been refreshed within <Fact k="youtube.maxAgeDays" unit="day" />, or empty it if one of your saved prompts still points at it.
+- **Deleting your data:** email <SupportLink /> from your account email to delete your account and the data stored with it (tracked channels, prompts, notifications and settings). We complete deletion within <Fact k="legal.dataRequestDays" unit="day" />. Deleting data from YTNiches doesn't change anything stored by YouTube; to delete data on YouTube itself, use YouTube.
+- **Revoking access:** you can remove YTNiches' access to your Google account at any time from [Google's security settings](https://security.google.com/settings/security/permissions). When you do, you'll be signed out and can ask us to delete your data as described above.
 
 ## How we use your data, and why
 
@@ -75,7 +79,7 @@ AI Prompts and Thumbnail ideas are generated by **OpenAI**. For each request we 
 
 We use these providers to run YTNiches. Each processes data only to provide its service to us.
 
-- **[Google](http://www.google.com/policies/privacy):** sign-in, and YouTube API Services.
+- **[Google](https://policies.google.com/privacy):** sign-in, and YouTube API Services.
 - **[Vercel](https://vercel.com/legal/privacy-policy):** hosting the website and app.
 - **[Supabase](https://supabase.com/privacy):** our database, sign-in (including hashed passwords) and sessions.
 - **[Cloudflare](https://www.cloudflare.com/privacypolicy/):** bot protection (Turnstile) on the email sign-in forms.

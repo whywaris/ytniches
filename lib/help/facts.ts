@@ -20,6 +20,11 @@ import {
   RECENCY_DECAY_DAYS,
   TRENDING_WINDOW_DAYS,
 } from "@/lib/outliers/scoring";
+import {
+  CHANNEL_VIEW_SNAPSHOT_DAYS,
+  NICHE_SNAPSHOT_DAYS,
+  TIER_INTERVAL_DAYS,
+} from "@/lib/discovery/config";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 import {
@@ -110,10 +115,16 @@ export const FACTS: Record<string, string | number> = {
 
   "support.email": SUPPORT_EMAIL,
   "youtube.maxAgeDays": YOUTUBE_DATA_MAX_AGE_DAYS,
+  "youtube.viewReadingDays": CHANNEL_VIEW_SNAPSHOT_DAYS,
+  "youtube.nicheSnapshotDays": NICHE_SNAPSHOT_DAYS,
+  "youtube.refreshDays": new Intl.ListFormat("en-US", { type: "disjunction" }).format(
+    Object.values(TIER_INTERVAL_DAYS).map(String),
+  ),
 
   "legal.operator": LEGAL.operator,
   "legal.entity": LEGAL.entity,
   "legal.governingLaw": LEGAL.governingLaw,
+  "legal.country": LEGAL.country,
   "legal.minimumAge": LEGAL.minimumAge,
   "legal.dataRequestDays": LEGAL.dataRequestDays,
   "legal.liabilityCapMonths": LEGAL.liabilityCapMonths,

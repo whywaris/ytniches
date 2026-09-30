@@ -34,11 +34,7 @@ describe("content/legal", () => {
         (match) => `${page.slug}: ${match[1]}`,
       ),
     );
-    expect(open).toEqual([
-      "terms: business address, or confirm none is published",
-      "terms: city for the courts",
-      "privacy: business address, or confirm none is published",
-    ]);
+    expect(open).toEqual(["terms: city for the courts"]);
   });
 
   describe.each(pages)("content/legal/$slug", (page) => {
@@ -79,7 +75,11 @@ describe("content/legal", () => {
       /agree to be bound by the \[YouTube Terms of Service\]\(https:\/\/www\.youtube\.com\/t\/terms\)/,
     );
     expect(privacy).toContain("YouTube API Services");
-    expect(privacy).toContain("http://www.google.com/policies/privacy");
+    expect(privacy).toContain("https://policies.google.com/privacy");
+    expect(privacy).toContain("https://www.youtube.com/t/terms");
     expect(privacy).toContain("https://security.google.com/settings/security/permissions");
+    // III.E.4 (deletion) and III.E.4.h (own metrics labelled as not from YouTube).
+    expect(privacy).toMatch(/doesn't change anything stored by YouTube/);
+    expect(privacy).toMatch(/not data from YouTube/);
   });
 });

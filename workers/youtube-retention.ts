@@ -2,14 +2,14 @@ import { captureException } from "@sentry/nextjs";
 
 import { inngest } from "@/lib/inngest/client";
 import { createServiceClient } from "@/lib/supabase/service";
-import { CHANNEL_VIEW_SNAPSHOT_DAYS, SNAPSHOT_DAILY_RETENTION_DAYS } from "@/lib/discovery/config";
+import { CHANNEL_VIEW_SNAPSHOT_DAYS, NICHE_SNAPSHOT_DAYS } from "@/lib/discovery/config";
 import { YOUTUBE_DATA_MAX_AGE_DAYS, YOUTUBE_RETENTION_EVENT } from "@/lib/youtube/retention";
 
 // D-067b / YouTube Developer Policies III.E.4.d: daily purge of YouTube
 // data not refreshed within YOUTUBE_DATA_MAX_AGE_DAYS. The rules (what's
 // deleted vs emptied) live in the purge_stale_youtube_data SQL function.
 // D-073: the same job covers the Discovery Engine's tables (outliers_feed,
-// discovery columns, niche_snapshots rollup) -- there is no second purge.
+// discovery columns, niche_snapshots expiry) -- there is no second purge.
 
 const JOB = "youtube-retention-cron";
 const RULE = `YouTube Developer Policies III.E.4.d (${YOUTUBE_DATA_MAX_AGE_DAYS} days)`;
@@ -35,7 +35,7 @@ export class YouTubeRetentionError extends Error {
 export async function purgeStaleYouTubeData() {
   const { data, error } = await createServiceClient().rpc("purge_stale_youtube_data", {
     p_max_age_days: YOUTUBE_DATA_MAX_AGE_DAYS,
-    p_snapshot_days: SNAPSHOT_DAILY_RETENTION_DAYS,
+    p_snapshot_days: NICHE_SNAPSHOT_DAYS,
     p_view_snapshot_days: CHANNEL_VIEW_SNAPSHOT_DAYS,
   });
   if (error) {
@@ -56,7 +56,7 @@ export async function purgeStaleYouTubeData() {
         details: failure.details,
         hint: failure.hint,
         maxAgeDays: YOUTUBE_DATA_MAX_AGE_DAYS,
-        snapshotDays: SNAPSHOT_DAILY_RETENTION_DAYS,
+        snapshotDays: NICHE_SNAPSHOT_DAYS,
       },
       fingerprint: ["youtube-retention", pgCode ?? "none"],
     });

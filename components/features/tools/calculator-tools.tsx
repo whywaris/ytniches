@@ -10,6 +10,7 @@ import {
   watchTime,
   WATCH_HOURS_GOAL,
 } from "@/lib/tools/calculators";
+import { FINANCIAL_ESTIMATE_DISCLAIMER } from "@/lib/youtube/estimates";
 import { parseStartTime } from "@/lib/youtube/urls";
 import { NumberInput } from "@/components/ui/number-input";
 import { TextInput } from "@/components/ui/text-input";
@@ -139,6 +140,9 @@ export function RevenueTool() {
           helperText={rpmError ? undefined : "YouTube Studio → Analytics → Revenue."}
         />
       </div>
+      <p className="rounded-sm border border-border-subtle bg-bg-surface-1 px-3 py-2 text-body-sm font-medium text-text-primary">
+        {FINANCIAL_ESTIMATE_DISCLAIMER}
+      </p>
       {revenue !== null && (
         <div className="flex flex-col gap-4">
           <dl className="grid gap-3 sm:grid-cols-2">

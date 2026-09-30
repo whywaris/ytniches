@@ -20,8 +20,7 @@ const { OutlierCheckerTool } = await import("@/components/features/tools/outlier
 const { ThumbnailResizerTool } = await import("@/components/features/tools/thumbnail-resizer-tool");
 const { WatchTimeTool, RevenueTool } = await import("@/components/features/tools/calculator-tools");
 const { TimestampTool } = await import("@/components/features/tools/timestamp-tool");
-const { ThumbnailDownloadTool } =
-  await import("@/components/features/tools/thumbnail-download-tool");
+const { ThumbnailViewerTool } = await import("@/components/features/tools/thumbnail-viewer-tool");
 const { TagExtractorTool } = await import("@/components/features/tools/tag-extractor-tool");
 const { QrCodeTool } = await import("@/components/features/tools/qr-code-tool");
 const { ToolPage } = await import("@/components/features/tools/tool-page");
@@ -38,7 +37,7 @@ describe.each([
   ["WatchTimeTool", WatchTimeTool],
   ["RevenueTool", RevenueTool],
   ["TimestampTool", TimestampTool],
-  ["ThumbnailDownloadTool", ThumbnailDownloadTool],
+  ["ThumbnailViewerTool", ThumbnailViewerTool],
   ["TagExtractorTool", TagExtractorTool],
   ["QrCodeTool", QrCodeTool],
 ])("%s", (_name, Tool) => {

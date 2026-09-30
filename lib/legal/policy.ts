@@ -4,6 +4,8 @@ export const LEGAL = {
   operator: "Waris Jamil",
   entity: "Waris Jamil, a sole proprietor",
   governingLaw: "Pakistan",
+  // No street address is published (owner's decision, 2026-09-30).
+  country: "Pakistan",
   minimumAge: 16,
   // Export, correction and deletion requests are completed within this.
   dataRequestDays: 30,

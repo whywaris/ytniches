@@ -796,7 +796,7 @@ Decisions that still need to close before their dependent docs / features can be
     - The Outliers Grid ranges become 7/14/30 days.
     - **Effect on D-057:** an expired user's channels stop syncing, so their YouTube data stays viewable only until this purge empties it, 30 days after their last sync.
   - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2). **Done** (login and signup).
-  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a). **Done:** it's in the app shell, plus the six free tools that show YouTube data. **Open risk:** it's a text link. III.F.2.a says "displaying YouTube Brand Features", which may mean the official YouTube logo. If a reviewer asks for it, swap in the official asset under YouTube's branding guidelines. We have no logo files yet.
+  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a). **Done:** it's in the app shell, plus the six free tools that show YouTube data. **Superseded by D-084:** now the official "developed with YouTube" logo.
   - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner. **Done** (checked in the browser).
   - f. Legal pages: terms, privacy, refunds, cookies (D-058). **Done.** Numbers come from constants via `<Fact>`, and no payment provider is named. Every processor is named in the privacy policy. Business facts live in `lib/legal/policy.ts`: sole proprietor, Pakistan law, minimum age 16, liability cap of 12 months' fees, 30 days for data requests.
 - **Deferred:** in-app data export and account deletion buttons (`/settings/danger`, UI-UX-Flow.md §8.1.6). Until then, requests go by email and are done within 30 days.
@@ -1043,3 +1043,16 @@ Decisions that still need to close before their dependent docs / features can be
   - Code: `app/(auth)/*`, `app/auth/confirm`, `lib/auth/*`, `middleware.ts`, `lib/services/admin.ts`.
   - Database: migration `20260929100001`.
   - Docs: Security.md §2, Application-Flow §3, the privacy, cookie and terms pages, and the help article "Signing in".
+
+### D-084: YouTube API compliance for the audit
+
+- **Status:** Resolved (2026-09-30). Owner-approved; the product rename is still pending (the name contains "YT", which the Branding Guidelines forbid).
+- **Why:** the YouTube API audit. The Developer Policies (updated 2026-09-14) forbid creating derived metrics from API Data and aggregating it, and cap stored statistics at 30 days. The derived-metrics policy allows analytics clients to do both (up to 36 months of statistics and derived metrics) once they accept an amendment in the audit/quota form: Section 5, "Analytics & Reporting".
+- **Final call:**
+  - **Snapshots:** `niche_snapshots` are kept 30 days (`NICHE_SNAPSHOT_DAYS`), Mondays included (migration `20260930100001`). Raise to at most 36 months only after the amendment is accepted.
+  - **Labels:** our own figures (scores, niche tags, insights, outlier multiples) carry "YTNiches estimate, not YouTube data" (`EstimateNote`, `lib/youtube/estimates.ts`). The revenue calculator shows "Estimates only. Not provided, approved or endorsed by YouTube or Google."
+  - **Attribution:** the official, unaltered "developed with YouTube" logo (`public/brand/`) links to YouTube in the app shell, on free tools that show YouTube data, and in the marketing footer, away from our own logo. Replaces the "Data from YouTube" text (D-067d).
+  - **Free tools:** named "… for YouTube", never "YouTube …"; URLs unchanged. The thumbnail downloader became Thumbnail Viewer for YouTube (no download button).
+  - **Legal:** the Privacy Policy's YouTube section covers discovery, the figures we store and for how long, refresh and deletion, deletion requests, and the fact that our estimates aren't YouTube data. Google Privacy Policy link: https://policies.google.com/privacy. No street address is published; the country is (`LEGAL.country`).
+- **Open:** the product rename; the courts city in the Terms; whether `legal.dataRequestDays` (30) should drop to 7 to match III.E.4 for any future Authorized Data.
+- **Impacts:** `lib/youtube/estimates.ts`, `components/features/youtube/*`, `lib/tools/registry.ts`, `content/legal/*`, `lib/discovery/config.ts`, the purge migration, Backend-Schema.md §retention, Niche-Discovery-Engine.md.

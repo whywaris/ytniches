@@ -10,13 +10,18 @@ import {
   YAxis,
 } from "recharts";
 
+import { NICHE_SNAPSHOT_DAYS } from "@/lib/discovery/config";
 import type { NicheHistoryPoint } from "@/lib/services/niche-feed";
 
 // Recharts can't render in a Server Component (see view-trend-chart.tsx),
-// so the 90-day score line is its own client island.
+// so the score line is its own client island.
 export function ScoreTrendChart({ history }: { history: NicheHistoryPoint[] }) {
   return (
-    <div className="h-48 w-full" role="img" aria-label="Opportunity score over the last 90 days">
+    <div
+      className="h-48 w-full"
+      role="img"
+      aria-label={`Opportunity score over the last ${NICHE_SNAPSHOT_DAYS} days`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={history} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
           <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />

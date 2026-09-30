@@ -315,3 +315,11 @@
 html:has(.marketing) {
   scroll-behavior: smooth;
 }
+
+/* D-084: the "developed with YouTube" logo in the app follows the theme
+   (white text on dark, dark text on light). The marketing site is always
+   dark and renders only the white one (tone="dark"). */
+:root[data-theme="light"] .yt-logo-on-dark,
+:root:not([data-theme="light"]) .yt-logo-on-light {
+  display: none;
+}

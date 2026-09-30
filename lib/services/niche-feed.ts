@@ -6,6 +6,7 @@ import {
   CHANNEL_VIEW_SNAPSHOT_DAYS,
   DAY_MS,
   FEED_PAGE_SIZE,
+  NICHE_SNAPSHOT_DAYS,
   OUTLIER_FEED_MIN_MULTIPLE,
   TRUE_VIEWS_MIN_READING_AGE_DAYS,
 } from "@/lib/discovery/config";
@@ -743,7 +744,7 @@ export interface NicheDetail extends NicheFeedItem {
   topOutliers: GlobalOutlierItem[];
 }
 
-const HISTORY_DAYS = 90;
+const HISTORY_DAYS = NICHE_SNAPSHOT_DAYS;
 
 export async function getNicheBySlug(
   ctx: RequestContext,

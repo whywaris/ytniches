@@ -1,6 +1,7 @@
 import { FOOTER, withBlogLink } from "@/components/features/landing/content";
 import { SoonLink } from "@/components/features/landing/soon-link";
 import { Logo } from "@/components/features/brand/logo";
+import { YouTubeAttribution } from "@/components/features/youtube/youtube-attribution";
 
 // Landing-Page-Spec §15 / D-082: legal, contact, blog, tools, help and the
 // /vs/* pages (named from content/vs).
@@ -33,8 +34,10 @@ function Footer({ blogLive = false }: { blogLive?: boolean }) {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-(--glass-border) pt-8 text-body-sm text-text-secondary md:flex-row md:justify-between">
+        <div className="mt-12 flex flex-col gap-4 border-t border-(--glass-border) pt-8 text-body-sm text-text-secondary md:flex-row md:items-center md:justify-between">
           <p>{FOOTER.copyright}</p>
+          {/* Away from our logo (top-left), per YouTube's Branding Guidelines. */}
+          <YouTubeAttribution tone="dark" />
         </div>
       </div>
     </footer>

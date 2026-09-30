@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarPlus, Lock, Sparkles } from "lucide-react";
 
 import { getRequestContext } from "@/lib/context";
-import { isValidNicheSlug } from "@/lib/discovery/config";
+import { isValidNicheSlug, NICHE_SNAPSHOT_DAYS } from "@/lib/discovery/config";
 import { formatCount } from "@/lib/format";
 import { getNicheBySlug } from "@/lib/services/niche-feed";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { OutlierCard } from "@/components/features/outliers/outlier-card";
 import { ChannelGrid } from "@/app/(app)/niches/channel-grid";
 import { ScoreTrendChart } from "@/app/(app)/niches/[slug]/score-trend-chart";
 import { TrackNicheButton } from "@/app/(app)/niches/[slug]/track-niche-button";
+import { EstimateNote } from "@/components/features/youtube/estimate-note";
 
 import type { Metadata } from "next";
 
@@ -96,6 +97,7 @@ export default async function NicheDetailPage({ params }: { params: Promise<{ sl
               </Tag>
             ))}
           </div>
+          <EstimateNote what="This niche, its score and tags" className="mt-2" />
         </div>
         <div className="text-right">
           <p className="text-caption text-text-tertiary">Opportunity score</p>
@@ -138,7 +140,9 @@ export default async function NicheDetailPage({ params }: { params: Promise<{ sl
           <SignalBars signals={niche.signals} />
         </Card>
         <Card className="lg:col-span-2">
-          <h2 className="mb-3 text-h4 font-semibold text-text-primary">Last 90 days</h2>
+          <h2 className="mb-3 text-h4 font-semibold text-text-primary">
+            Last {NICHE_SNAPSHOT_DAYS} days
+          </h2>
           <ScoreTrendChart history={niche.history} />
         </Card>
       </div>

@@ -34,9 +34,9 @@ export const TOOLS: Tool[] = [
   {
     slug: "youtube-outlier-checker",
     youtubeData: true,
-    name: "YouTube Outlier Checker",
+    name: "Outlier Checker for YouTube",
     tagline: "Paste a video. See if it's beating its own channel's average.",
-    seoTitle: "YouTube Outlier Checker — Is This Video Beating Its Channel?",
+    seoTitle: "Outlier Checker for YouTube — Is a Video Beating Its Channel?",
     seoDescription:
       "Check if any YouTube video is an outlier: its views against the channel's last 10 uploads, the multiplier, and a clear verdict. Free, no signup.",
     howTo: [
@@ -76,9 +76,9 @@ export const TOOLS: Tool[] = [
   {
     slug: "youtube-subscribe-link-generator",
     youtubeData: true,
-    name: "YouTube Subscribe Link Generator",
+    name: "Subscribe Link Generator for YouTube",
     tagline: "A link that opens your channel with the subscribe prompt already up.",
-    seoTitle: "YouTube Subscribe Link Generator — Free, Works on Every Device",
+    seoTitle: "Subscribe Link Generator for YouTube — Free, Any Device",
     seoDescription:
       "Turn any channel URL or @handle into a subscribe link that opens the subscribe prompt. Free, instant, no signup.",
     howTo: [
@@ -113,9 +113,9 @@ export const TOOLS: Tool[] = [
   {
     slug: "rss-feed-generator",
     youtubeData: true,
-    name: "YouTube RSS Feed Generator",
+    name: "RSS Feed Generator for YouTube",
     tagline: "Get the RSS feed for any YouTube channel or playlist.",
-    seoTitle: "YouTube RSS Feed Generator — Free, Instant, No Login",
+    seoTitle: "RSS Feed Generator for YouTube — Free, Instant, No Login",
     seoDescription:
       "Convert any YouTube channel, playlist or @handle into an RSS feed link. Follow uploads in any RSS reader. Free, no account needed.",
     howTo: [
@@ -151,9 +151,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-embed-code-generator",
-    name: "YouTube Embed Code Generator",
+    name: "Embed Code Generator for YouTube",
     tagline: "Embed code with a start time, autoplay, controls and privacy mode.",
-    seoTitle: "YouTube Embed Code Generator — Free & Responsive",
+    seoTitle: "Embed Code Generator for YouTube — Free & Responsive",
     seoDescription:
       "Generate YouTube embed code with a start time, autoplay, hidden controls, responsive sizing and privacy-enhanced mode. Free, no signup.",
     howTo: [
@@ -187,9 +187,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "thumbnail-resizer",
-    name: "YouTube Thumbnail Resizer",
+    name: "Thumbnail Resizer for YouTube",
     tagline: "Resize any image to 1280×720, under 2MB. It never leaves your browser.",
-    seoTitle: "YouTube Thumbnail Resizer — 1280×720, Under 2MB, Free",
+    seoTitle: "Thumbnail Resizer for YouTube — 1280×720, Under 2MB",
     seoDescription:
       "Resize and crop any image to YouTube's 1280×720 thumbnail size, under the 2MB limit. Runs in your browser; nothing is uploaded.",
     howTo: [
@@ -231,9 +231,9 @@ export const TOOLS: Tool[] = [
   {
     slug: "youtube-channel-id-finder",
     youtubeData: true,
-    name: "YouTube Channel ID Finder",
+    name: "Channel ID Finder for YouTube",
     tagline: "Turn any @handle or channel link into its permanent channel ID.",
-    seoTitle: "YouTube Channel ID Finder — Get Any Channel's ID Free",
+    seoTitle: "Channel ID Finder for YouTube — Any Channel's ID, Free",
     seoDescription:
       "Find the channel ID (UC…) for any YouTube @handle or channel URL. Free, instant, no signup.",
     howTo: ["Paste an @handle or channel link.", "Press Find.", "Copy the channel ID."],
@@ -263,12 +263,16 @@ export const TOOLS: Tool[] = [
   {
     slug: "youtube-thumbnail-download",
     youtubeData: true,
-    name: "YouTube Thumbnail Downloader",
-    tagline: "Get any video's thumbnail in every size YouTube stores.",
-    seoTitle: "YouTube Thumbnail Downloader — Free HD Thumbnails",
+    name: "Thumbnail Viewer for YouTube",
+    tagline: "See any video's thumbnail in every size YouTube stores.",
+    seoTitle: "Thumbnail Viewer for YouTube — See Every Size, Free",
     seoDescription:
-      "Paste a video link and get its thumbnail in every size YouTube stores, up to 1280×720 HD. Free, instant, no signup.",
-    howTo: ["Paste a YouTube video link.", "Pick a size.", "Download it, or open it full size."],
+      "Paste a video link and see its thumbnail in every size YouTube stores, up to 1280×720 HD. Free, instant, no signup.",
+    howTo: [
+      "Paste a YouTube video link.",
+      "Compare the sizes side by side.",
+      "Open any size full screen.",
+    ],
     faq: [
       {
         question: "Why is there no HD version for some videos?",
@@ -294,9 +298,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "watch-time-calculator",
-    name: "YouTube Watch Time Calculator",
+    name: "Watch Time Calculator for YouTube",
     tagline: "Turn views and average view duration into watch hours.",
-    seoTitle: "YouTube Watch Time Calculator — Track Your 4,000 Hours",
+    seoTitle: "Watch Time Calculator for YouTube — Your 4,000 Hours",
     seoDescription:
       "Work out your watch hours from views and average view duration, and how close you are to the 4,000 hours YouTube's Partner Program asks for.",
     howTo: [
@@ -332,9 +336,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-revenue-calculator",
-    name: "YouTube Revenue Calculator",
+    name: "Revenue Estimate Calculator for YouTube",
     tagline: "Estimate your earnings from your views and your own RPM.",
-    seoTitle: "YouTube Revenue Calculator — Estimate Earnings From Your RPM",
+    seoTitle: "Revenue Estimate Calculator for YouTube — From Your RPM",
     seoDescription:
       "Estimate YouTube earnings from your views and your own RPM from YouTube Studio. No made-up niche averages. Free, no signup.",
     howTo: [
@@ -368,9 +372,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-timestamp-generator",
-    name: "YouTube Timestamp Generator",
+    name: "Timestamp Generator for YouTube",
     tagline: "Turn your notes into chapters YouTube will actually show.",
-    seoTitle: "YouTube Timestamp Generator — Chapters That Work",
+    seoTitle: "Timestamp Generator for YouTube — Chapters That Work",
     seoDescription:
       "Format video chapters for your YouTube description and check them against YouTube's rules: starts at 0:00, 3+ chapters, 10 seconds each. Free.",
     howTo: [
@@ -404,9 +408,9 @@ export const TOOLS: Tool[] = [
   {
     slug: "tag-extractor",
     youtubeData: true,
-    name: "YouTube Tag Extractor",
+    name: "Tag Extractor for YouTube",
     tagline: "See the tags on any public YouTube video.",
-    seoTitle: "YouTube Tag Extractor — See Any Video's Tags Free",
+    seoTitle: "Tag Extractor for YouTube — See Any Video's Tags Free",
     seoDescription:
       "Paste a video link and see the tags the uploader added. Copy them in one click. Free, no signup.",
     howTo: ["Paste a YouTube video link.", "Press Extract.", "Copy the tags you want."],
@@ -435,9 +439,9 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "youtube-qr-code-generator",
-    name: "YouTube QR Code Generator",
+    name: "QR Code Generator for YouTube",
     tagline: "A QR code for any YouTube video, Short, channel or playlist.",
-    seoTitle: "YouTube QR Code Generator — Free PNG & SVG",
+    seoTitle: "QR Code Generator for YouTube — Free PNG & SVG",
     seoDescription:
       "Make a QR code for any YouTube video, channel or playlist link. Download it as PNG or SVG. Free, no signup, nothing tracked.",
     howTo: ["Paste a YouTube link.", "Pick a size.", "Download it as PNG or SVG."],

@@ -155,7 +155,7 @@ There is one 30-day purge: main's `youtube-retention-cron` (D-067b), which calls
 
 - **Outliers.** `outliers_feed` rows whose video or channel is stale are deleted first, so a blanked video never stays in the feed.
 - **Discovery columns.** Blanking a video clears `outlier_multiple`. Emptying a channel clears every YouTube-derived discovery column, including `niche_id` and `enriched_at`, so it drops out of the feeds. Our own provenance (`discovered_at`, `discovered_via_seed`, `refresh_tier`) stays.
-- **Snapshot rollup.** It keeps 90 days (`p_snapshot_days`) of daily snapshots. Older ones are reduced to one row per ISO week (the Monday row).
+- **Snapshot expiry (D-084).** It keeps 30 days (`p_snapshot_days`) of daily snapshots and deletes older ones, Mondays included: snapshots are statistics derived from YouTube API Data, which the Developer Policies limit to 30 days. Up to 36 months becomes possible once the derived-metrics amendment is accepted.
 
 ---
 

@@ -42,7 +42,14 @@ values ('00000000-0000-0000-0000-00000000f101', current_date, 5000),
        ('00000000-0000-0000-0000-00000000f101', current_date - 31, 3900),
        ('00000000-0000-0000-0000-00000000f102', current_date, 100);
 
-select * from public.purge_stale_youtube_data(30, 90, 30);
+-- D-084: niche snapshots past 30 days go too, Mondays included.
+insert into public.niche_snapshots (niche_id, snapshot_date, opportunity_score)
+values ('00000000-0000-0000-0000-00000000f001', current_date, 50),
+       ('00000000-0000-0000-0000-00000000f001', current_date - 30, 50),
+       ('00000000-0000-0000-0000-00000000f001', current_date - 31, 50),
+       ('00000000-0000-0000-0000-00000000f001', date_trunc('week', current_date - 40)::date, 50);
+
+select * from public.purge_stale_youtube_data(30);
 
 do $$
 begin
@@ -61,6 +68,10 @@ begin
   if (select count(*) from public.channel_niches
       where channel_id = '00000000-0000-0000-0000-00000000f101') <> 2 then
     raise exception 'fresh channel lost its niche tags';
+  end if;
+  if (select array_agg(current_date - snapshot_date order by snapshot_date desc) from public.niche_snapshots
+      where niche_id = '00000000-0000-0000-0000-00000000f001') <> array[0, 30] then
+    raise exception 'expected niche snapshots from today and day -30 only (Mondays not kept)';
   end if;
 end $$;
 

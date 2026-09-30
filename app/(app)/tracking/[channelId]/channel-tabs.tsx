@@ -7,6 +7,7 @@ import { ChannelEventItem } from "@/app/(app)/tracking/[channelId]/channel-event
 import { VideosTable } from "@/app/(app)/tracking/[channelId]/videos-table";
 import { ViewTrendChart } from "@/app/(app)/tracking/[channelId]/view-trend-chart";
 import { OutlierCard } from "@/components/features/outliers/outlier-card";
+import { EstimateNote } from "@/components/features/youtube/estimate-note";
 import type { TrackedEvent } from "@/lib/services/tracking";
 import type { VideoSummary } from "@/lib/services/channels";
 import type { OutlierItem } from "@/lib/services/outliers";
@@ -37,6 +38,7 @@ function formatCount(value: number): string {
 function ChannelTabs({ events, videos, metrics, outliers }: ChannelTabsProps) {
   return (
     <Tabs defaultValue="activity">
+      <EstimateNote what="Outlier multiples, milestones and cadence changes" className="mb-3" />
       <TabsList>
         <TabsTrigger value="activity">Activity</TabsTrigger>
         <TabsTrigger value="videos">Videos</TabsTrigger>

@@ -6,14 +6,21 @@ import { TOOLS } from "@/lib/tools/registry";
 import { YouTubeAttribution } from "@/components/features/youtube/youtube-attribution";
 
 describe("YouTubeAttribution", () => {
-  it("names YouTube as the source with a link, accessibly", async () => {
+  it("shows the official developed-with-YouTube logo linking to YouTube, accessibly (D-084)", async () => {
     const { container } = render(<YouTubeAttribution />);
-    expect(screen.getByText(/Data from/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "YouTube" })).toHaveAttribute(
-      "href",
-      "https://www.youtube.com",
-    );
+    const link = screen.getAllByRole("link", { name: "Developed with YouTube" });
+    expect(link).toHaveLength(1);
+    expect(link[0]).toHaveAttribute("href", "https://www.youtube.com");
+    // Both theme variants, one hidden by CSS; the app theme picks.
+    expect(container.querySelectorAll("img")).toHaveLength(2);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("renders only the white-text logo on always-dark surfaces", () => {
+    const { container } = render(<YouTubeAttribution tone="dark" />);
+    const images = container.querySelectorAll("img");
+    expect(images).toHaveLength(1);
+    expect(images[0]!.getAttribute("src")).toContain("sentence-case-light");
   });
 
   it("is flagged on every free tool that shows YouTube data", () => {
