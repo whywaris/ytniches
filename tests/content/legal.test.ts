@@ -34,7 +34,7 @@ describe("content/legal", () => {
         (match) => `${page.slug}: ${match[1]}`,
       ),
     );
-    expect(open).toEqual(["terms: city for the courts"]);
+    expect(open).toEqual([]);
   });
 
   describe.each(pages)("content/legal/$slug", (page) => {

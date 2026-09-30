@@ -125,6 +125,7 @@ export const FACTS: Record<string, string | number> = {
   "legal.entity": LEGAL.entity,
   "legal.governingLaw": LEGAL.governingLaw,
   "legal.country": LEGAL.country,
+  "legal.courtsCity": LEGAL.courtsCity,
   "legal.minimumAge": LEGAL.minimumAge,
   "legal.dataRequestDays": LEGAL.dataRequestDays,
   "legal.liabilityCapMonths": LEGAL.liabilityCapMonths,
