@@ -16,7 +16,7 @@ import type { RequestContext } from "@/lib/context";
 async function findTopOutlier(ctx: RequestContext) {
   const [week] = await listTopOutliers(ctx, { view: "trending", limit: 1 });
   if (week) return week;
-  const [month] = await listTopOutliers(ctx, { view: "grid", range: 30, limit: 1 });
+  const [month] = await listTopOutliers(ctx, { view: "grid", published: 30, limit: 1 });
   return month ?? null;
 }
 

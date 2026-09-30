@@ -15,28 +15,38 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OutlierCard } from "@/components/features/outliers/outlier-card";
 import { EstimateNote } from "@/components/features/youtube/estimate-note";
-import type { OutlierItem, OutlierRange } from "@/lib/services/outliers";
+import {
+  DEFAULT_PUBLISHED_WINDOW,
+  OUTLIER_PUBLISHED_WINDOWS,
+  publishedWindowLabel,
+  type OutlierPublishedWindow,
+} from "@/lib/outliers/scoring";
+import type { OutlierItem } from "@/lib/services/outliers";
 
 export type OutlierViewTab = "feed" | "grid" | "trending";
 
 export interface OutliersClientProps {
   initialView: OutlierViewTab;
-  initialRange: OutlierRange;
+  initialPublished: OutlierPublishedWindow;
   initialFeedState: OutlierFeedState;
   initialTopItems: OutlierItem[];
 }
 
 const FEED_PAGE_SIZE = 20;
-const RANGE_OPTIONS: { value: OutlierRange; label: string }[] = [
-  { value: 7, label: "7d" },
-  { value: 14, label: "14d" },
-  { value: 30, label: "30d" },
-];
+// D-085: filter by when the video was published (not when we detected it).
+const PUBLISHED_OPTIONS = OUTLIER_PUBLISHED_WINDOWS.map((value) => ({
+  value,
+  label: publishedWindowLabel(value),
+}));
 
-function buildOutliersUrl(pathname: string, view: OutlierViewTab, range: OutlierRange): string {
+function buildOutliersUrl(
+  pathname: string,
+  view: OutlierViewTab,
+  published: OutlierPublishedWindow,
+): string {
   const params = new URLSearchParams();
   if (view !== "feed") params.set("view", view);
-  if (view === "grid" && range !== 30) params.set("range", String(range));
+  if (published !== DEFAULT_PUBLISHED_WINDOW) params.set("published", String(published));
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
 }
@@ -44,11 +54,11 @@ function buildOutliersUrl(pathname: string, view: OutlierViewTab, range: Outlier
 // PRD.md §7.1's three Outlier Finder views. Feed is the only one with real
 // pagination (chronological, cursor-based, same as /tracking's activity
 // feed); Grid and Trending are both bounded top-scoring lists ranked by the
-// same live OUTLIER_SCORE (lib/services/outliers.ts), differing only in
-// their detected_at window.
+// same live OUTLIER_SCORE (lib/services/outliers.ts); Trending only covers
+// recent detections. The publish-date filter applies to all three.
 function OutliersClient({
   initialView,
-  initialRange,
+  initialPublished,
   initialFeedState,
   initialTopItems,
 }: OutliersClientProps) {
@@ -56,44 +66,44 @@ function OutliersClient({
   const pathname = usePathname();
 
   const [view, setView] = React.useState<OutlierViewTab>(initialView);
-  const [range, setRange] = React.useState<OutlierRange>(initialRange);
+  const [published, setPublished] = React.useState<OutlierPublishedWindow>(initialPublished);
   const [feedState, setFeedState] = React.useState<OutlierFeedState>(initialFeedState);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [topItems, setTopItems] = React.useState<OutlierItem[]>(initialTopItems);
   const [topLoading, setTopLoading] = React.useState(false);
 
-  async function runFeed() {
+  async function runFeed(nextPublished: OutlierPublishedWindow) {
     setFeedState({ status: "loading" });
-    const result = await listOutlierFeedAction({ limit: FEED_PAGE_SIZE });
+    const result = await listOutlierFeedAction({ limit: FEED_PAGE_SIZE, published: nextPublished });
     setFeedState(toOutlierFeedState(result));
   }
 
-  async function runTop(nextView: OutlierViewTab, nextRange: OutlierRange) {
+  async function runTop(nextView: OutlierViewTab, nextPublished: OutlierPublishedWindow) {
     if (nextView === "feed") return;
     setTopLoading(true);
-    const items = await listTopOutliersAction({
-      view: nextView,
-      range: nextView === "grid" ? nextRange : undefined,
-    });
+    const items = await listTopOutliersAction({ view: nextView, published: nextPublished });
     setTopItems(items);
     setTopLoading(false);
+  }
+
+  function load(nextView: OutlierViewTab, nextPublished: OutlierPublishedWindow) {
+    router.replace(buildOutliersUrl(pathname, nextView, nextPublished));
+    if (nextView === "feed") {
+      void runFeed(nextPublished);
+    } else {
+      void runTop(nextView, nextPublished);
+    }
   }
 
   function handleViewChange(next: string) {
     const nextView: OutlierViewTab = next === "grid" || next === "trending" ? next : "feed";
     setView(nextView);
-    router.replace(buildOutliersUrl(pathname, nextView, range));
-    if (nextView === "feed") {
-      void runFeed();
-    } else {
-      void runTop(nextView, range);
-    }
+    load(nextView, published);
   }
 
-  function handleRangeChange(next: OutlierRange) {
-    setRange(next);
-    router.replace(buildOutliersUrl(pathname, view, next));
-    void runTop("grid", next);
+  function handlePublishedChange(next: OutlierPublishedWindow) {
+    setPublished(next);
+    load(view, next);
   }
 
   async function handleLoadMore() {
@@ -102,6 +112,7 @@ function OutliersClient({
     const result = await listOutlierFeedAction({
       limit: FEED_PAGE_SIZE,
       cursor: feedState.nextCursor,
+      published,
     });
     setLoadingMore(false);
     if (result.ok) {
@@ -135,22 +146,20 @@ function OutliersClient({
             <TabsTrigger value="trending">Trending</TabsTrigger>
           </TabsList>
 
-          {view === "grid" ? (
-            <div role="group" aria-label="Date range" className="flex items-center gap-1">
-              {RANGE_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  size="sm"
-                  variant={range === option.value ? "secondary" : "ghost"}
-                  aria-pressed={range === option.value}
-                  onClick={() => handleRangeChange(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          ) : null}
+          <div role="group" aria-label="Published" className="flex items-center gap-1">
+            {PUBLISHED_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={published === option.value ? "secondary" : "ghost"}
+                aria-pressed={published === option.value}
+                onClick={() => handlePublishedChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <TabsContent value="feed" className="flex flex-col gap-3 pt-4">
@@ -163,13 +172,17 @@ function OutliersClient({
           ) : null}
 
           {feedState.status === "error" ? (
-            <ErrorState message={feedState.message} onRetry={() => void runFeed()} />
+            <ErrorState message={feedState.message} onRetry={() => void runFeed(published)} />
           ) : null}
 
           {feedState.status === "empty" ? (
             <EmptyState
               icon={<Flame aria-hidden="true" />}
-              message="No outliers detected yet. Track a few more channels, or check back after the next sync."
+              message={
+                published === "all"
+                  ? "No outliers detected yet. Track a few more channels, or check back after the next sync."
+                  : "No outliers from videos published in this window. Try a longer one."
+              }
             />
           ) : null}
 
@@ -202,7 +215,7 @@ function OutliersClient({
           ) : topItems.length === 0 ? (
             <EmptyState
               icon={<Flame aria-hidden="true" />}
-              message="No outliers in this range yet."
+              message="No outliers from videos published in this window yet."
             />
           ) : (
             topItems.map((item) => <OutlierCard key={item.id} outlier={item} />)

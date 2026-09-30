@@ -8,6 +8,7 @@ import {
   type SaveChannelError,
 } from "@/lib/services/channels";
 import { groupUploadsByChannel, type ChannelUploadGroup } from "@/lib/dashboard";
+import { alertWindowStartDate } from "@/lib/outliers/scoring";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -223,6 +224,10 @@ export async function getChannelActivity(
     .from("tracked_events")
     .select("*")
     .eq("channel_id", channelId)
+    // D-085: back-catalogue outliers (video published before the alert
+    // window, or recorded before publishedAt was stored) stay off the
+    // activity feed; the Outliers tab still lists them.
+    .or(`event_type.neq.outlier_detected,payload->>publishedAt.gte.${alertWindowStartDate()}`)
     .order("detected_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);

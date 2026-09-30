@@ -3,6 +3,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import { refreshCadenceHoursFor, TIER_INFO, trackedChannelsLimitFor } from "@/lib/billing/plans";
 import { getRedis } from "@/lib/cache/redis";
+import { AVG_VIEWS_WINDOW_DAYS } from "@/lib/channels/views";
 import { CREDIT_COSTS, FAIR_USE } from "@/lib/credits/costs";
 import { consume, getBalance } from "@/lib/credits";
 import { getCachedSearchChannels, setCachedSearchChannels } from "@/lib/youtube/cache";
@@ -44,6 +45,12 @@ function getSearchRateLimiter(): Ratelimit {
 // the same numbers the pricing cards show. No current subscription row ->
 // the Starter cap and cadence.
 
+// Whether the 30-day average can be shown (D-085): "pending" = no videos
+// stored for this channel yet (enrichment or a sync hasn't reached it);
+// "no_recent_uploads" = videos stored, none published in the last 30 days.
+// Only "measured" channels take part in avg-views filtering and sorting.
+export type ViewsStatus = "pending" | "no_recent_uploads" | "measured";
+
 export interface ChannelSearchResult {
   id: string;
   youtubeChannelId: string;
@@ -51,9 +58,11 @@ export interface ChannelSearchResult {
   avatarUrl: string | null;
   subscriberCount: number;
   videoCount: number;
+  // 0 unless viewsStatus is "measured".
   avgViewsLast30Days: number;
   avgViewsLifetime: number;
   uploadFrequencyPerWeek: number;
+  viewsStatus: ViewsStatus;
   isMonetized: boolean | null;
   language: string | null;
   country: string | null;
@@ -155,17 +164,27 @@ interface ChannelMetrics {
   avgViewsLast30Days: number;
   avgViewsLifetime: number;
   uploadFrequencyPerWeek: number;
+  viewsStatus: ViewsStatus;
   viewTrend: number[];
 }
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+// A channel with no stored videos: nothing measured yet (D-085).
+const PENDING_METRICS: ChannelMetrics = {
+  avgViewsLast30Days: 0,
+  avgViewsLifetime: 0,
+  uploadFrequencyPerWeek: 0,
+  viewsStatus: "pending",
+  viewTrend: [],
+};
+
+const THIRTY_DAYS_MS = AVG_VIEWS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 const FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000;
 
 // Computed from whatever videos.list rows already exist for these channels
 // from prior syncs (channel detail views, tracking) — this search flow
 // never fetches videos itself (would double+ the quota cost of a search).
-// A channel with zero cached video rows scores 0 on both — same
-// cold-cache-under-return behavior already agreed for Niche Finder overall.
+// A channel with zero cached video rows is "pending" (D-085): shown as
+// "Views pending", not as 0, until enrichment or a sync stores its videos.
 async function computeChannelMetrics(
   supabase: Awaited<ReturnType<typeof createClient>>,
   channelIds: string[],
@@ -216,12 +235,7 @@ async function computeChannelMetrics(
   for (const channelId of channelIds) {
     const bucket = byChannel.get(channelId);
     if (!bucket) {
-      metrics.set(channelId, {
-        avgViewsLast30Days: 0,
-        avgViewsLifetime: 0,
-        uploadFrequencyPerWeek: 0,
-        viewTrend: [],
-      });
+      metrics.set(channelId, PENDING_METRICS);
       continue;
     }
     const sortedByDate = [...bucket.views].sort((a, b) => a.publishedAt - b.publishedAt);
@@ -229,6 +243,7 @@ async function computeChannelMetrics(
       avgViewsLast30Days: average(bucket.recentViews),
       avgViewsLifetime: average(bucket.views.map((video) => video.count)),
       uploadFrequencyPerWeek: bucket.recentUploads / 4,
+      viewsStatus: bucket.recentViews.length > 0 ? "measured" : "no_recent_uploads",
       viewTrend: sortedByDate.map((video) => video.count),
     });
   }
@@ -273,13 +288,27 @@ function applyFilters(
     if (filters.subscribersMax !== undefined && result.subscriberCount > filters.subscribersMax) {
       return false;
     }
-    if (filters.avgViewsMin !== undefined && result.avgViewsLast30Days < filters.avgViewsMin) {
+    // D-085: channels without a 30-day average aren't judged by it (they
+    // stay in the results, unranked), rather than failing as "0 views".
+    const hasAverage = result.viewsStatus === "measured";
+    if (
+      hasAverage &&
+      filters.avgViewsMin !== undefined &&
+      result.avgViewsLast30Days < filters.avgViewsMin
+    ) {
       return false;
     }
-    if (filters.avgViewsMax !== undefined && result.avgViewsLast30Days > filters.avgViewsMax) {
+    if (
+      hasAverage &&
+      filters.avgViewsMax !== undefined &&
+      result.avgViewsLast30Days > filters.avgViewsMax
+    ) {
       return false;
     }
-    if (!matchesUploadFrequency(result.uploadFrequencyPerWeek, filters.uploadFrequency)) {
+    if (
+      result.viewsStatus !== "pending" &&
+      !matchesUploadFrequency(result.uploadFrequencyPerWeek, filters.uploadFrequency)
+    ) {
       return false;
     }
     // monetized: intentionally not filtered on — is_monetized has no
@@ -302,6 +331,12 @@ function applyFilters(
   });
 }
 
+// Unranked entries (true) go after ranked ones; 0 = decide on the value.
+function rankLast(aUnranked: boolean, bUnranked: boolean): number {
+  if (aUnranked === bUnranked) return 0;
+  return aUnranked ? 1 : -1;
+}
+
 function sortResults(
   results: ChannelSearchResult[],
   sort: NicheSearchInput["sort"],
@@ -310,10 +345,20 @@ function sortResults(
   switch (sort) {
     case "subscribers":
       return sorted.sort((a, b) => b.subscriberCount - a.subscriberCount);
+    // D-085: measured channels are ranked; the rest follow, in their
+    // original (relevance) order. Array.prototype.sort is stable.
     case "avg_views":
-      return sorted.sort((a, b) => b.avgViewsLast30Days - a.avgViewsLast30Days);
+      return sorted.sort(
+        (a, b) =>
+          rankLast(a.viewsStatus !== "measured", b.viewsStatus !== "measured") ||
+          b.avgViewsLast30Days - a.avgViewsLast30Days,
+      );
     case "upload_freq":
-      return sorted.sort((a, b) => b.uploadFrequencyPerWeek - a.uploadFrequencyPerWeek);
+      return sorted.sort(
+        (a, b) =>
+          rankLast(a.viewsStatus === "pending", b.viewsStatus === "pending") ||
+          b.uploadFrequencyPerWeek - a.uploadFrequencyPerWeek,
+      );
     case "relevance":
       return sorted;
   }
@@ -327,12 +372,7 @@ async function toSearchResults(
   return channels.flatMap((channel) => {
     const id = idByYoutubeId.get(channel.id);
     if (!id) return [];
-    const channelMetrics = metrics.get(id) ?? {
-      avgViewsLast30Days: 0,
-      avgViewsLifetime: 0,
-      uploadFrequencyPerWeek: 0,
-      viewTrend: [],
-    };
+    const channelMetrics = metrics.get(id) ?? PENDING_METRICS;
     return [
       {
         id,
@@ -430,12 +470,7 @@ export async function getChannelDetail(
   }
 
   const metrics = await computeChannelMetrics(supabase, [channelId]);
-  const channelMetrics = metrics.get(channelId) ?? {
-    avgViewsLast30Days: 0,
-    avgViewsLifetime: 0,
-    uploadFrequencyPerWeek: 0,
-    viewTrend: [],
-  };
+  const channelMetrics = metrics.get(channelId) ?? PENDING_METRICS;
 
   return ok({
     id: channel.id,

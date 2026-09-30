@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import type { NicheChannelResult } from "@/components/features/niche-finder/types";
+import {
+  rankableAvgViews,
+  unmeasuredViewsLabel,
+} from "@/components/features/niche-finder/avg-views";
 
 // UI-UX-Flow.md §5.2 comparison view — 2-3 channels side by side. "Top
 // video" from the spec is dropped: ChannelSearchResult only carries
@@ -40,8 +44,9 @@ const ROWS: ComparisonRow[] = [
   },
   {
     label: "Avg views (30d)",
-    render: (channel) => formatCount(channel.avgViewsLast30Days),
-    winnerValue: (channel) => channel.avgViewsLast30Days,
+    render: (channel) =>
+      unmeasuredViewsLabel(channel.viewsStatus) ?? formatCount(channel.avgViewsLast30Days),
+    winnerValue: (channel) => rankableAvgViews(channel),
   },
   {
     label: "Upload frequency",

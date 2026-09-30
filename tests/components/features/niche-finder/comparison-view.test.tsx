@@ -16,6 +16,7 @@ function makeChannel(overrides: Partial<NicheChannelResult>): NicheChannelResult
     avgViewsLast30Days: 1000,
     avgViewsLifetime: 800,
     uploadFrequencyPerWeek: 1,
+    viewsStatus: "measured",
     isMonetized: null,
     language: "en",
     country: "US",

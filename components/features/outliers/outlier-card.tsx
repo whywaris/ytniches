@@ -19,6 +19,12 @@ export interface OutlierCardProps {
   showChannel?: boolean;
 }
 
+const PUBLISHED_DATE = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 function formatCount(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
@@ -46,8 +52,9 @@ function OutlierCard({ outlier, showChannel = true }: OutlierCardProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-start justify-between gap-2">
           <p className="min-w-0 truncate text-body text-text-primary">{outlier.videoTitle}</p>
+          {/* D-085: the true multiple. outlierScore (decayed by age) only ranks. */}
           <Tag tone="outliers" className="shrink-0">
-            {outlier.outlierScore.toFixed(1)}x baseline
+            {outlier.multiple.toFixed(1)}x baseline
           </Tag>
         </div>
 
@@ -64,6 +71,10 @@ function OutlierCard({ outlier, showChannel = true }: OutlierCardProps) {
 
         <p className="text-caption text-text-tertiary">
           {formatCount(outlier.viewCount)} views &middot; baseline {formatCount(outlier.baseline)}{" "}
+          &middot; published{" "}
+          <time dateTime={outlier.publishedAt}>
+            {PUBLISHED_DATE.format(new Date(outlier.publishedAt))}
+          </time>{" "}
           &middot; detected {formatRelativeTime(outlier.detectedAt)}
         </p>
 

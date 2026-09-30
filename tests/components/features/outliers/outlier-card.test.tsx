@@ -25,6 +25,7 @@ function makeOutlier(overrides: Partial<OutlierItem> = {}): OutlierItem {
     videoThumbnailUrl: "https://example.com/thumb.jpg",
     viewCount: 500_000,
     baseline: 100_000,
+    multiple: 5,
     outlierScore: 4.5,
     publishedAt: "2026-01-01T00:00:00Z",
     detectedAt: "2026-01-02T00:00:00Z",
@@ -42,8 +43,17 @@ describe("OutlierCard", () => {
     render(<OutlierCard outlier={makeOutlier()} />);
 
     expect(screen.getByText("8 Hours of Deep Sleep Music")).toBeInTheDocument();
-    expect(screen.getByText("4.5x baseline")).toBeInTheDocument();
+    // D-085: the true multiple (views / baseline), not the decayed score (4.5).
+    expect(screen.getByText("5.0x baseline")).toBeInTheDocument();
+    expect(screen.queryByText("4.5x baseline")).not.toBeInTheDocument();
     expect(screen.getByText("Sleep Sounds Daily")).toBeInTheDocument();
+  });
+
+  it("shows when the video was published", () => {
+    render(<OutlierCard outlier={makeOutlier()} />);
+    const time = document.querySelector("time");
+    expect(time?.getAttribute("dateTime")).toBe("2026-01-01T00:00:00Z");
+    expect(time?.textContent).toMatch(/\b20\d\d\b/);
   });
 
   it("hides the channel row when showChannel is false", () => {

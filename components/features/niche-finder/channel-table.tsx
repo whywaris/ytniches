@@ -10,6 +10,10 @@ import { Tag } from "@/components/ui/tag";
 import { Table, type ColumnDef, type TableDensity } from "@/components/ui/table";
 import type { TablePaginationProps } from "@/components/ui/table-pagination";
 import type { NicheChannelResult } from "@/components/features/niche-finder/types";
+import {
+  rankableAvgViews,
+  unmeasuredViewsLabel,
+} from "@/components/features/niche-finder/avg-views";
 
 // UI-UX-Flow.md §5.2 list view. Feature-specific ColumnDef[] on top of the
 // Table primitive — per Table's own approved API, this is exactly what
@@ -102,8 +106,9 @@ function ChannelTable({
         key: "avgViews",
         header: "Avg views",
         sortable: true,
-        sortAccessor: (row) => row.avgViewsLast30Days,
-        accessor: (row) => formatCount(row.avgViewsLast30Days),
+        sortAccessor: (row) => rankableAvgViews(row),
+        accessor: (row) =>
+          unmeasuredViewsLabel(row.viewsStatus) ?? formatCount(row.avgViewsLast30Days),
       },
       {
         key: "uploadFreq",

@@ -30,6 +30,43 @@ export function computeRecencyWeight(publishedAt: string, now: number = Date.now
 export const OUTLIER_SCORE = (views: number, baseline: number, recencyWeight: number): number =>
   (views / baseline) * recencyWeight;
 
+// D-085: what the card shows. OUTLIER_SCORE is only for ranking -- its
+// recency weight would make an old 4.5x outlier read as "0.5x baseline".
+export const outlierMultiple = (views: number, baseline: number): number => views / baseline;
+
+// D-085 / PRD.md §7.1: outliers are always recorded (the Outliers page
+// shows them all, filterable by publish date), but notifications, digests
+// and activity-feed items only go out for videos published this recently.
+// Otherwise a newly tracked channel's first sync would alert on its whole
+// back catalogue.
+export const OUTLIER_ALERT_WINDOW_DAYS = 30;
+
+// D-085: the Outliers page's publish-date filter. Pure data, so the client
+// component and the help center can use it without server code.
+export const OUTLIER_PUBLISHED_WINDOWS = [30, 90, "all"] as const;
+export type OutlierPublishedWindow = (typeof OUTLIER_PUBLISHED_WINDOWS)[number];
+export const DEFAULT_PUBLISHED_WINDOW: OutlierPublishedWindow = 30;
+
+export function publishedWindowLabel(window: OutlierPublishedWindow): string {
+  if (window === "all") return "All time";
+  return window === DEFAULT_PUBLISHED_WINDOW ? `Last ${window} days` : `${window} days`;
+}
+
+export function publishedWithinDays(
+  publishedAt: string,
+  days: number,
+  now: number = Date.now(),
+): boolean {
+  return now - new Date(publishedAt).getTime() <= days * DAY_MS;
+}
+
+// First day (YYYY-MM-DD) of the alert window, for queries on the
+// payload's ISO publishedAt: text comparison against a date-only string is
+// correct, and it keeps dots and colons out of PostgREST filter strings.
+export function alertWindowStartDate(now: number = Date.now()): string {
+  return new Date(now - OUTLIER_ALERT_WINDOW_DAYS * DAY_MS).toISOString().slice(0, 10);
+}
+
 export interface BaselineVideo {
   viewCount: number;
   publishedAt: string;

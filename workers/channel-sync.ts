@@ -8,7 +8,9 @@ import { inngest } from "@/lib/inngest/client";
 import {
   computeRecencyWeight,
   evaluateAgainstChannel,
+  OUTLIER_ALERT_WINDOW_DAYS,
   OUTLIER_SCORE,
+  publishedWithinDays,
   type ChannelVideo,
 } from "@/lib/outliers/scoring";
 import {
@@ -317,6 +319,9 @@ export async function syncChannelData(channelId: string): Promise<DetectedEvent[
           viewCount,
           baseline,
           outlierScore: OUTLIER_SCORE(viewCount, baseline, recencyWeight),
+          // D-085: lets notifications, the digest and the channel activity
+          // feed skip back-catalogue outliers without a join.
+          publishedAt: video.snippet.publishedAt,
         },
       });
     }
@@ -436,7 +441,20 @@ function sendEmailForEvent(userId: string, event: DetectedEvent): Promise<boolea
 // events are more important than notifications. Called from its own
 // step.run() in the Inngest function below, so a retry here never re-runs
 // the (already-succeeded) sync step.
-export async function fanOutNotifications(events: DetectedEvent[]): Promise<void> {
+// D-085 / PRD.md §7.1: an outlier on a video published more than
+// OUTLIER_ALERT_WINDOW_DAYS ago is recorded (the Outliers page shows it) but
+// never notified -- otherwise a newly tracked channel's first sync would
+// alert on its whole back catalogue.
+export function isNotifiable(event: DetectedEvent): boolean {
+  if (event.eventType !== "outlier_detected") return true;
+  const publishedAt = event.payload.publishedAt;
+  return (
+    typeof publishedAt === "string" && publishedWithinDays(publishedAt, OUTLIER_ALERT_WINDOW_DAYS)
+  );
+}
+
+export async function fanOutNotifications(allEvents: DetectedEvent[]): Promise<void> {
+  const events = allEvents.filter(isNotifiable);
   if (events.length === 0) return;
 
   const supabase = createServiceClient();

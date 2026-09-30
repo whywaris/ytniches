@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import type { NicheChannelResult } from "@/components/features/niche-finder/types";
+import { unmeasuredViewsLabel } from "@/components/features/niche-finder/avg-views";
 
 // UI-UX-Flow.md §5.2 grid card. Presentational only — no network calls;
 // onSave/onOpen are callbacks, the parent page owns the actual Server
@@ -60,7 +61,10 @@ function ChannelCard({ channel, saved = false, onSave, onOpen, className }: Chan
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-text-secondary">
         <span>{formatCount(channel.subscriberCount)} subs</span>
         <span>{formatCount(channel.videoCount)} videos</span>
-        <span>{formatCount(channel.avgViewsLast30Days)} avg views</span>
+        <span>
+          {unmeasuredViewsLabel(channel.viewsStatus) ??
+            `${formatCount(channel.avgViewsLast30Days)} avg views`}
+        </span>
       </div>
 
       {/* A single point can't draw a trend — omit rather than render a flat
