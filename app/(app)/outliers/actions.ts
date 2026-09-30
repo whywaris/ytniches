@@ -5,8 +5,9 @@ import {
   listChannelOutliers,
   listOutlierFeed,
   listTopOutliers,
+  OUTLIER_PUBLISHED_WINDOWS,
   type OutlierItem,
-  type OutlierRange,
+  type OutlierPublishedWindow,
   type OutlierView,
 } from "@/lib/services/outliers";
 import {
@@ -22,20 +23,27 @@ import type { TrackingError } from "@/lib/services/tracking";
 // niches/actions.ts): get the caller's context, delegate to the service,
 // return its Result untouched.
 
+// Client input: only a known publish window gets through (else the default).
+function publishedWindow(value: unknown): OutlierPublishedWindow | undefined {
+  return (OUTLIER_PUBLISHED_WINDOWS as readonly unknown[]).includes(value)
+    ? (value as OutlierPublishedWindow)
+    : undefined;
+}
+
 export async function listOutlierFeedAction(
-  options: { limit?: number; cursor?: string } = {},
+  options: { limit?: number; cursor?: string; published?: OutlierPublishedWindow } = {},
 ): Promise<Result<{ items: OutlierItem[]; nextCursor: string | null }, TrackingError>> {
   const ctx = await getRequestContext();
-  return listOutlierFeed(ctx, options);
+  return listOutlierFeed(ctx, { ...options, published: publishedWindow(options.published) });
 }
 
 export async function listTopOutliersAction(options: {
   view: OutlierView;
-  range?: OutlierRange;
+  published?: OutlierPublishedWindow;
   limit?: number;
 }): Promise<OutlierItem[]> {
   const ctx = await getRequestContext();
-  return listTopOutliers(ctx, options);
+  return listTopOutliers(ctx, { ...options, published: publishedWindow(options.published) });
 }
 
 export async function listChannelOutliersAction(

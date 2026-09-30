@@ -15,6 +15,7 @@ const CHANNEL: NicheChannelResult = {
   avgViewsLast30Days: 91_200,
   avgViewsLifetime: 64_500,
   uploadFrequencyPerWeek: 3,
+  viewsStatus: "measured",
   isMonetized: true,
   language: "en",
   country: "US",
@@ -23,6 +24,20 @@ const CHANNEL: NicheChannelResult = {
 };
 
 describe("ChannelCard", () => {
+  it.each([
+    ["pending", "Views pending"],
+    ["no_recent_uploads", "No uploads in 30 days"],
+  ] as const)('shows %s channels as "%s", not 0 avg views (D-085)', (viewsStatus, label) => {
+    render(<ChannelCard channel={{ ...CHANNEL, viewsStatus, avgViewsLast30Days: 0 }} />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText(/avg views/)).not.toBeInTheDocument();
+  });
+
+  it("shows the measured 30-day average", () => {
+    render(<ChannelCard channel={CHANNEL} />);
+    expect(screen.getByText(/avg views$/)).toBeInTheDocument();
+  });
+
   it("calls onOpen with the channel id when the card is clicked", async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();

@@ -709,6 +709,7 @@ async function loadOutlierPage(
       videoThumbnailUrl: row.videos.thumbnail_url,
       viewCount: row.videos.view_count,
       baseline: row.outlier_multiple > 0 ? row.videos.view_count / row.outlier_multiple : 0,
+      multiple: row.outlier_multiple,
       outlierScore: row.outlier_multiple,
       publishedAt: row.videos.published_at,
       detectedAt: row.detected_at,

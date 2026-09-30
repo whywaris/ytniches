@@ -23,6 +23,7 @@ const BASE_CHANNEL: NicheChannelResult = {
   avgViewsLast30Days: 91_200,
   avgViewsLifetime: 64_500,
   uploadFrequencyPerWeek: 3,
+  viewsStatus: "measured",
   isMonetized: true,
   language: "en",
   country: "US",
@@ -39,10 +40,16 @@ export const Saved: Story = {
 };
 
 export const ColdCacheNoSparkline: Story = {
-  name: "Cold cache (no sparkline)",
+  name: "Views pending (no stored videos, D-085)",
   render: () => (
     <ChannelCard
-      channel={{ ...BASE_CHANNEL, avgViewsLast30Days: 0, uploadFrequencyPerWeek: 0, viewTrend: [] }}
+      channel={{
+        ...BASE_CHANNEL,
+        viewsStatus: "pending",
+        avgViewsLast30Days: 0,
+        uploadFrequencyPerWeek: 0,
+        viewTrend: [],
+      }}
       className="max-w-sm"
     />
   ),
@@ -59,6 +66,16 @@ export const UnmonetizedNoAvatar: Story = {
         country: "AU",
         viewTrend: [3_000, 5_500, 4_200, 8_300],
       }}
+      className="max-w-sm"
+    />
+  ),
+};
+
+export const NoRecentUploads: Story = {
+  name: "No uploads in 30 days (D-085)",
+  render: () => (
+    <ChannelCard
+      channel={{ ...BASE_CHANNEL, viewsStatus: "no_recent_uploads", avgViewsLast30Days: 0 }}
       className="max-w-sm"
     />
   ),

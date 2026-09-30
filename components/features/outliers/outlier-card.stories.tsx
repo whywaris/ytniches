@@ -24,6 +24,7 @@ function outlier(overrides: Partial<OutlierItem> = {}): OutlierItem {
     videoThumbnailUrl: "https://placehold.co/320x180",
     viewCount: 500_000,
     baseline: 100_000,
+    multiple: 5,
     outlierScore: 5,
     publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     detectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -48,5 +49,21 @@ export const WithoutChannel: Story = {
 };
 
 export const HighScore: Story = {
-  args: { outlier: outlier({ outlierScore: 9.2, viewCount: 2_100_000, baseline: 220_000 }) },
+  args: {
+    outlier: outlier({ multiple: 9.5, outlierScore: 9.2, viewCount: 2_100_000, baseline: 220_000 }),
+  },
+};
+
+// D-085: an old back-catalogue outlier. Its ranking score has decayed to
+// 0.45, but the card shows the true multiple, 4.5x, and the publish date.
+export const BackCatalogue: Story = {
+  args: {
+    outlier: outlier({
+      viewCount: 454_000,
+      baseline: 100_000,
+      multiple: 4.54,
+      outlierScore: 0.45,
+      publishedAt: new Date(Date.now() - 326 * 24 * 60 * 60 * 1000).toISOString(),
+    }),
+  },
 };

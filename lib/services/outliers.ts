@@ -1,4 +1,12 @@
-import { computeRecencyWeight, OUTLIER_SCORE, TRENDING_WINDOW_DAYS } from "@/lib/outliers/scoring";
+import {
+  computeRecencyWeight,
+  OUTLIER_SCORE,
+  DEFAULT_PUBLISHED_WINDOW,
+  outlierMultiple,
+  publishedWithinDays,
+  TRENDING_WINDOW_DAYS,
+  type OutlierPublishedWindow,
+} from "@/lib/outliers/scoring";
 import { clampLimit, decodeCursor, encodeCursor, type FeedCursor } from "@/lib/services/tracking";
 import { createClient } from "@/lib/supabase/server";
 import { err, ok, type Result } from "@/lib/result";
@@ -56,9 +64,24 @@ export interface OutlierItem {
   videoThumbnailUrl: string;
   viewCount: number;
   baseline: number;
+  // D-085: views / baseline, what the card shows. outlierScore adds the
+  // recency decay and is only used to rank.
+  multiple: number;
   outlierScore: number;
   publishedAt: string;
   detectedAt: string;
+}
+
+// D-085: the publish-date filter lives in lib/outliers/scoring (pure, so
+// the client can import it); re-exported for server callers.
+export {
+  DEFAULT_PUBLISHED_WINDOW,
+  OUTLIER_PUBLISHED_WINDOWS,
+  type OutlierPublishedWindow,
+} from "@/lib/outliers/scoring";
+
+function inPublishedWindow(item: OutlierItem, window: OutlierPublishedWindow): boolean {
+  return window === "all" || publishedWithinDays(item.publishedAt, window);
 }
 
 type TrackedEventRow = Database["public"]["Tables"]["tracked_events"]["Row"];
@@ -128,6 +151,7 @@ export async function buildOutlierItems(
         videoThumbnailUrl: video.thumbnail_url,
         viewCount: video.view_count,
         baseline: payload.baseline,
+        multiple: outlierMultiple(video.view_count, payload.baseline),
         outlierScore: OUTLIER_SCORE(video.view_count, payload.baseline, recencyWeight),
         publishedAt: video.published_at,
         detectedAt: row.detected_at,
@@ -151,11 +175,17 @@ async function trackedChannelIds(ctx: RequestContext): Promise<string[]> {
 
 // PRD.md §7.1 "Outliers feed across all tracked channels" -- chronological,
 // cursor-paginated, same shape as getActivityFeed/getChannelActivity.
+// D-085: filtered by the video's publish date. The date lives on the
+// joined video, not the event, so pages are filtered after the join and
+// topped up from the next batch (bounded) so a page isn't left short.
+const MAX_FEED_BATCHES = 5;
+
 export async function listOutlierFeed(
   ctx: RequestContext,
-  options: { limit?: number; cursor?: string } = {},
+  options: { limit?: number; cursor?: string; published?: OutlierPublishedWindow } = {},
 ): Promise<Result<{ items: OutlierItem[]; nextCursor: string | null }, TrackingError>> {
   const limit = clampLimit(options.limit);
+  const published = options.published ?? DEFAULT_PUBLISHED_WINDOW;
 
   let cursor: FeedCursor | null = null;
   if (options.cursor) {
@@ -171,38 +201,45 @@ export async function listOutlierFeed(
   }
 
   const supabase = await createClient();
-  let query = supabase
-    .from("tracked_events")
-    .select("*")
-    .eq("event_type", "outlier_detected")
-    .in("channel_id", channelIds)
-    .order("detected_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(limit + 1);
+  const items: OutlierItem[] = [];
+  let nextCursor: string | null = null;
 
-  if (cursor) {
-    query = query.or(
-      `detected_at.lt.${cursor.sortKey},and(detected_at.eq.${cursor.sortKey},id.lt.${cursor.id})`,
-    );
+  for (let batch = 0; batch < MAX_FEED_BATCHES; batch++) {
+    let query = supabase
+      .from("tracked_events")
+      .select("*")
+      .eq("event_type", "outlier_detected")
+      .in("channel_id", channelIds)
+      .order("detected_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1);
+
+    if (cursor) {
+      query = query.or(
+        `detected_at.lt.${cursor.sortKey},and(detected_at.eq.${cursor.sortKey},id.lt.${cursor.id})`,
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(`listOutlierFeed query failed: ${error.message}`);
+    }
+
+    const hasMore = data.length > limit;
+    const page = data.slice(0, limit);
+    const last = page[page.length - 1];
+    const built = await buildOutlierItems(supabase, page);
+    items.push(...built.filter((item) => inPublishedWindow(item, published)));
+
+    nextCursor = hasMore && last ? encodeCursor(last.id, last.detected_at) : null;
+    if (!nextCursor || items.length >= limit) break;
+    cursor = { id: last!.id, sortKey: last!.detected_at };
   }
 
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`listOutlierFeed query failed: ${error.message}`);
-  }
-
-  const hasMore = data.length > limit;
-  const page = data.slice(0, limit);
-  const last = page[page.length - 1];
-  const nextCursor = hasMore && last ? encodeCursor(last.id, last.detected_at) : null;
-
-  return ok({ items: await buildOutlierItems(supabase, page), nextCursor });
+  return ok({ items, nextCursor });
 }
 
 export type OutlierView = "grid" | "trending";
-// Capped by the 30-day YouTube data window (D-067b): outlier events older
-// than that are purged, so a longer range would show the same results.
-export type OutlierRange = 7 | 14 | 30;
 
 // PRD.md §7.1 "Grid (top-scoring past 30/60/90 days)" and "Trending
 // (outliers gaining momentum right now)" -- both rank by the *same* live
@@ -210,24 +247,33 @@ export type OutlierRange = 7 | 14 | 30;
 // choice of 7/14/30 (D-067b cap); trending: a fixed, tight TRENDING_WINDOW_DAYS). A
 // ranked top-N list, not a cursor feed -- PRD frames these as bounded
 // "top-scoring" views, unlike Feed's explicit infinite scroll.
+// D-085: Grid ranks every stored outlier; Trending only those detected in
+// the last TRENDING_WINDOW_DAYS. Both are then filtered by publish date.
 export async function listTopOutliers(
   ctx: RequestContext,
-  options: { view: OutlierView; range?: OutlierRange; limit?: number } = { view: "grid" },
+  options: { view: OutlierView; published?: OutlierPublishedWindow; limit?: number } = {
+    view: "grid",
+  },
 ): Promise<OutlierItem[]> {
   const limit = Math.min(Math.max(1, options.limit ?? DEFAULT_TOP_LIMIT), MAX_TOP_LIMIT);
-  const windowDays = options.view === "trending" ? TRENDING_WINDOW_DAYS : (options.range ?? 30);
-  const since = new Date(Date.now() - windowDays * DAY_MS).toISOString();
+  const published = options.published ?? DEFAULT_PUBLISHED_WINDOW;
 
   const channelIds = await trackedChannelIds(ctx);
   if (channelIds.length === 0) return [];
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("tracked_events")
     .select("*")
     .eq("event_type", "outlier_detected")
-    .in("channel_id", channelIds)
-    .gte("detected_at", since)
+    .in("channel_id", channelIds);
+  if (options.view === "trending") {
+    query = query.gte(
+      "detected_at",
+      new Date(Date.now() - TRENDING_WINDOW_DAYS * DAY_MS).toISOString(),
+    );
+  }
+  const { data, error } = await query
     .order("detected_at", { ascending: false })
     .limit(MAX_RANK_CANDIDATES);
 
@@ -236,7 +282,10 @@ export async function listTopOutliers(
   }
 
   const items = await buildOutlierItems(supabase, data);
-  return items.sort((a, b) => b.outlierScore - a.outlierScore).slice(0, limit);
+  return items
+    .filter((item) => inPublishedWindow(item, published))
+    .sort((a, b) => b.outlierScore - a.outlierScore)
+    .slice(0, limit);
 }
 
 // PRD.md §7.1 "Per-channel outlier list" -- chronological, cursor-paginated,

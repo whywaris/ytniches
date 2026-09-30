@@ -14,6 +14,7 @@ function makeChannel(id: string): ChannelSearchResult {
     avgViewsLast30Days: 1000,
     avgViewsLifetime: 800,
     uploadFrequencyPerWeek: 1,
+    viewsStatus: "measured",
     isMonetized: null,
     language: "en",
     country: "US",

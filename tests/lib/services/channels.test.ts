@@ -309,6 +309,69 @@ describe("searchNiches", () => {
     }
   });
 
+  describe("channels without a 30-day average (D-085)", () => {
+    const old = "2024-01-01T00:00:00Z";
+    function searchThree(filters: Parameters<typeof defaultFilters>[0]) {
+      getCachedSearchChannels.mockResolvedValueOnce(null);
+      getBalance.mockResolvedValueOnce(10);
+      searchChannelIds.mockResolvedValueOnce({ ok: true, value: ["UC1", "UC2", "UC3"] });
+      getChannelsByIds.mockResolvedValueOnce({
+        ok: true,
+        value: [makeChannel({ id: "UC1" }), makeChannel({ id: "UC2" }), makeChannel({ id: "UC3" })],
+      });
+      serviceFrom.mockReturnValueOnce(
+        channelsUpsertTable({
+          data: [
+            { id: "internal-1", youtube_channel_id: "UC1" },
+            { id: "internal-2", youtube_channel_id: "UC2" },
+            { id: "internal-3", youtube_channel_id: "UC3" },
+          ],
+          error: null,
+        }),
+      );
+      sessionFrom.mockReturnValueOnce(
+        videosTable({
+          data: [
+            // UC1: no stored videos -> pending. UC2: only an old upload.
+            { channel_id: "internal-2", view_count: 9_000, published_at: old },
+            {
+              channel_id: "internal-3",
+              view_count: 20_000,
+              published_at: new Date().toISOString(),
+            },
+          ],
+          error: null,
+        }),
+      );
+      consume.mockResolvedValueOnce({ ok: true, value: undefined });
+      return searchNiches(ctx, defaultFilters(filters), "key-1");
+    }
+
+    it("marks each channel pending, no_recent_uploads or measured", async () => {
+      const result = await searchThree({});
+      expect(result.ok && result.value.map((r) => [r.youtubeChannelId, r.viewsStatus])).toEqual([
+        ["UC1", "pending"],
+        ["UC2", "no_recent_uploads"],
+        ["UC3", "measured"],
+      ]);
+    });
+
+    it("keeps them through an avg-views filter instead of treating them as 0", async () => {
+      const result = await searchThree({ avgViewsMin: 50_000 });
+      // UC3 is measured below the minimum; UC1 and UC2 can't be judged.
+      expect(result.ok && result.value.map((r) => r.youtubeChannelId)).toEqual(["UC1", "UC2"]);
+    });
+
+    it("sorts them after measured channels when sorting by avg views", async () => {
+      const result = await searchThree({ sort: "avg_views" });
+      expect(result.ok && result.value.map((r) => r.youtubeChannelId)).toEqual([
+        "UC3",
+        "UC1",
+        "UC2",
+      ]);
+    });
+  });
+
   it("returns an empty viewTrend for a cold-cache channel with no video rows", async () => {
     getCachedSearchChannels.mockResolvedValueOnce(null);
     getBalance.mockResolvedValueOnce(10);

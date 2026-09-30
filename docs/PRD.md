@@ -301,8 +301,8 @@ Phase 2 adds features that drive weekly return visits. Once users are hooked on 
 **How it works:**
 
 - For each tracked channel, calculate rolling baseline of average views per video
-- Flag videos exceeding baseline by threshold X% (TBD)
-- Rank by outlier score (percentage over baseline × recency weight)
+- Flag videos exceeding baseline by a threshold (3× the trailing average of the previous 10 videos, at least 5 needed)
+- Rank by outlier score (multiple over baseline × recency weight). The score is for ranking only; cards show the true multiple (views ÷ baseline) and the video's publish date (D-085).
 
 **Outputs:**
 
@@ -310,7 +310,9 @@ Phase 2 adds features that drive weekly return visits. Once users are hooked on 
 - Per-channel outlier list
 - One-click "extract prompts from this outlier" → routes to AI Prompts
 
-**Views:** Feed (chronological), Grid (top-scoring past 7/14/30 days; capped by the 30-day YouTube data limit, D-067), Trending (outliers gaining momentum right now).
+**Views:** Feed (chronological), Grid (top-scoring), Trending (outliers detected in the last 7 days, ranked). All three are filtered by the video's publish date: Last 30 days (default) / 90 days / All time.
+
+**Back-catalogue rule (D-085):** every outlier is recorded and stays on the Outliers page (for as long as YouTube's 30-day data limit allows). Activity-feed items and notifications (in-app, email and the digest) go out only for outliers on videos published in the last 30 days, so a newly tracked channel's first sync doesn't alert on its whole back catalogue.
 
 ---
 

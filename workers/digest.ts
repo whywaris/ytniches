@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isEmailEligibleTier } from "@/lib/billing";
 import { getEffectivePlan } from "@/lib/billing/effective-plan";
 import { DIGEST_ITEM_LIMIT } from "@/lib/notifications/digest-config";
+import { alertWindowStartDate } from "@/lib/outliers/scoring";
 import { buildOutlierItems } from "@/lib/services/outliers";
 import { sendWeeklyDigestEmail, type WeeklyDigestData } from "@/lib/email/notifications";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -104,6 +105,8 @@ export async function buildDigestData(
       .eq("event_type", "outlier_detected")
       .in("channel_id", channelIds)
       .gte("detected_at", since)
+      // D-085: no back-catalogue outliers in the digest.
+      .gte("payload->>publishedAt", alertWindowStartDate())
       .order("detected_at", { ascending: false })
       .limit(50),
     supabase

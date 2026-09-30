@@ -1056,3 +1056,17 @@ Decisions that still need to close before their dependent docs / features can be
   - **Legal:** the Privacy Policy's YouTube section covers discovery, the figures we store and for how long, refresh and deletion, deletion requests, and the fact that our estimates aren't YouTube data. Google Privacy Policy link: https://policies.google.com/privacy. No street address is published; the country is (`LEGAL.country`).
 - **Open:** the product rename; the courts city in the Terms; whether `legal.dataRequestDays` (30) should drop to 7 to match III.E.4 for any future Authorized Data.
 - **Impacts:** `lib/youtube/estimates.ts`, `components/features/youtube/*`, `lib/tools/registry.ts`, `content/legal/*`, `lib/discovery/config.ts`, the purge migration, Backend-Schema.md §retention, Niche-Discovery-Engine.md.
+
+### D-085: Honest numbers on outlier and channel cards; back-catalogue outliers don't alert
+
+- **Status:** Resolved (2026-09-30), owner-approved.
+- **Why:** two reports from production:
+  - Every Niche Finder result showed "0 avg views". The average is computed from stored videos, and a search stores none; enrichment hadn't run since go-live, so no channel had any.
+  - The Outliers page showed "0.5x" and "1.0x baseline". The card printed the recency-decayed ranking score, not the multiple: a 4.54× outlier on a 326-day-old video read as 0.5×.
+- **Final call:**
+  - **Avg views:** each channel has a `viewsStatus`: `pending` (no stored videos, shown as "Views pending"), `no_recent_uploads` ("No uploads in 30 days") or `measured`. Only measured channels are judged by the avg-views filter and ranked by the avg-views sort; the rest stay in the results after them. Pending channels also skip the upload-frequency filter and sort.
+  - **Outlier cards:** show the true multiple (views ÷ baseline) and the video's publish date. The decayed score is used only for ranking.
+  - **Back catalogue:** every outlier is still recorded, but notifications (in-app, email, digest) and activity-feed items only go out for videos published in the last `OUTLIER_ALERT_WINDOW_DAYS` (30). New outlier events store `publishedAt`; events without it (recorded before this) count as back catalogue.
+  - **Outliers page:** Feed, Grid and Trending all filter by publish date: Last 30 days (default) / 90 days / All time (`?published=`). This replaces Grid's detection-date 7/14/30 range. Trending still only covers detections in the last 7 days.
+- **Not changed:** the 3× threshold and baseline (previous 10 videos, at least 5). PRD.md §7.1 now states the back-catalogue rule.
+- **Impacts:** `lib/services/channels.ts`, `lib/services/outliers.ts`, `lib/outliers/scoring.ts`, `lib/services/tracking.ts`, `workers/channel-sync.ts`, `workers/digest.ts`, the channel and outlier cards, the Outliers page, help (what-is-an-outlier, no-outliers-yet, reading-results, niche-finder-filters).

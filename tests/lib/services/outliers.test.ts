@@ -76,7 +76,7 @@ describe("listOutlierFeed", () => {
   it("returns an empty page without querying tracked_events when the user tracks no channels", async () => {
     sessionFrom.mockReturnValueOnce(trackedChannelRows([]));
 
-    const result = await listOutlierFeed(ctx);
+    const result = await listOutlierFeed(ctx, { published: "all" });
 
     expect(result).toEqual({ ok: true, value: { items: [], nextCursor: null } });
     expect(sessionFrom).toHaveBeenCalledTimes(1);
@@ -88,7 +88,7 @@ describe("listOutlierFeed", () => {
     sessionFrom.mockReturnValueOnce(videoRows([{}]));
     sessionFrom.mockReturnValueOnce(channelRows([{}]));
 
-    const result = await listOutlierFeed(ctx);
+    const result = await listOutlierFeed(ctx, { published: "all" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -100,6 +100,8 @@ describe("listOutlierFeed", () => {
     // published_at is well over 90 days before "now" -> recency weight
     // floors at 0.1, so score = (6000 / 1000) * 0.1 = 0.6, deterministically.
     expect(item.outlierScore).toBeCloseTo(0.6, 5);
+    // D-085: the card shows the true multiple, never the decayed score.
+    expect(item.multiple).toBe(6);
     expect(item.channelName).toBe("Sleep Sounds Daily");
   });
 
@@ -109,7 +111,7 @@ describe("listOutlierFeed", () => {
     sessionFrom.mockReturnValueOnce(videoRows([])); // no matching video row
     sessionFrom.mockReturnValueOnce(channelRows([{}]));
 
-    const result = await listOutlierFeed(ctx);
+    const result = await listOutlierFeed(ctx, { published: "all" });
 
     expect(result).toEqual({ ok: true, value: { items: [], nextCursor: null } });
   });
@@ -131,7 +133,7 @@ describe("listOutlierFeed", () => {
     sessionFrom.mockReturnValueOnce(videoRows([{}, {}]));
     sessionFrom.mockReturnValueOnce(channelRows([{}]));
 
-    const result = await listOutlierFeed(ctx, { limit: 1 });
+    const result = await listOutlierFeed(ctx, { limit: 1, published: "all" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -171,7 +173,7 @@ describe("listTopOutliers", () => {
     );
     sessionFrom.mockReturnValueOnce(channelRows([{}]));
 
-    const items = await listTopOutliers(ctx, { view: "grid", range: 30 });
+    const items = await listTopOutliers(ctx, { view: "grid", published: "all" });
 
     expect(items.map((item) => item.videoId)).toEqual(["vid-high", "vid-low"]);
   });
@@ -190,9 +192,100 @@ describe("listTopOutliers", () => {
     );
     sessionFrom.mockReturnValueOnce(channelRows([{}]));
 
-    const items = await listTopOutliers(ctx, { view: "trending", limit: 2 });
+    const items = await listTopOutliers(ctx, { view: "trending", limit: 2, published: "all" });
 
     expect(items).toHaveLength(2);
+  });
+});
+
+describe("publish-date window (D-085)", () => {
+  const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+  const threeVideos = () =>
+    videoRows([
+      { id: "vid-new", published_at: daysAgo(3) },
+      { id: "vid-67", published_at: daysAgo(67) },
+      { id: "vid-326", published_at: daysAgo(326) },
+    ]);
+  const threeEvents = () =>
+    makeQueryBuilder({
+      data: ["vid-new", "vid-67", "vid-326"].map((videoId, i) =>
+        outlierEventRow({
+          id: `e${i}`,
+          payload: { videoId, title: videoId, viewCount: 5000, baseline: 1000 },
+        }),
+      ),
+      error: null,
+    });
+
+  it.each([
+    [undefined, ["vid-new"]],
+    [90, ["vid-new", "vid-67"]],
+    ["all", ["vid-new", "vid-67", "vid-326"]],
+  ] as const)(
+    "grid with published=%s keeps %j (default is 30 days)",
+    async (published, expected) => {
+      sessionFrom.mockReturnValueOnce(trackedChannelRows(["chan-1"]));
+      sessionFrom.mockReturnValueOnce(threeEvents());
+      sessionFrom.mockReturnValueOnce(threeVideos());
+      sessionFrom.mockReturnValueOnce(channelRows([{}]));
+
+      const items = await listTopOutliers(ctx, { view: "grid", published });
+
+      expect(items.map((item) => item.videoId).sort()).toEqual([...expected].sort());
+    },
+  );
+
+  it("shows an old outlier's true multiple, not its decayed score", async () => {
+    sessionFrom.mockReturnValueOnce(trackedChannelRows(["chan-1"]));
+    sessionFrom.mockReturnValueOnce(threeEvents());
+    sessionFrom.mockReturnValueOnce(threeVideos());
+    sessionFrom.mockReturnValueOnce(channelRows([{}]));
+
+    const items = await listTopOutliers(ctx, { view: "grid", published: "all" });
+    const old = items.find((item) => item.videoId === "vid-326")!;
+
+    expect(old.multiple).toBeCloseTo(6, 5); // live 6,000 views / 1,000 baseline
+    expect(old.outlierScore).toBeCloseTo(0.6, 5); // floored recency weight, ranking only
+  });
+
+  it("tops up a feed page from the next batch when old outliers are filtered out", async () => {
+    sessionFrom.mockReturnValueOnce(trackedChannelRows(["chan-1"]));
+    // Batch 1: one old outlier (filtered out), more rows exist.
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: [
+          outlierEventRow({
+            id: "e2",
+            detected_at: "2026-09-29T00:00:00Z",
+            payload: { videoId: "vid-old", title: "old", viewCount: 5000, baseline: 1000 },
+          }),
+          outlierEventRow({ id: "e1", detected_at: "2026-09-28T00:00:00Z" }),
+        ],
+        error: null,
+      }),
+    );
+    sessionFrom.mockReturnValueOnce(videoRows([{ id: "vid-old", published_at: daysAgo(200) }]));
+    sessionFrom.mockReturnValueOnce(channelRows([{}]));
+    // Batch 2: a recent one.
+    sessionFrom.mockReturnValueOnce(
+      makeQueryBuilder({
+        data: [
+          outlierEventRow({
+            id: "e1",
+            detected_at: "2026-09-28T00:00:00Z",
+            payload: { videoId: "vid-recent", title: "recent", viewCount: 5000, baseline: 1000 },
+          }),
+        ],
+        error: null,
+      }),
+    );
+    sessionFrom.mockReturnValueOnce(videoRows([{ id: "vid-recent", published_at: daysAgo(2) }]));
+    sessionFrom.mockReturnValueOnce(channelRows([{}]));
+
+    const result = await listOutlierFeed(ctx, { limit: 1 });
+
+    expect(result.ok && result.value.items.map((item) => item.videoId)).toEqual(["vid-recent"]);
+    expect(result.ok && result.value.nextCursor).toBeNull();
   });
 });
 

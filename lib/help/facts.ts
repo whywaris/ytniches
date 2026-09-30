@@ -17,6 +17,9 @@ import {
   BASELINE_MIN_VIDEOS,
   BASELINE_WINDOW,
   OUTLIER_THRESHOLD_MULTIPLIER,
+  OUTLIER_ALERT_WINDOW_DAYS,
+  OUTLIER_PUBLISHED_WINDOWS,
+  publishedWindowLabel,
   RECENCY_DECAY_DAYS,
   TRENDING_WINDOW_DAYS,
 } from "@/lib/outliers/scoring";
@@ -25,6 +28,7 @@ import {
   NICHE_SNAPSHOT_DAYS,
   TIER_INTERVAL_DAYS,
 } from "@/lib/discovery/config";
+import { AVG_VIEWS_WINDOW_DAYS } from "@/lib/channels/views";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 import {
@@ -109,6 +113,17 @@ export const FACTS: Record<string, string | number> = {
   "tracking.cadenceThreshold": CADENCE_CHANGE_THRESHOLD_PER_WEEK,
   "tracking.cadenceWindowWeeks": CADENCE_WINDOW_WEEKS,
   "outliers.trendingDays": TRENDING_WINDOW_DAYS,
+  "outliers.alertDays": OUTLIER_ALERT_WINDOW_DAYS,
+  // "Last 30 days (the default), 90 days or All time" -- the page's labels.
+  "outliers.publishedFilters": new Intl.ListFormat("en-US", { type: "disjunction" }).format(
+    OUTLIER_PUBLISHED_WINDOWS.map(
+      (window, index) => publishedWindowLabel(window) + (index === 0 ? " (the default)" : ""),
+    ),
+  ),
+  "outliers.longerWindows": new Intl.ListFormat("en-US", { type: "disjunction" }).format(
+    OUTLIER_PUBLISHED_WINDOWS.slice(1).map(publishedWindowLabel),
+  ),
+  "channels.avgViewsDays": AVG_VIEWS_WINDOW_DAYS,
 
   "invites.expiryDays": INVITE_EXPIRY_DAYS,
 

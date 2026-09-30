@@ -10,6 +10,7 @@ import { getChannelDetail } from "@/lib/services/channels";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
+import { unmeasuredViewsLabel } from "@/components/features/niche-finder/avg-views";
 import { SaveButton } from "@/app/(app)/niches/channels/[channelId]/save-button";
 import { ViewTrendChart } from "@/app/(app)/niches/channels/[channelId]/view-trend-chart";
 
@@ -107,7 +108,9 @@ export default async function ChannelDetailPage({
         </Card>
         <Card padding="md">
           <p className="text-caption text-text-tertiary">Avg views (30d)</p>
-          <p className="text-h3 text-text-primary">{formatCount(channel.avgViewsLast30Days)}</p>
+          <p className="text-h3 text-text-primary">
+            {unmeasuredViewsLabel(channel.viewsStatus) ?? formatCount(channel.avgViewsLast30Days)}
+          </p>
         </Card>
         <Card padding="md">
           <p className="text-caption text-text-tertiary">Upload frequency</p>
@@ -118,7 +121,9 @@ export default async function ChannelDetailPage({
         <Card padding="md">
           <p className="text-caption text-text-tertiary">Est. monthly views</p>
           <p className="text-h3 text-text-primary">
-            {formatCount(channel.avgViewsLast30Days * channel.uploadFrequencyPerWeek * 4.3)}
+            {channel.viewsStatus === "measured"
+              ? formatCount(channel.avgViewsLast30Days * channel.uploadFrequencyPerWeek * 4.3)
+              : "—"}
           </p>
         </Card>
       </div>

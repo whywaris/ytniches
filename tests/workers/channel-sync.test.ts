@@ -35,7 +35,8 @@ vi.mock("@/lib/email/notifications", () => ({
   sendOutlierEmail: (...args: unknown[]) => sendOutlierEmail(...args),
 }));
 
-const { syncChannelData, fanOutNotifications } = await import("@/workers/channel-sync");
+const { syncChannelData, fanOutNotifications, isNotifiable } =
+  await import("@/workers/channel-sync");
 
 const CHANNEL_ID = "11111111-1111-1111-1111-111111111111";
 const CHANNEL_ROW = { id: CHANNEL_ID, youtube_channel_id: "UC1", name: "Sleep Sounds Daily" };
@@ -374,6 +375,8 @@ describe("syncChannelData", () => {
     expect(outlierEvent?.payload.videoId).toBe("internal-outlier1");
     expect(outlierEvent?.payload.viewCount).toBe(5000);
     expect(outlierEvent?.payload.baseline).toBe(1000);
+    // D-085: stored so notifications can skip back-catalogue outliers.
+    expect(outlierEvent?.payload.publishedAt).toEqual(expect.any(String));
     expect(outlierEvent?.payload.outlierScore as number).toBeCloseTo(
       (5000 / 1000) * (1 - 1 / 90),
       2,
@@ -541,6 +544,41 @@ describe("fanOutNotifications", () => {
     eventType: "new_video" as const,
     payload: { videoId: "v1", title: "Ep 1" },
   };
+
+  describe("back-catalogue outliers (D-085)", () => {
+    const outlier = (publishedAt?: string) => ({
+      channelId: CHANNEL_ID,
+      channelName: "Sleep Sounds Daily",
+      eventType: "outlier_detected" as const,
+      payload: {
+        videoId: "v1",
+        title: "Ep 1",
+        viewCount: 5000,
+        baseline: 1000,
+        outlierScore: 5,
+        ...(publishedAt ? { publishedAt } : {}),
+      },
+    });
+    const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+    it("notifies outliers on videos published in the last 30 days", () => {
+      expect(isNotifiable(outlier(daysAgo(29)))).toBe(true);
+    });
+
+    it("records but never notifies older ones, or ones without a publish date", () => {
+      expect(isNotifiable(outlier(daysAgo(31)))).toBe(false);
+      expect(isNotifiable(outlier())).toBe(false);
+    });
+
+    it("leaves other event types alone", () => {
+      expect(isNotifiable(NEW_VIDEO_EVENT)).toBe(true);
+    });
+
+    it("sends nothing (no queries) when every event is a back-catalogue outlier", async () => {
+      await fanOutNotifications([outlier(daysAgo(326))]);
+      expect(serviceFrom).not.toHaveBeenCalled();
+    });
+  });
 
   it("does nothing (no queries) for an empty events array", async () => {
     await fanOutNotifications([]);
@@ -722,6 +760,7 @@ describe("fanOutNotifications", () => {
           viewCount: 5000,
           baseline: 1000,
           outlierScore: 4.94,
+          publishedAt: new Date().toISOString(),
         },
       },
     ]);
