@@ -129,4 +129,18 @@ describe("joinNotificationChannels", () => {
     expect(sessionFrom).toHaveBeenCalledTimes(2);
     expect(result.every((n) => n.channel.id === "chan-1")).toBe(true);
   });
+
+  it("resolves a niche note (niche:<slug>) to the niche's name", async () => {
+    sessionFrom.mockReturnValueOnce(
+      fromTable({ data: [{ slug: "mafia-history", name: "Mafia History" }], error: null }),
+    );
+
+    const [result] = await joinNotificationChannels([
+      notification({ notificationType: "niche_update", relatedResource: "niche:mafia-history" }),
+    ]);
+
+    expect(sessionFrom).toHaveBeenCalledWith("niches");
+    expect(result?.niche).toEqual({ slug: "mafia-history", name: "Mafia History" });
+    expect(result?.channel.name).toBe("Unknown channel");
+  });
 });

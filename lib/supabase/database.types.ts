@@ -130,68 +130,202 @@ export type Database = {
           },
         ];
       };
+      channel_niches: {
+        Row: {
+          channel_id: string;
+          confidence: number;
+          created_at: string;
+          is_primary: boolean;
+          niche_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          confidence: number;
+          created_at?: string;
+          is_primary?: boolean;
+          niche_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          confidence?: number;
+          created_at?: string;
+          is_primary?: boolean;
+          niche_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_niches_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "channel_niches_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      channel_view_snapshots: {
+        Row: {
+          channel_id: string;
+          snapshot_date: string;
+          total_view_count: number;
+        };
+        Insert: {
+          channel_id: string;
+          snapshot_date: string;
+          total_view_count: number;
+        };
+        Update: {
+          channel_id?: string;
+          snapshot_date?: string;
+          total_view_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_view_snapshots_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       channels: {
         Row: {
           avatar_url: string | null;
+          avg_views_recent: number | null;
           banner_url: string | null;
+          classification_confidence: number | null;
+          classified_at: string | null;
+          content_type: string | null;
+          median_views_recent: number | null;
+          views_last_30d: number | null;
           country: string | null;
           created_at: string;
           description: string | null;
+          discovered_at: string | null;
+          discovered_via_seed: string | null;
+          enriched_at: string | null;
+          first_upload_at: string | null;
           handle: string | null;
+          has_shorts: boolean | null;
           id: string;
+          is_faceless: boolean | null;
           is_monetized: boolean | null;
           language: string | null;
           last_synced_at: string;
+          likely_monetized: boolean | null;
+          made_for_kids: boolean | null;
           name: string;
+          niche_id: string | null;
+          outlier_score: number | null;
+          refresh_tier: string;
           subscriber_count: number;
           total_view_count: number;
           unavailable_since: string | null;
           updated_at: string;
+          uploads_playlist_id: string | null;
           video_count: number;
           youtube_channel_id: string;
           youtube_created_at: string;
         };
         Insert: {
           avatar_url?: string | null;
+          avg_views_recent?: number | null;
           banner_url?: string | null;
+          classification_confidence?: number | null;
+          classified_at?: string | null;
+          content_type?: string | null;
+          median_views_recent?: number | null;
+          views_last_30d?: number | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
+          discovered_at?: string | null;
+          discovered_via_seed?: string | null;
+          enriched_at?: string | null;
+          first_upload_at?: string | null;
           handle?: string | null;
+          has_shorts?: boolean | null;
           id?: string;
+          is_faceless?: boolean | null;
           is_monetized?: boolean | null;
           language?: string | null;
           last_synced_at?: string;
+          likely_monetized?: boolean | null;
+          made_for_kids?: boolean | null;
           name: string;
+          niche_id?: string | null;
+          outlier_score?: number | null;
+          refresh_tier?: string;
           subscriber_count?: number;
           total_view_count?: number;
           unavailable_since?: string | null;
           updated_at?: string;
+          uploads_playlist_id?: string | null;
           video_count?: number;
           youtube_channel_id: string;
           youtube_created_at: string;
         };
         Update: {
           avatar_url?: string | null;
+          avg_views_recent?: number | null;
           banner_url?: string | null;
+          classification_confidence?: number | null;
+          classified_at?: string | null;
+          content_type?: string | null;
+          median_views_recent?: number | null;
+          views_last_30d?: number | null;
           country?: string | null;
           created_at?: string;
           description?: string | null;
+          discovered_at?: string | null;
+          discovered_via_seed?: string | null;
+          enriched_at?: string | null;
+          first_upload_at?: string | null;
           handle?: string | null;
+          has_shorts?: boolean | null;
           id?: string;
+          is_faceless?: boolean | null;
           is_monetized?: boolean | null;
           language?: string | null;
           last_synced_at?: string;
+          likely_monetized?: boolean | null;
+          made_for_kids?: boolean | null;
           name?: string;
+          niche_id?: string | null;
+          outlier_score?: number | null;
+          refresh_tier?: string;
           subscriber_count?: number;
           total_view_count?: number;
           unavailable_since?: string | null;
           updated_at?: string;
+          uploads_playlist_id?: string | null;
           video_count?: number;
           youtube_channel_id?: string;
           youtube_created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "channels_discovered_via_seed_fkey";
+            columns: ["discovered_via_seed"];
+            isOneToOne: false;
+            referencedRelation: "discovery_seeds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "channels_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       credit_allocations: {
         Row: {
@@ -278,6 +412,188 @@ export type Database = {
           {
             foreignKeyName: "credit_events_user_id_fkey";
             columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      discovery_seeds: {
+        Row: {
+          created_at: string;
+          id: string;
+          keyword: string;
+          last_run_at: string | null;
+          priority: number;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          keyword: string;
+          last_run_at?: string | null;
+          priority?: number;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          keyword?: string;
+          last_run_at?: string | null;
+          priority?: number;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      niche_snapshots: {
+        Row: {
+          accessibility: number | null;
+          channel_count: number;
+          created_at: string;
+          demand: number | null;
+          median_views: number | null;
+          momentum: number | null;
+          new_channels_30d: number;
+          niche_id: string;
+          opportunity_score: number;
+          outlier_density: number | null;
+          snapshot_date: string;
+          supply: number | null;
+          trend: number | null;
+          why_chips: string[];
+        };
+        Insert: {
+          accessibility?: number | null;
+          channel_count?: number;
+          created_at?: string;
+          demand?: number | null;
+          median_views?: number | null;
+          momentum?: number | null;
+          new_channels_30d?: number;
+          niche_id: string;
+          opportunity_score: number;
+          outlier_density?: number | null;
+          snapshot_date: string;
+          supply?: number | null;
+          trend?: number | null;
+          why_chips?: string[];
+        };
+        Update: {
+          accessibility?: number | null;
+          channel_count?: number;
+          created_at?: string;
+          demand?: number | null;
+          median_views?: number | null;
+          momentum?: number | null;
+          new_channels_30d?: number;
+          niche_id?: string;
+          opportunity_score?: number;
+          outlier_density?: number | null;
+          snapshot_date?: string;
+          supply?: number | null;
+          trend?: number | null;
+          why_chips?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "niche_snapshots_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      niches: {
+        Row: {
+          category: string;
+          created_at: string;
+          description: string | null;
+          embedding: string | null;
+          id: string;
+          name: string;
+          seed_keywords: string[];
+          slug: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          description?: string | null;
+          embedding?: string | null;
+          id?: string;
+          name: string;
+          seed_keywords?: string[];
+          slug: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          description?: string | null;
+          embedding?: string | null;
+          id?: string;
+          name?: string;
+          seed_keywords?: string[];
+          slug?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      niche_suggestions: {
+        Row: {
+          created_at: string;
+          description: string;
+          example_channel_id: string | null;
+          id: string;
+          name: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          slug: string;
+          status: string;
+          times_suggested: number;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string;
+          example_channel_id?: string | null;
+          id?: string;
+          name: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          slug: string;
+          status?: string;
+          times_suggested?: number;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          example_channel_id?: string | null;
+          id?: string;
+          name?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          slug?: string;
+          status?: string;
+          times_suggested?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "niche_suggestions_example_channel_id_fkey";
+            columns: ["example_channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "niche_suggestions_reviewed_by_fkey";
+            columns: ["reviewed_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -425,6 +741,58 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      outliers_feed: {
+        Row: {
+          channel_id: string;
+          created_at: string;
+          detected_at: string;
+          niche_id: string | null;
+          outlier_multiple: number;
+          updated_at: string;
+          video_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          created_at?: string;
+          detected_at?: string;
+          niche_id?: string | null;
+          outlier_multiple: number;
+          updated_at?: string;
+          video_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          created_at?: string;
+          detected_at?: string;
+          niche_id?: string | null;
+          outlier_multiple?: number;
+          updated_at?: string;
+          video_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "outliers_feed_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "outliers_feed_niche_id_fkey";
+            columns: ["niche_id"];
+            isOneToOne: false;
+            referencedRelation: "niches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "outliers_feed_video_id_fkey";
+            columns: ["video_id"];
+            isOneToOne: true;
+            referencedRelation: "videos";
             referencedColumns: ["id"];
           },
         ];
@@ -850,6 +1218,7 @@ export type Database = {
           language: string | null;
           last_synced_at: string;
           like_count: number | null;
+          outlier_multiple: number | null;
           published_at: string;
           tags: string[];
           thumbnail_url: string;
@@ -870,6 +1239,7 @@ export type Database = {
           language?: string | null;
           last_synced_at?: string;
           like_count?: number | null;
+          outlier_multiple?: number | null;
           published_at: string;
           tags?: string[];
           thumbnail_url: string;
@@ -890,6 +1260,7 @@ export type Database = {
           language?: string | null;
           last_synced_at?: string;
           like_count?: number | null;
+          outlier_multiple?: number | null;
           published_at?: string;
           tags?: string[];
           thumbnail_url?: string;
@@ -1142,6 +1513,12 @@ export type Database = {
           channel_id: string;
         }[];
       };
+      find_due_enrichment_channel_ids: {
+        Args: { p_cold_days: number; p_hot_days: number; p_limit: number; p_warm_days: number };
+        Returns: {
+          channel_id: string;
+        }[];
+      };
       find_due_digest_user_ids: {
         Args: never;
         Returns: {
@@ -1174,17 +1551,56 @@ export type Database = {
         Returns: boolean;
       };
       purge_stale_youtube_data: {
-        Args: { p_max_age_days: number };
+        Args: { p_max_age_days: number; p_snapshot_days?: number; p_view_snapshot_days?: number };
         Returns: {
           channels_deleted: number;
           channels_emptied: number;
           events_deleted: number;
           notifications_deleted: number;
+          outliers_deleted: number;
+          snapshots_deleted: number;
           videos_deleted: number;
           videos_emptied: number;
+          view_snapshots_deleted: number;
         }[];
       };
       touch_last_active: { Args: never; Returns: undefined };
+      admin_signup_counts: {
+        Args: { p_since: string };
+        Returns: { verified: number; verified_since: number; pending: number }[];
+      };
+      auth_user_exists: { Args: { p_email: string }; Returns: boolean };
+      suggest_niche: {
+        Args: { p_channel_id: string; p_description: string; p_name: string; p_slug: string };
+        Returns: undefined;
+      };
+      match_niche: {
+        Args: { p_embedding: string; p_min_similarity: number };
+        Returns: {
+          niche_id: string;
+          similarity: number;
+        }[];
+      };
+      niche_signal_inputs: {
+        Args: {
+          p_min_avg_views: number;
+          p_new_channel_months: number;
+          p_outlier_multiple: number;
+          p_small_channel_subs: number;
+        };
+        Returns: {
+          channel_count: number;
+          median_views_90d: number | null;
+          new_channels_30d: number;
+          new_performing_count: number;
+          niche_id: string;
+          outlier_video_count: number;
+          performing_count: number;
+          recent_video_count: number;
+          small_performing_count: number;
+          uploads_30d: number;
+        }[];
+      };
       shares_workspace_with: {
         Args: { target_user_id: string };
         Returns: boolean;

@@ -7,7 +7,7 @@ import type { OutlierRange } from "@/lib/services/outliers";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Outliers — YTNiches",
+  title: "Your outliers — YTNiches",
 };
 
 const FEED_PAGE_SIZE = 20;

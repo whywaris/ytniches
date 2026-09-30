@@ -12,6 +12,7 @@ import {
   TOOL_ERROR_COPY,
   trackToolUsed,
 } from "@/components/features/tools/tool-kit";
+import { EstimateNote } from "@/components/features/youtube/estimate-note";
 import { checkOutlierAction } from "@/app/(marketing)/tools/actions";
 
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -114,6 +115,7 @@ export function OutlierCheckerTool() {
       {check && (
         <div className="flex flex-col gap-4">
           <Verdict check={check} />
+          <EstimateNote what="The outlier multiple" />
           <ResultCta slug="youtube-outlier-checker" />
         </div>
       )}

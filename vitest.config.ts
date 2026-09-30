@@ -13,6 +13,11 @@ export default defineConfig({
     // Vitest's own recommended fix (printed as a perf hint) and only
     // gets more necessary as Batch B adds more component tests.
     isolate: false,
+    // With shared workers a vi.stubEnv left in place leaks into later files
+    // (the auth tests' NEXT_PUBLIC_SITE_URL broke the digest URLs in CI);
+    // reset stubbed env vars before each test (imports still see a stub left by
+    // the previous file, so read env at call time, not module load).
+    unstubEnvs: true,
     // Default 5000ms. FullCalendar's month-grid render (Phase 3 Tasks
     // 2+3's Content Calendar) is CPU-heavy enough that a sibling worker
     // running it can starve an unrelated file's userEvent-timer-based

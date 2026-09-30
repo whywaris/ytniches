@@ -1,14 +1,29 @@
 "use server";
 
+import { z } from "zod";
+
 import { getRequestContext } from "@/lib/context";
 import {
   saveChannelToTracking,
   searchNiches,
+  trackNiche,
+  type NotFoundError,
+  type TrackNicheResult,
   type ChannelSearchResult,
   type SaveChannelError,
   type SearchError,
 } from "@/lib/services/channels";
 import { NicheSearchInputSchema } from "@/lib/services/channels.schema";
+import {
+  channelFiltersToValues,
+  nicheFiltersToValues,
+  outlierFiltersToValues,
+  parseChannelFilters,
+  parseNicheFilters,
+  parseOutlierFilters,
+} from "@/lib/discovery/feed-url";
+import { unlockFilteredView, type UnlockResult } from "@/lib/services/feed-credits";
+import type { InsufficientCreditsError } from "@/lib/credits";
 import { err, type Result } from "@/lib/result";
 import { capture } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
@@ -83,4 +98,58 @@ export async function saveChannelAction(
     void capture("first_save", { distinctId: ctx.userId });
   }
   return result;
+}
+
+const SlugSchema = z.string().regex(/^[a-z0-9-]{1,80}$/);
+
+// Niche-Discovery-Engine.md §9.2/§9.5: "Track" on a niche card or page.
+export async function trackNicheAction(
+  slug: unknown,
+): Promise<Result<TrackNicheResult, NotFoundError | { type: "validation_error" }>> {
+  const parsed = SlugSchema.safeParse(slug);
+  if (!parsed.success) return err({ type: "validation_error" });
+  const ctx = await getRequestContext();
+  return trackNiche(ctx, parsed.data);
+}
+
+const FeedTabSchema = z.enum(["niches", "channels", "outliers"]);
+const FilterValuesSchema = z.record(z.string(), z.string().max(100));
+
+// Re-parse through the same URL parsers the page uses, so the unlock is
+// keyed on exactly the filters the page will check (junk params dropped).
+function canonicalValues(
+  tab: z.infer<typeof FeedTabSchema>,
+  raw: Record<string, string>,
+): Record<string, string | undefined> {
+  switch (tab) {
+    case "niches":
+      return nicheFiltersToValues(parseNicheFilters(raw));
+    case "channels":
+      return channelFiltersToValues(parseChannelFilters(raw));
+    case "outliers":
+      return outlierFiltersToValues(parseOutlierFilters(raw));
+  }
+}
+
+// D-072: a filtered discovery view costs 1 credit, then it's free to re-run
+// or page for 24h. Same client-generated idempotency key contract as
+// searchNichesAction.
+export async function unlockFeedFiltersAction(
+  tab: unknown,
+  values: unknown,
+  idempotencyKey: string,
+): Promise<Result<UnlockResult, InsufficientCreditsError | { type: "validation_error" }>> {
+  const parsedTab = FeedTabSchema.safeParse(tab);
+  const parsedValues = FilterValuesSchema.safeParse(values);
+  const parsedKey = z.string().uuid().safeParse(idempotencyKey);
+  if (!parsedTab.success || !parsedValues.success || !parsedKey.success) {
+    return err({ type: "validation_error" });
+  }
+  const ctx = await getRequestContext();
+  return unlockFilteredView(
+    ctx,
+    parsedTab.data,
+    canonicalValues(parsedTab.data, parsedValues.data),
+    parsedKey.data,
+  );
 }

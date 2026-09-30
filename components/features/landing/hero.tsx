@@ -1,46 +1,41 @@
-import { HERO } from "@/components/features/landing/content";
+import { Button } from "@/components/ui/button";
+import { HERO, HOW_IT_WORKS, PRIMARY_CTA } from "@/components/features/landing/content";
 import { CtaLink } from "@/components/features/landing/cta-link";
-import {
-  HeroVideoPoster,
-  HeroVideoProvider,
-  WatchDemoButton,
-} from "@/components/features/landing/hero-video";
+import { HeroArt } from "@/components/features/landing/illustrations";
 
-// Landing-Page-Spec §2. Social-proof line deliberately omitted until ~250
-// users (Landing-Copy §2.2).
+// D-082 hero. "See how it works" is a plain anchor (smooth scroll in CSS,
+// off under reduced motion) -- no JS.
 function Hero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative -mt-[72px] flex flex-col items-center px-6 pt-40 pb-20 md:min-h-[80vh] md:px-10 lg:min-h-[max(100vh,720px)]"
+      className="relative px-6 pt-12 pb-20 md:px-10 md:pt-20 md:pb-28"
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_at_top,var(--accent-subtle),transparent_65%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[640px] bg-[radial-gradient(ellipse_at_70%_0%,var(--glow-accent-soft),transparent_65%)]"
       />
-      <HeroVideoProvider>
-        <div className="relative mx-auto flex max-w-[1120px] flex-col items-center text-center">
-          <p className="mb-4 text-body-sm font-medium tracking-wide text-accent-text uppercase">
-            {HERO.eyebrow}
-          </p>
+      <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+        <div>
           <h1
             id="hero-heading"
-            className="max-w-4xl text-display-sm font-semibold tracking-tight text-text-primary lg:text-display-lg"
+            className="font-display text-[40px] leading-[1.1] font-normal text-balance text-text-primary sm:text-display-sm md:text-display-lg"
           >
             {HERO.headline}
           </h1>
-          <p className="mt-6 max-w-2xl text-body-lg text-text-secondary">{HERO.subhead}</p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <CtaLink href="/signup" event="landing_hero_cta_click" eventProps={{ cta: "primary" }}>
-              {HERO.primaryCta}
+          <p className="mt-6 max-w-xl text-body-lg text-text-secondary">{HERO.subhead}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <CtaLink href="/signup" event="landing_hero_cta_click" eventProps={{ source: "hero" }}>
+              {PRIMARY_CTA}
             </CtaLink>
-            <WatchDemoButton label={HERO.secondaryCta} />
+            <Button asChild variant="secondary" size="lg">
+              <a href={`#${HOW_IT_WORKS.id}`}>{HERO.secondaryCta}</a>
+            </Button>
           </div>
-          <div className="mt-16 w-full">
-            <HeroVideoPoster />
-          </div>
+          <p className="mt-6 text-body-sm text-text-secondary">{HERO.dataLine}</p>
         </div>
-      </HeroVideoProvider>
+        <HeroArt className="mx-auto max-w-[560px]" />
+      </div>
     </section>
   );
 }

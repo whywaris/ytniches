@@ -6,14 +6,16 @@ import { ok, type Result } from "@/lib/result";
 import type { RequestContext } from "@/lib/context";
 
 // The four implemented tracked_event_type values (subscriber_milestone has
-// no detector yet, per workers/channel-sync.ts).
+// no detector yet, per workers/channel-sync.ts), plus niche_update: the
+// Discovery Engine's tracked-niche notes (Niche-Discovery-Engine.md §11).
 export type NotificationEventType =
-  "new_video" | "view_spike" | "cadence_change" | "outlier_detected";
+  "new_video" | "view_spike" | "cadence_change" | "outlier_detected" | "niche_update";
 const NOTIFICATION_TYPES: NotificationEventType[] = [
   "new_video",
   "view_spike",
   "cadence_change",
   "outlier_detected",
+  "niche_update",
 ];
 
 export type DigestCadence = "off" | "daily" | "weekly";

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { renderMdx } from "@/lib/blog/mdx";
+import { BETA_MODE } from "@/lib/billing/beta";
 import { FACTS } from "@/lib/help/facts";
 import { getLegalPages } from "@/lib/legal";
 import { HELP_MDX_COMPONENTS } from "@/components/features/help/help-mdx";
@@ -34,11 +35,7 @@ describe("content/legal", () => {
         (match) => `${page.slug}: ${match[1]}`,
       ),
     );
-    expect(open).toEqual([
-      "terms: business address, or confirm none is published",
-      "terms: city for the courts",
-      "privacy: business address, or confirm none is published",
-    ]);
+    expect(open).toEqual([]);
   });
 
   describe.each(pages)("content/legal/$slug", (page) => {
@@ -72,6 +69,13 @@ describe("content/legal", () => {
     });
   });
 
+  it("states the trial credits the way credit-cycles grants them (D-081)", () => {
+    expect(FACTS["trial.creditsTerms"]).toContain(BETA_MODE ? "every month" : "once");
+    expect(pages.find((page) => page.slug === "terms")!.body).toContain(
+      '<Fact k="trial.creditsTerms" />',
+    );
+  });
+
   it("meets YouTube's Developer Policies wording (III.A.1, III.A.2)", () => {
     const terms = pages.find((page) => page.slug === "terms")!.body;
     const privacy = pages.find((page) => page.slug === "privacy")!.body;
@@ -79,7 +83,11 @@ describe("content/legal", () => {
       /agree to be bound by the \[YouTube Terms of Service\]\(https:\/\/www\.youtube\.com\/t\/terms\)/,
     );
     expect(privacy).toContain("YouTube API Services");
-    expect(privacy).toContain("http://www.google.com/policies/privacy");
+    expect(privacy).toContain("https://policies.google.com/privacy");
+    expect(privacy).toContain("https://www.youtube.com/t/terms");
     expect(privacy).toContain("https://security.google.com/settings/security/permissions");
+    // III.E.4 (deletion) and III.E.4.h (own metrics labelled as not from YouTube).
+    expect(privacy).toMatch(/doesn't change anything stored by YouTube/);
+    expect(privacy).toMatch(/not data from YouTube/);
   });
 });

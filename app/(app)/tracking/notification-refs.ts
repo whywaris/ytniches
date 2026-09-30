@@ -3,14 +3,14 @@ import type { NotificationWithEvent } from "@/lib/services/tracking";
 import type { ActivityFeedNotification } from "@/components/features/tracking/types";
 
 interface ParsedResource {
-  type: "video" | "channel";
+  type: "video" | "channel" | "niche";
   id: string;
 }
 
 function parseRelatedResource(raw: string | null): ParsedResource | null {
   if (!raw) return null;
   const [type, id] = raw.split(":");
-  if ((type === "video" || type === "channel") && id) {
+  if ((type === "video" || type === "channel" || type === "niche") && id) {
     return { type, id };
   }
   return null;
@@ -19,7 +19,7 @@ function parseRelatedResource(raw: string | null): ParsedResource | null {
 const UNKNOWN_CHANNEL = { id: "", name: "Unknown channel", avatarUrl: null as string | null };
 
 // Backend-Schema.md §4.3: notifications don't carry a channel_id column,
-// only `related_resource` ("video:<id>" | "channel:<id>") -- see
+// only `related_resource` ("video:<id>" | "channel:<id>" | "niche:<slug>") -- see
 // components/features/tracking/types.ts's own note that the page layer is
 // responsible for this join. Resolves every notification's display channel
 // in at most two batched queries (videos, then channels), regardless of
@@ -80,9 +80,25 @@ export async function joinNotificationChannels(
     }
   }
 
+  const nicheSlugs = [
+    ...new Set(parsed.flatMap((p) => (p.ref?.type === "niche" ? [p.ref.id] : []))),
+  ];
+  const nicheBySlug = new Map<string, { slug: string; name: string }>();
+  if (nicheSlugs.length > 0) {
+    const { data, error } = await supabase
+      .from("niches")
+      .select("slug, name")
+      .in("slug", nicheSlugs);
+    if (error) {
+      throw new Error(`joinNotificationChannels niches query failed: ${error.message}`);
+    }
+    for (const row of data) nicheBySlug.set(row.slug, row);
+  }
+
   return parsed.map(({ notification, ref }) => {
     let channel = UNKNOWN_CHANNEL;
-    if (ref) {
+    const niche = ref?.type === "niche" ? nicheBySlug.get(ref.id) : undefined;
+    if (ref && ref.type !== "niche") {
       const channelId = ref.type === "channel" ? ref.id : videoChannelId.get(ref.id);
       if (channelId) {
         channel = channelById.get(channelId) ?? UNKNOWN_CHANNEL;
@@ -97,6 +113,7 @@ export async function joinNotificationChannels(
       readAt: notification.readAt,
       dismissedAt: notification.dismissedAt,
       channel,
+      ...(niche ? { niche } : {}),
     };
   });
 }

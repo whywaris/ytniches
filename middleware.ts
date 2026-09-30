@@ -8,7 +8,10 @@ import { createServerClient } from "@supabase/ssr";
 // touching this file. Includes routes that don't have a page yet (e.g.
 // /niches, /admin/*): hitting one just 404s after the auth check passes,
 // which is correct.
-const AUTH_ROUTES = ["/signup", "/login", "/forgot-password", "/reset-password", "/verify"];
+// Signed-in users are sent to /dashboard from these. /reset-password isn't
+// one: a password-reset link signs the user in first (D-083), and the page
+// checks the recovery cookie itself.
+const AUTH_ROUTES = ["/signup", "/login", "/forgot-password", "/check-email"];
 const APP_ROUTE_PREFIXES = [
   "/dashboard",
   "/onboarding",

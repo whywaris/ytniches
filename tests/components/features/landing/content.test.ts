@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
+import { TIER_INFO, TRIAL } from "@/lib/billing/plans";
+import { LEGAL } from "@/lib/legal/policy";
+import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 import * as content from "@/components/features/landing/content";
 
 // Landing-Copy.md §5.6's review checklist, as far as a machine can check it.
@@ -20,12 +24,19 @@ const BANNED = [
   "delight",
 ];
 
+// D-082: payment and Google reviewers read the page -- no money claims.
+// The one amount allowed is the beta price, $0 (D-081); paid prices live on /pricing.
+const MONEY_CLAIMS =
+  /\b(profit\w*|revenue|income|earn\w*|monetiz\w*|make money|rpm|cpm)\b|\$[1-9]/i;
+
 function allStrings(value: unknown): string[] {
   if (typeof value === "string") return [value];
   if (Array.isArray(value)) return value.flatMap(allStrings);
   if (value && typeof value === "object") return Object.values(value).flatMap(allStrings);
   return [];
 }
+
+const text = allStrings(content).join(" ");
 
 describe("landing content", () => {
   it("keeps SEO title under 60 and description under 155 chars", () => {
@@ -34,41 +45,46 @@ describe("landing content", () => {
   });
 
   it("uses no banned words (Landing-Copy §1.5)", () => {
-    const text = allStrings(content).join(" ").toLowerCase();
     for (const word of BANNED) {
-      expect(text, `banned word "${word}"`).not.toMatch(new RegExp(`\\b${word}`));
+      expect(text.toLowerCase(), `banned word "${word}"`).not.toMatch(new RegExp(`\\b${word}`));
     }
   });
 
-  it("ships Mac's final founder copy, not the starter draft", () => {
-    const story = content.FOUNDER.paragraphs.join(" ");
-    expect(story).toContain("World War 2");
-    expect(story).not.toContain("a while back");
-    expect(content.FOUNDER.signature).toBe("— Mac, founder");
+  it("makes no income, revenue or profitability claims (D-082)", () => {
+    expect(text).not.toMatch(MONEY_CLAIMS);
   });
 
-  it("states the Monetization.md credit costs, not 'one credit'", () => {
-    expect(content.AI_SECTION.creditLine).toContain("5 credits");
-    expect(content.AI_SECTION.creditLine).toContain("3 to regenerate");
-  });
-
-  it("marks only YouTube as a live integration", () => {
-    const live = content.INTEGRATIONS.categories
-      .flatMap((category) => category.items)
-      .filter((item) => item.live)
-      .map((item) => item.id);
-    expect(live).toEqual(["youtube"]);
-  });
-
-  it("builds Ask-AI links with the encoded pre-filled query", () => {
-    const links = content.askAiLinks("hello world");
-    expect(links.map((link) => link.label)).toEqual([
-      "Ask ChatGPT",
-      "Ask Claude",
-      "Ask Perplexity",
-    ]);
-    for (const link of links) {
-      expect(link.href).toContain("hello%20world");
+  it("only states numbers that come from constants (D-082)", () => {
+    const allowed = new Set(
+      [
+        YOUTUBE_DATA_MAX_AGE_DAYS,
+        BETA_NOTICE_DAYS,
+        BETA_PRICE,
+        LEGAL.dataRequestDays,
+        TRIAL.credits,
+        TRIAL.days,
+        new Date().getFullYear(),
+        ...Object.values(TIER_INFO).flatMap((info) => [info.monthlyPrice, info.monthlyCredits]),
+      ].map(String),
+    );
+    for (const number of text.match(/\d+/g) ?? []) {
+      expect(allowed.has(number), `typed number ${number}`).toBe(true);
     }
+  });
+
+  it("has 5-6 FAQs covering data source, independence, storage, pricing, deletion, contact", () => {
+    expect(content.FAQ.length).toBeGreaterThanOrEqual(5);
+    expect(content.FAQ.length).toBeLessThanOrEqual(6);
+    const answers = content.FAQ.map((item) => `${item.question} ${item.answer}`).join(" ");
+    expect(answers).toMatch(/YouTube API Services/);
+    // D-084: no wording that implies YouTube or Google endorses us.
+    expect(text).not.toMatch(
+      /(official|approved|certified|endorsed by|partnered)(?![^.]*(isn't|not))/i,
+    );
+    expect(answers).toMatch(/isn't affiliated with, endorsed or sponsored by YouTube or Google/);
+    expect(content.FAQ.some((item) => item.link?.href === "/legal/privacy")).toBe(true);
+    expect(answers).toMatch(/beta/i);
+    expect(answers).toMatch(/delete your account/);
+    expect(answers).toMatch(/support@ytniches\.com/);
   });
 });

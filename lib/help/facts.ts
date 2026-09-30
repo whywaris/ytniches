@@ -1,3 +1,13 @@
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/credentials";
+import {
+  AUTH_EMAILS_PER_HOUR,
+  AUTH_LINK_EXPIRY_HOURS,
+  LOCKOUT_MAX_FAILURES,
+  LOCKOUT_WINDOW_SECONDS,
+  PENDING_EMAIL_MINUTES,
+  RECOVERY_MINUTES,
+} from "@/lib/auth/forms";
+import { BETA_MODE, BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
 import { LEGAL } from "@/lib/legal/policy";
@@ -10,6 +20,11 @@ import {
   RECENCY_DECAY_DAYS,
   TRENDING_WINDOW_DAYS,
 } from "@/lib/outliers/scoring";
+import {
+  CHANNEL_VIEW_SNAPSHOT_DAYS,
+  NICHE_SNAPSHOT_DAYS,
+  TIER_INTERVAL_DAYS,
+} from "@/lib/discovery/config";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { YOUTUBE_DATA_MAX_AGE_DAYS } from "@/lib/youtube/retention";
 import {
@@ -50,6 +65,7 @@ const planFacts = Object.fromEntries(
 
 export const FACTS: Record<string, string | number> = {
   "credits.nicheSearch": CREDIT_COSTS.nicheSearch,
+  "credits.filteredFeedSearch": CREDIT_COSTS.filteredFeedSearch,
   "credits.promptGenerate": CREDIT_COSTS.promptGenerate,
   "credits.promptRegenerate": CREDIT_COSTS.promptRegenerate,
   "credits.thumbnailIdeas": CREDIT_COSTS.thumbnailIdeas,
@@ -58,8 +74,24 @@ export const FACTS: Record<string, string | number> = {
   "search.cacheHours": SEARCH_RESULTS_CACHE_HOURS,
 
   "trial.pitch": TRIAL_PITCH,
+  "beta.noticeDays": BETA_NOTICE_DAYS,
+  "beta.price": dollars(BETA_PRICE),
+
+  // D-083 email + password sign-in.
+  "auth.passwordMinLength": PASSWORD_MIN_LENGTH,
+  "auth.linkExpiryHours": AUTH_LINK_EXPIRY_HOURS,
+  "auth.lockoutFailures": LOCKOUT_MAX_FAILURES,
+  "auth.lockoutMinutes": LOCKOUT_WINDOW_SECONDS / 60,
+  "auth.emailsPerHour": AUTH_EMAILS_PER_HOUR,
+  "auth.pendingEmailMinutes": PENDING_EMAIL_MINUTES,
+  "auth.recoveryMinutes": RECOVERY_MINUTES,
   "trial.days": TRIAL.days,
   "trial.credits": TRIAL.credits,
+  // What workers/credit-cycles.ts does: during the beta the trial's credits
+  // refill monthly with no carry-over (rolloverCap 0); otherwise once.
+  "trial.creditsTerms": BETA_MODE
+    ? `During the beta, the trial doesn't expire and comes with ${TRIAL.credits} credits every month. Unused credits don't carry over`
+    : `The trial comes with ${TRIAL.credits} credits, once`,
   "trial.plan": TIER_INFO[TRIAL.tier].label,
   "trial.sync": sync(TRIAL.refreshCadenceHours),
 
@@ -88,10 +120,17 @@ export const FACTS: Record<string, string | number> = {
 
   "support.email": SUPPORT_EMAIL,
   "youtube.maxAgeDays": YOUTUBE_DATA_MAX_AGE_DAYS,
+  "youtube.viewReadingDays": CHANNEL_VIEW_SNAPSHOT_DAYS,
+  "youtube.nicheSnapshotDays": NICHE_SNAPSHOT_DAYS,
+  "youtube.refreshDays": new Intl.ListFormat("en-US", { type: "disjunction" }).format(
+    Object.values(TIER_INTERVAL_DAYS).map(String),
+  ),
 
   "legal.operator": LEGAL.operator,
   "legal.entity": LEGAL.entity,
   "legal.governingLaw": LEGAL.governingLaw,
+  "legal.country": LEGAL.country,
+  "legal.courtsCity": LEGAL.courtsCity,
   "legal.minimumAge": LEGAL.minimumAge,
   "legal.dataRequestDays": LEGAL.dataRequestDays,
   "legal.liabilityCapMonths": LEGAL.liabilityCapMonths,

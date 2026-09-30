@@ -211,7 +211,7 @@ Decisions that still need to close before their dependent docs / features can be
 
 ### D-015: OAuth as primary auth
 
-- **Status:** Open
+- **Status:** Resolved (2026-09-29) by D-083
 - **Impacts:** Onboarding spec, Security.md, Backend auth logic
 - **Options:**
   - A: Google-only (no email/password option)
@@ -219,7 +219,7 @@ Decisions that still need to close before their dependent docs / features can be
   - C: Google + email/password + Apple
 - **Trade-offs:** Google-only = simpler build, faster signup for most, alienates users without Google account or those who avoid Google. Multiple providers = more code, better inclusion.
 - **Recommendation:** Option B. Google reduces signup friction for the majority; email/password serves the minority who need it, adds \~1 day of work.
-- **Final call:** —
+- **Final call:** Option B, Google + email/password (2026-09-29). Built as D-083.
 
 ---
 
@@ -286,7 +286,7 @@ Decisions that still need to close before their dependent docs / features can be
   - Which "stuck" moment mattered most (competitor spying / outlier detection / content ideas / script writing / consistency)
   - Contrarian opinion — a strong take that most faceless-creator advice gets wrong
 - **Recommendation:** Book a 20-minute founder discovery to extract these, then draft copy in Mac's voice. Cannot fake this input.
-- **Final call:** Founder story confirmed — World War 2 faceless YouTube channel. Stuck moment: no system for topics, outliers, or prompts after finding the niche. Deployed in landing page (content.ts, founder-section.tsx).
+- **Final call:** Founder story confirmed — World War 2 faceless YouTube channel. Stuck moment: no system for topics, outliers, or prompts after finding the niche. Used in the blog and author bio; removed from the landing page on 2026-09-29 (D-082).
 
 ---
 
@@ -648,7 +648,7 @@ Decisions that still need to close before their dependent docs / features can be
   - **Old tool URLs we don't rebuild** stay undecided for now, pending Mac's call per URL (redirect, rebuild or drop).
   - **Client-side first.** Subscribe link, RSS (channel or playlist), embed code and thumbnail resizing run in the browser. A `/channel/UC…` URL or bare channel ID needs zero API calls; only `@handles` go to the server.
   - **Rate limit.** Server-backed tool requests share one per-IP bucket: 10 per hour and 30 per day (Upstash sliding windows). Cache hits count too. Plus a hidden honeypot field.
-  - **Quota guard.** Free tools return "Busy right now" once the day's YouTube quota reaches 70% of `DAILY_QUOTA_LIMIT` (7,000 of 10,000), so the last 30% is kept for signed-in users. The check runs before the rate limit, so a busy day doesn't spend a visitor's allowance. Busy blocks cached results too (simplest; revisit if it hurts).
+  - **Quota guard.** ~~Free tools return "Busy right now" once the day's YouTube quota reaches 70% of `DAILY_QUOTA_LIMIT` (7,000 of 10,000), so the last 30% is kept for signed-in users.~~ Revisited 2026-09-27 (D-075): free tools have their own 1,500-unit daily budget and go "Busy" only when that is spent, so other traffic can't push them there. The check runs before the rate limit, so a busy day doesn't spend a visitor's allowance. Busy blocks cached results too (simplest; revisit if it hurts).
   - **Handle cache.** New Redis key `youtube:handle:{handle}` → channel ID, 24h TTL. Previously every repeat `@handle` lookup cost a unit. It benefits the app's own channel inputs too. (TRD.md §5.2's key list should add it in the next TRD edit.)
   - **Wider shared parser.** `lib/youtube/urls.ts` now accepts bare `@handle`, bare `UC…` IDs, trailing tabs (`/videos`), `m.youtube.com`, and `/live`, `/embed` and bare video IDs. It's shared by the app and the tools. Legacy `/c/` and `/user/` links are still rejected with a clear message.
   - **One outlier rule.** The "earlier uploads" selection moved from `workers/channel-sync.ts` into `evaluateAgainstChannel` in `lib/outliers/scoring.ts`, used by both the worker and the Outlier Checker. New edge-case tests (cold start, 2,999 vs 3,000 views, zero baseline) pass against both the old and the new worker.
@@ -796,7 +796,7 @@ Decisions that still need to close before their dependent docs / features can be
     - The Outliers Grid ranges become 7/14/30 days.
     - **Effect on D-057:** an expired user's channels stop syncing, so their YouTube data stays viewable only until this purge empties it, 30 days after their last sync.
   - c. A signup consent line, since users must agree to the privacy policy before using the product (III.A.2). **Done** (login and signup).
-  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a). **Done:** it's in the app shell, plus the six free tools that show YouTube data. **Open risk:** it's a text link. III.F.2.a says "displaying YouTube Brand Features", which may mean the official YouTube logo. If a reviewer asks for it, swap in the official asset under YouTube's branding guidelines. We have no logo files yet.
+  - d. "Data from YouTube" attribution on every screen that shows YouTube data (III.F.2.a). **Done:** it's in the app shell, plus the six free tools that show YouTube data. **Superseded by D-084:** now the official "developed with YouTube" logo.
   - e. PostHog cookieless (`persistence: "memory"`), so there are no analytics cookies and no consent banner. **Done** (checked in the browser).
   - f. Legal pages: terms, privacy, refunds, cookies (D-058). **Done.** Numbers come from constants via `<Fact>`, and no payment provider is named. Every processor is named in the privacy policy. Business facts live in `lib/legal/policy.ts`: sole proprietor, Pakistan law, minimum age 16, liability cap of 12 months' fees, 30 days for data requests.
 - **Deferred:** in-app data export and account deletion buttons (`/settings/danger`, UI-UX-Flow.md §8.1.6). Until then, requests go by email and are done within 30 days.
@@ -814,3 +814,245 @@ Decisions that still need to close before their dependent docs / features can be
   - Hard-coded emerald replaced in the calendar palette, email layout and blog OG image.
   - Calendar entry labels were white on the palette, which failed contrast; they're now near-black. Violet is lightened to #a78bfa so every palette colour clears 4.5:1.
   - `tests/lib/design-tokens.test.ts` checks every accent pairing in both themes, because jest-axe in jsdom can't see CSS variables.
+
+### D-069: Niche Discovery Engine — extend `channels`/`videos`, don't fork them
+
+- **Status:** Resolved (2026-09-26). The build gate is still open (see below).
+- **Context:** Niche Finder only offers live search: 100 quota units per keyword, and it has no feed, no niche score and no global outliers. The owner's spec (now `docs/Niche-Discovery-Engine.md`) adds a background engine that crawls, enriches, classifies and scores channels every day, and turns `/niches` into a browse feed.
+- **Options:**
+  - A: New `yt_channels` / `yt_videos` tables, as in the draft spec.
+  - B: Extend the existing shared `channels` / `videos`.
+- **Final call:** B. Tracked channels, prompts, calendar entries and tracked events already have FKs to these rows. Forking them would store the same channel twice and create a sync problem. The new tables are `discovery_seeds`, `niches`, `niche_snapshots` and `outliers_feed`. The route stays `/niches`, and the feed is a set of tabs (`?tab=niches|channels|outliers|search`).
+- **Quota warning:** the spec budget (about 9,500 units a day for jobs, 500 buffer) would have left roughly 5 live searches a day. Revisited 2026-09-27: the jobs now have their own 3,000-unit budget (D-075) until D-036.
+- **Gate (open):** all of the following, before this is called done:
+  - [ ] 7 days of unattended cron runs
+  - [ ] the quota was never exceeded
+  - [ ] no untracked YouTube row is older than 30 days
+  - [ ] Lighthouse/a11y pass on `/niches` tabs and `/niches/[slug]`
+- **Impacts:** PRD §6.1, Backend-Schema §3 / §6, TRD §4.2, UI-UX-Flow §5, Application-Flow §2.3, `docs/Niche-Discovery-Engine.md`.
+
+### D-070: Service-role writes from workers and discovery services
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** Security.md §3.1 says only migrations use the service role, and Backend-Schema §6.1 says the same. The shared cache tables have always been service-role-only writes, and `workers/*` already use `createServiceClient()`. The docs contradicted the code.
+- **Final call:** this is a documented exception. The service-role client may be used by:
+  - (a) Inngest functions in `workers/`;
+  - (b) `lib/services/discovery/*`;
+  - (c) the existing service-layer writes to shared cache tables and admin actions.
+
+  All three are server-only, and client components must never import them. User-facing reads of research data (`niches`, `niche_snapshots`, `outliers_feed`, `channels`, `videos`) go through the user client under RLS, using `anyone_read_*` policies. Admin-triggered discovery actions are written to `admin_actions`.
+
+- **Impacts:** Security.md §3.1, Backend-Schema §6.1.
+
+### D-071: Opportunity Score weights v1 and qualification thresholds
+
+- **Status:** Resolved (2026-09-26). Tune after beta.
+- **Final call:** use the spec defaults. All of them live in `lib/discovery/config.ts`.
+  - **Weights:** Accessibility 30, Demand 25, Momentum 20, Outlier density 15, Supply (inverse) 10. Each signal is percentile-normalised across niches.
+  - **Labels:** 80+ Low competition, 50–79 Medium, < 50 High.
+  - **Qualification:** the channel was created within 12 months OR has a ≥ 3× video in the last 30 days, AND avg recent views ≥ 5,000.
+  - **Refresh tiers:** hot 2d, warm 7d, cold 25d.
+  - **Minimum sample:** a niche needs 3 performing channels before it gets a score.
+- **Revisit:** after 2 weeks of beta data. Compare the score with what users actually track.
+
+### D-072: Default discovery feeds are free; a filtered search costs 1 credit; Starter/Trial see the top 50 niches
+
+- **Status:** Resolved (2026-09-26). Revised 2026-09-27 (owner): filtered views are charged.
+- **Revised again 2026-09-28 (owner, D-077):** the three filter presets (New faceless, Small + breakout, Rising) are **free**, like the default feeds. Any other custom filter set still costs 1 credit.
+- **Final call:**
+  - **Free:** the default Niches, Channels and Outliers feeds, `/niches/[slug]`, sorting, paging, and a niche-only filter (card badges and niche pages link to it, so it's navigation). None of these make YouTube calls.
+  - **Filtered search, 1 credit** (`CREDIT_COSTS.filteredFeedSearch`): any other filter set on a feed tab (score, status, subs, views, dates, outlier score, toggles, language, min multiple, time window). Re-running or paging the same filters is free for 24h (`SEARCH_RESULTS_CACHE_HOURS`), the same deal as a live search (D-065). Same idempotency pattern too: the client sends a UUID per Apply, and `consume` ignores a repeat.
+  - **Charged only on an explicit action**, never while rendering: the filter panel's Apply, or "Show results (1 credit)" on the gate card that a locked filtered URL (shared link, back button) shows instead of results. Prefetches and refreshes can't spend credits. The 24h unlock is per user (`feed-unlock:{user}:{hash}` in Redis).
+  - Live search is still 1 credit (D-065).
+  - Starter and Trial (no plan, or tier `starter`, or status `trialing`) see the top 50 niches by score, with an upgrade prompt after them. Pro, Team and inherited Team (D-059) see all niches. Channels and Outliers feeds are uncapped.
+- **Impacts:** Monetization.md §3.1, `lib/services/feed-credits.ts`, `lib/services/niche-feed.ts`, UI-UX-Flow §5.0, Niche-Discovery-Engine §10.
+
+### D-073: 30-day retention for untracked YouTube data
+
+- **Status:** Resolved (2026-09-26)
+- **Context:** YouTube API policy requires refreshing or deleting API data within 30 days. Before the engine we stored only channels that users searched or tracked, and there was no retention rule for `channels` / `videos`.
+- **Final call:** No second purge. Main's daily `youtube-retention-cron` (D-067b) and its `purge_stale_youtube_data` are extended (migration `20260928100006`), and main's rules win. Stale videos referenced by saved prompts are blanked, not deleted. The extension adds:
+  - `outliers_feed` rows for stale videos or channels are deleted.
+  - Blanked videos lose `outlier_multiple`; emptied channels lose every YouTube-derived discovery column (`niche_id`, `enriched_at`, etc.).
+  - `niche_snapshots` keep 90 days daily, then one row per week.
+- **Superseded (2026-09-27):** the branch's own `retention-purge` job and 3-argument `purge_stale_youtube_data` (trim to the latest 30 videos, protect calendar/tracked-event channels) were dropped. Admin → Discovery "Run YouTube data purge" sends `youtube/retention.requested` to main's job.
+- **User rows are never deleted (2026-09-27, pre-merge FK audit):** the purge and `dropUnqualified` delete a channel only if no user row points at it: not tracked, no prompt on its videos, no calendar entry (soft-deleted ones too), no notification override, no channel-linked task. Otherwise the channel is emptied, so the calendar link survives and shows "Channel details expired". `prompts.source_video_id` is ON DELETE RESTRICT (was CASCADE), so any other path that deletes a prompted video fails instead of deleting prompts. `calendar_entries.channel_id` stays SET NULL as the last backstop. Covered by `supabase/tests/purge_keeps_user_data.test.sql` (CI job `sql`). Migration `20260928100007`.
+- **Failure alerts (2026-09-27):** the 30-day rule must never stop silently. Each failed purge attempt goes to Sentry with the Postgres code, details and hint, grouped per code; `23503` is labelled as a user row's foreign key blocking a delete (e.g. the prompts RESTRICT FK). When Inngest runs out of retries, `onFailure` sends a `fatal` event with the run id.
+- **Impacts:** Backend-Schema §6.4, TRD §4.2.
+
+### D-074: gpt-4o-mini + text-embedding-3-small for niche classification
+
+- **Status:** Resolved (2026-09-26). This refines D-029 and D-032.
+- **Final call:**
+  - User-facing generation stays on `gpt-4o`.
+  - Background classification uses `gpt-4o-mini` through the same `generateStructuredOutput` wrapper, which now takes a `model` option.
+  - Niche labels are embedded with `text-embedding-3-small` (1536 dims) and stored in `niches.embedding` (pgvector).
+  - A label joins an existing niche at cosine similarity ≥ 0.85; otherwise a new niche is created. **Superseded by D-080:** niches are a curated list and the classifier never creates one.
+- **Impacts:** `lib/ai/client.ts`, TRD §6.2.
+
+### D-075: Per-category YouTube quota budgets
+
+- **Status:** Resolved (2026-09-27). Revisits D-054's quota guard and D-069's job budget.
+- **Context:** One shared daily pool meant the discovery crawler could push free tools into "Busy" (D-054's 70% cutoff) and eat live-search headroom.
+- **Final call:** the daily quota is split into budgets, each env-overridable and capped at `DAILY_QUOTA_LIMIT`:
+
+  | Category   | Sources                                 | Default | Env                      |
+  | ---------- | --------------------------------------- | ------- | ------------------------ |
+  | live       | Niche Finder search, other in-app calls | 3,500   | `YT_BUDGET_LIVE`         |
+  | sync       | channel-sync                            | 2,000   | `YT_BUDGET_SYNC`         |
+  | free_tools | public tools                            | 1,500   | `YT_BUDGET_FREE_TOOLS`   |
+  | discovery  | discovery run + enrichment              | 3,000   | `DISCOVERY_DAILY_BUDGET` |
+
+  `checkAndIncrement` refuses a call when its category or the day's total is over. Free tools are "Busy" only when their own budget is spent. Discovery jobs pre-check their budget and stop cleanly. Admin → API Quotas shows used/budget per category. Revisit all four after D-036.
+
+- **Impacts:** `lib/youtube/quota.ts`, `lib/services/free-tools.ts`, TRD §5.3, Niche-Discovery-Engine §6.4/§7.
+
+### D-076: Quota day and discovery schedules follow Pacific time
+
+- **Status:** Resolved (2026-09-27)
+- **Context:** YouTube resets the daily quota at midnight Pacific. Our counters rolled over at UTC midnight and the jobs were scheduled in PKT, so a "day" of our budget straddled two YouTube quota days.
+- **Final call:** quota counters are keyed by the `America/Los_Angeles` date. Discovery crons use Inngest's `TZ=America/Los_Angeles`: discovery 00:15 (right after the reset), classify 02:00, purge 03:00, snapshot 04:00; enrichment stays every 2h. The first day after deploy has a partial counter (the key changes); harmless.
+- **Impacts:** `lib/youtube/quota.ts`, `workers/discovery.ts`, TRD §4.2/§5.3, Niche-Discovery-Engine §6.
+
+### D-077: Niche Finder redesign: filter bar, channel cards, multi-niche channels
+
+- **Status:** Resolved (2026-09-28, owner)
+- **Context:** Mac's feedback said filters must not be a sidebar. The channel card also needed real, explainable signals.
+- **Final call:**
+  - **Filters:** a horizontal bar above full-width results.
+    - Basic chips: Niche, Subscribers, Avg views, Channel age, Language, Country, Content type.
+    - "+ More filters" (Pro): outlier score, faceless only, exclude kids, likely monetized (est.), exact date ranges. Starter sees these locked with an upgrade prompt, never hidden; the trial counts as Pro.
+    - Presets row, active-filter chips and a single "Show results · 1 credit / · free" button.
+    - Mobile: a "Filters" button opens a bottom sheet.
+    - Score on the Niches tab: 70+ Hot / 50–69 Good / Any.
+  - **Presets are free** (D-072 revised).
+  - **"Status" becomes "Trend":** Rising / Steady / Crowded / Cooling (from rising / active / saturated / declining), with a tooltip per rule.
+  - **Tabs:** Channels (default), Niches, Breakout videos, Search. The sidebar's Outliers becomes **"Your outliers"** (tracked channels only), so the two never share a name.
+  - **Channel card (full-width list row):**
+    - Subscribers; "Views on uploads from the last 30 days"; active since; total videos; typical views (median); language; content type; spotted.
+    - Top 3 videos with the shared 3× outlier badge.
+    - Insight chips from real data, each with a tooltip:
+      - Breakout: an upload at 3× baseline or more in the last 30 days.
+      - New channel: first upload within 12 months.
+      - Consistent uploads: at least one upload in each of the last 4 weeks.
+      - Engaged audience: median (likes + comments) ÷ views of at least 4%.
+      - Faceless (est.).
+    - No revenue, RPM or profitability claims.
+    - Niche tags (up to 3), views-vs-subs badge, Similar channels (niche filter, free), Analyze niche, Track, Generate prompts.
+    - No bookmark: Track is the save action.
+  - **Schema:**
+    - `channel_niches` holds up to 3 niches per channel. Tags and filtering use all of them; niche **scores** count the primary only (`channels.niche_id` still mirrors it).
+    - `channels.median_views_recent`, `content_type` and `views_last_30d`, computed at enrichment.
+    - `channel_view_snapshots`: a daily total-views reading kept 30 days back, inside the YouTube limit. The card switches to a true "Views (30 days)" once a reading from 28–30 days ago exists. The purge expires the readings.
+  - **New primitives:** Popover, Tooltip, Sheet (Design-System.md §5.14–5.16).
+
+### D-078: Discovery searches use at most half the discovery budget
+
+- **Status:** Resolved (2026-09-28). Refines D-069 / D-075.
+- **Context:** The first dev run searched 30 seeds × 100 units = the whole 3,000-unit discovery budget. Ingest (channels.list) and first enrichment bill the same budget, so nothing was stored or enriched. The seeds were marked run anyway, so the paid searches were lost.
+- **Final call:**
+  - A run searches at most `floor((budget × 50% − discovery-job units already spent today) / 100)` seeds, capped at 30. That's 15 seeds at the default 3,000 budget. The other half covers ingest and first enrichment (~81 units per 50 channels).
+  - Seeds are marked run only after ingest has stored their channels. An ingest that fails or runs out of budget leaves them due for the next run.
+  - A manual run may cap its seeds (`maxSeeds`) for small test runs.
+  - **Retries never re-pay** (added 2026-09-28, after a malformed `videos.list` response made two enrichment batches retry and waste ~900 units):
+    - Every paid YouTube call in discovery and enrichment runs in its own Inngest step: each search, each 50-ID `channels.list`, each channel's `playlistItems`, each 50-ID `videos.list`. The DB writes follow in one store step, so a retry resumes at the failed step.
+    - `videos.list` items are validated one at a time; a malformed item is skipped and logged.
+    - A malformed response (`invalid_response`) fails the job without retrying; transient errors retry only their own step.
+- **Impacts:** `lib/discovery/config.ts`, `workers/discovery.ts`, `lib/services/discovery/{ingest,seeds}.ts`, Niche-Discovery-Engine §6.
+
+### D-079: Discovery search variants: mostly English, part medium/long
+
+- **Status:** Resolved (2026-09-28)
+- **Context:** Unrestricted `order=viewCount` searches over the last 7 days came back ~85% Shorts, and about half non-English (test run of 2026-09-28: 62 of 73 kept channels Shorts, 35 of 73 not English).
+- **Final call:** each run cycles its seeds through six search variants: `en/any`, `en/medium`, `any/any`, `en/long`, `en/medium`, `any/any`.
+  - 4 of 6 set `relevanceLanguage=en`, which ranks English higher without excluding other languages.
+  - 3 of 6 set `videoDuration` to `medium` (4–20 min) or `long` (>20 min).
+  - The rest are unrestricted, so Shorts and other languages still come in.
+- **Impacts:** `lib/discovery/config.ts` (`searchVariant`), `lib/youtube/client.ts`, `lib/youtube/discovery.ts`, `lib/services/discovery/ingest.ts`, `workers/discovery.ts`, Niche-Discovery-Engine §6.
+
+### D-080: Curated niche taxonomy; the classifier picks, never creates
+
+- **Status:** Resolved (2026-09-28). Supersedes the auto-create part of D-074; the model choice stands.
+- **Context:** The first run's auto-created niches fragmented: 71 niches for 73 channels. Near-duplicates ("Geographic Education" / "Geographical Education") embedded at only ~0.69 similarity, so nothing reached the 3 performing channels a score needs, and the snapshot stored nothing.
+- **Final call:**
+  - **The list:** 74 owner-approved niches in 13 categories (migration `20260928100010`), each with a name, one-line description and seed keywords.
+    - A niche is something a creator would choose to start a channel in, broad enough for 3 or more channels.
+    - Language and format (Shorts/long) are filters, never part of a niche name.
+    - Mythology stays one niche; Bible Stories and Islamic History & Stories are separate.
+  - **Classifier:** `gpt-4o-mini` gets the list and picks up to 3 slugs (primary first; extras need 0.6 confidence), or none.
+    - A channel with no fit is stored as unclassified (`niche_id` null, `classified_at` set) and retried after the stale window.
+    - It never creates a niche. It may suggest a missing one into `niche_suggestions`.
+  - **Review queue:** a super admin approves a suggestion on /admin/discovery (choosing its category) or rejects it. Approving adds the niche, seeds discovery with its name and re-queues unclassified channels.
+  - **Replacing the auto niches:** the 71 AI niches were replaced and every stored channel is reclassified (no YouTube quota).
+  - **Card chips (same change):**
+    - Breakout needs 10× (was 3×, which matched ~86% of discovered channels) and shows the multiple ("Breakout 29×").
+    - Engaged is hidden when any recent upload hides its likes.
+- **Impacts:** `lib/services/discovery/classify.ts`, `lib/services/admin.ts`, `app/(admin)/admin/discovery`, `lib/discovery/{config,insights}.ts`, Backend-Schema.md, Niche-Discovery-Engine §6.
+- **Follow-up:** `niches.embedding`, `match_niche` and `createEmbedding` are now unused; drop them in a later migration.
+
+### D-081: Free public beta (BETA_MODE)
+
+- **Status:** Resolved (2026-09-28). Pauses D-057 (trial expiry) while on.
+- **Final call:** `BETA_MODE` in `lib/billing/beta.ts`. While it's on:
+  - **Trial:** every new account gets the trial (Pro features, trial limits) with **no expiry**; `computeAccountState` never returns `expired_trial`.
+  - **Credits:** trial credits (`TRIAL.credits`) refill monthly from the trial start. The credit-cycles cron closes each month and allocates, keyed per month so it never double-allocates.
+  - **No checkout anywhere:**
+    - /pricing leads with one **Beta** card (`BETA_PLAN`: `BETA_PRICE` $0, `TRIAL.credits` every month, the trial tier's features, "Start free" to signup). Below it, **"Plans after beta"** lists Starter, Pro and Team at their real prices, muted, tagged "Coming soon", with no buttons, plus `BETA_NOTICE_LINE`. Real prices stay public because the payment-provider review requires them. The JSON-LD offers only the Beta plan at price 0. With `BETA_MODE` off the page returns to the normal plans (`PricingContent betaMode`, tested in both states).
+    - The in-app upgrade modal shows the same layout, with "Your plan" in place of the CTA. Billing shows "Beta · $0/mo · Free during beta · N credits every month", the banner and the next refill date instead of Upgrade and "Trial ends".
+    - `createCheckout` refuses with `beta`, whatever the UI does.
+  - **Copy:** the trial pitch (`TRIAL_PITCH`, `trialSummary`) says "free during beta"; so do the landing page, FAQ and JSON-LD, and the help center (Free during beta, Upgrading, Understanding credits).
+- **When billing goes live (not built yet):**
+  1. Email every beta user `BETA_NOTICE_DAYS` (14) days' notice.
+  2. Turn `BETA_MODE` off; normal trial rules (and D-057) then apply.
+  3. Restore the trial and upgrade help articles.
+- **Impacts:** `lib/billing/{beta,plans,cycles}.ts`, `lib/services/billing.ts`, `workers/credit-cycles.ts`, billing UI, /pricing, help center, Monetization.md.
+
+### D-082: Landing redesign: glass on warm near-black, 9 sections, SVG illustrations
+
+- **Status:** Resolved (2026-09-28).
+- **Final call:**
+  - **Sections of `/`, in order:** navbar, hero, what YTNiches does (Find / Understand / Plan), how it works (3 steps), pricing teaser (free during beta, D-081), FAQ (6 items, FAQPage JSON-LD), final CTA, footer.
+  - **Removed:** the creator explorer, bento features, view switcher, templates showcase, beginner toggle, AI demo, integrations, changelog and VS section. They were used only on `/`, so they're deleted, with their helpers. The marketing pages no longer load framer-motion.
+  - **Kept:** the `/vs/*` pages, now linked by name from the footer.
+  - **Visual system:** marketing glass tokens scoped to `.marketing` (Design-System.md §2.8). Glows are mixed from `--accent`, there's a warm near-black background and a subtle grain, and blur is used only on the navbar and cards (lighter on mobile). The navbar and footer glass apply to every marketing page. Instrument Serif via `next/font` in the marketing layout only, for h1/h2.
+  - **Illustrations:** concept A for every picture, as coded SVGs. No screenshots, YouTube marks or play buttons.
+  - **Founder story removed from `/` (2026-09-29, owner):** it stays in the blog and the author bio.
+  - **Copy rules:** no income, revenue or profitability claims; every number comes from a constant. Both are enforced by `content.test.ts`.
+  - **SEO:**
+    - Title: "YTNiches — Spot rising YouTube channels, plan your content".
+    - Description: "Find fast-growing faceless YouTube channels every day, see which videos beat their channel's usual views, and turn it into a content plan." (The old one said "profitable".)
+- **Impacts:** `app/(marketing)/`, `components/features/landing/`, `app/globals.css`, Design-System.md §2.8/§3.1, Landing-Page-Spec.md and Landing-Copy.md (superseded notes).
+
+### D-083: Email + password sign-in alongside Google
+
+- **Status:** Resolved (2026-09-29). Resolves D-015 (option B).
+- **Final call:**
+  - **Flows:** sign-up, "check your email", verification, log in, forgot password, reset password (Application-Flow §3). The Terms/Privacy consent line sits under both ways to create an account.
+  - **Verification required:** no session, so no onboarding, trial or credits, until the email is verified. Verification and reset links go to `/auth/confirm` (token hash, any browser) and expire after **1 hour** (one Supabase setting for both; Security.md updated).
+  - **Passwords:** 12+ characters with lowercase, uppercase and a number, enforced in the form, the server action and Supabase. HaveIBeenPwned via Supabase leaked-password protection (needs **Pro**; the org is on Free as of this date).
+  - **CAPTCHA:** Cloudflare Turnstile through Supabase's built-in CAPTCHA, on every password flow.
+  - **Emails:** from `hello@ytniches.com` through Resend SMTP, with branded templates in `supabase/templates/`.
+  - **Errors:**
+    - Login never reveals whether an account exists: one generic error plus a static "Signed up with Google?" hint. "Verify your email first" shows only after a correct password.
+    - Sign-up **does** say "account exists" (owner's call) and points to Google or a reset.
+    - Forgot password is always neutral.
+  - **Lockout:** 5 failures per email in 15 minutes locks password sign-in for 15 minutes. It's checked before Supabase is called, applies to any address, sends one alert email per window to an existing account, and leaves Google sign-in working.
+  - **One account per email:** Google and password identities link automatically once the email is verified.
+  - **Admin:** "Total signups" counts verified accounts; "Pending verification" is shown separately (`admin_signup_counts`).
+- **Impacts:**
+  - Code: `app/(auth)/*`, `app/auth/confirm`, `lib/auth/*`, `middleware.ts`, `lib/services/admin.ts`.
+  - Database: migration `20260929100001`.
+  - Docs: Security.md §2, Application-Flow §3, the privacy, cookie and terms pages, and the help article "Signing in".
+
+### D-084: YouTube API compliance for the audit
+
+- **Status:** Resolved (2026-09-30). Owner-approved; the product rename is still pending (the name contains "YT", which the Branding Guidelines forbid).
+- **Why:** the YouTube API audit. The Developer Policies (updated 2026-09-14) forbid creating derived metrics from API Data and aggregating it, and cap stored statistics at 30 days. The derived-metrics policy allows analytics clients to do both (up to 36 months of statistics and derived metrics) once they accept an amendment in the audit/quota form: Section 5, "Analytics & Reporting".
+- **Final call:**
+  - **Snapshots:** `niche_snapshots` are kept 30 days (`NICHE_SNAPSHOT_DAYS`), Mondays included (migration `20260930100001`). Raise to at most 36 months only after the amendment is accepted.
+  - **Labels:** our own figures (scores, niche tags, insights, outlier multiples) carry "YTNiches estimate, not YouTube data" (`EstimateNote`, `lib/youtube/estimates.ts`). The revenue calculator shows "Estimates only. Not provided, approved or endorsed by YouTube or Google."
+  - **Attribution:** the official, unaltered "developed with YouTube" logo (`public/brand/`) links to YouTube in the app shell, on free tools that show YouTube data, and in the marketing footer, away from our own logo. Replaces the "Data from YouTube" text (D-067d).
+  - **Free tools:** named "… for YouTube", never "YouTube …"; URLs unchanged. The thumbnail downloader became Thumbnail Viewer for YouTube (no download button).
+  - **Legal:** the Privacy Policy's YouTube section covers discovery, the figures we store and for how long, refresh and deletion, deletion requests, and the fact that our estimates aren't YouTube data. Google Privacy Policy link: https://policies.google.com/privacy. No street address is published; the country is (`LEGAL.country`).
+- **Open:** the product rename; the courts city in the Terms; whether `legal.dataRequestDays` (30) should drop to 7 to match III.E.4 for any future Authorized Data.
+- **Impacts:** `lib/youtube/estimates.ts`, `components/features/youtube/*`, `lib/tools/registry.ts`, `content/legal/*`, `lib/discovery/config.ts`, the purge migration, Backend-Schema.md §retention, Niche-Discovery-Engine.md.

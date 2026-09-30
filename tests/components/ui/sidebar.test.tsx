@@ -56,6 +56,8 @@ describe("Sidebar / SidebarItem", () => {
     render(
       <Sidebar>
         <SidebarItem asChild icon={<Compass />} label="Niche Finder" active>
+          {/* A raw anchor on purpose: this tests asChild with any element. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/niches">Niche Finder</a>
         </SidebarItem>
       </Sidebar>,

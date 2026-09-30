@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import nextConfig from "@/next.config";
-import { LEGACY_TOOL_REDIRECTS } from "@/lib/tools/legacy-redirects";
+import { LEGACY_TOOL_REDIRECTS, LEGAL_REDIRECTS } from "@/lib/tools/legacy-redirects";
 
 // Every tool URL the old site (ytniches5) had. None may 404 after the
 // switch: each must either be a page here or a 301 to a page (D-054, D-055).
@@ -40,8 +40,20 @@ describe("old site tool URLs", () => {
     }
   });
 
-  it("next.config actually serves the 301s", async () => {
+  it("next.config actually serves the 301s and the legal redirects", async () => {
     const redirects = await nextConfig.redirects?.();
-    expect(redirects).toEqual(LEGACY_TOOL_REDIRECTS);
+    expect(redirects).toEqual([...LEGACY_TOOL_REDIRECTS, ...LEGAL_REDIRECTS]);
+  });
+});
+
+describe("short legal URLs (D-084)", () => {
+  it.each([
+    ["/privacy", "/legal/privacy"],
+    ["/terms", "/legal/terms"],
+  ])("%s redirects permanently to %s, a real page", (source, destination) => {
+    expect(LEGAL_REDIRECTS).toContainEqual({ source, destination, permanent: true });
+    const slug = destination.split("/").pop()!;
+    expect(existsSync(path.join(process.cwd(), "content", "legal", `${slug}.mdx`))).toBe(true);
+    expect(pageExists(source), `${source} is both a page and a redirect`).toBe(false);
   });
 });

@@ -14,7 +14,24 @@ import { computeBalance } from "@/lib/credits";
 import { err, ok, type Result } from "@/lib/result";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { DAILY_QUOTA_LIMIT, SOFT_LIMIT, getQuotaHistory, type QuotaDay } from "@/lib/youtube/quota";
+import {
+  DAILY_QUOTA_LIMIT,
+  SOFT_LIMIT,
+  getQuotaByCategory,
+  getQuotaBySource,
+  getQuotaHistory,
+  type QuotaDay,
+} from "@/lib/youtube/quota";
+import type { NicheCategory } from "@/lib/discovery/config";
+import { MANUAL_EVENTS, type ManualJob } from "@/lib/discovery/events";
+import { inngest } from "@/lib/inngest/client";
+import {
+  addManualSeed,
+  deleteSeed,
+  listSeeds,
+  normalizeKeyword,
+  type DiscoverySeed,
+} from "@/lib/services/discovery/seeds";
 import type { Json } from "@/lib/supabase/database.types";
 
 // Security.md §3.3: the ONLY place admin data access happens, via the
@@ -47,8 +64,8 @@ export async function requireSuperAdmin(): Promise<Result<{ adminId: string }, F
 async function logAdminAction(entry: {
   adminId: string;
   action: string;
-  targetType: string;
-  targetId: string;
+  targetType: string | null;
+  targetId: string | null;
   metadata: Record<string, unknown>;
 }): Promise<void> {
   const { error } = await createServiceClient()
@@ -85,8 +102,11 @@ async function loadSubscriptionFacts(): Promise<SubscriptionFact[]> {
 // ---------- Dashboard ----------
 
 export interface AdminKpis {
+  /** D-083: verified accounts only (Google accounts arrive verified). */
   totalSignups: number;
   signupsLast30d: number;
+  /** Email sign-ups that haven't clicked their verification link yet. */
+  pendingVerification: number;
   activeLast7d: number;
   activeLast30d: number;
   mrrCents: number;
@@ -112,9 +132,8 @@ export async function getAdminKpis(now: Date = new Date()): Promise<AdminKpis> {
     return query;
   };
 
-  const [total, signups30, active7, active30, webhookErrors, subs, quota] = await Promise.all([
-    countProfiles("created_at"),
-    countProfiles("created_at", 30),
+  const [signups, active7, active30, webhookErrors, subs, quota] = await Promise.all([
+    supabase.rpc("admin_signup_counts", { p_since: daysAgoIso(30, now) }).single(),
     countProfiles("last_active_at", 7),
     countProfiles("last_active_at", 30),
     supabase
@@ -126,13 +145,14 @@ export async function getAdminKpis(now: Date = new Date()): Promise<AdminKpis> {
     loadSubscriptionFacts(),
     getQuotaHistory(1, now),
   ]);
-  for (const result of [total, signups30, active7, active30, webhookErrors]) {
+  for (const result of [signups, active7, active30, webhookErrors]) {
     if (result.error) throw new Error(`getAdminKpis query failed: ${result.error.message}`);
   }
 
   return {
-    totalSignups: total.count ?? 0,
-    signupsLast30d: signups30.count ?? 0,
+    totalSignups: Number(signups.data?.verified ?? 0),
+    signupsLast30d: Number(signups.data?.verified_since ?? 0),
+    pendingVerification: Number(signups.data?.pending ?? 0),
     activeLast7d: active7.count ?? 0,
     activeLast30d: active30.count ?? 0,
     mrrCents: mrrCentsAt(subs, now),
@@ -619,11 +639,245 @@ export async function getRevenueReport(now: Date = new Date()): Promise<RevenueR
 // ---------- API quotas ----------
 
 export async function getQuotaReport(now: Date = new Date()) {
-  const history = await getQuotaHistory(7, now);
+  const [history, bySource, byCategory] = await Promise.all([
+    getQuotaHistory(7, now),
+    getQuotaBySource(now),
+    getQuotaByCategory(now),
+  ]);
   return {
     history,
     today: history[history.length - 1],
     limit: DAILY_QUOTA_LIMIT,
     softLimit: SOFT_LIMIT,
+    // D-075: used vs budget per category; per-source detail (D-069).
+    byCategory,
+    bySource,
   };
+}
+
+// ---------- Discovery Engine (D-069) ----------
+
+export interface DiscoveryAdminReport {
+  seeds: DiscoverySeed[];
+  suggestions: NicheSuggestion[];
+  channelsDiscovered: number;
+  channelsEnriched: number;
+  channelsClassified: number;
+  niches: number;
+  latestSnapshotDate: string | null;
+  outliers: number;
+}
+
+async function countRows(table: "niches" | "outliers_feed"): Promise<number> {
+  const { count, error } = await createServiceClient()
+    .from(table)
+    .select("*", { count: "exact", head: true });
+  if (error) throw new Error(`countRows ${table} failed: ${error.message}`);
+  return count ?? 0;
+}
+
+export async function getDiscoveryAdminReport(): Promise<DiscoveryAdminReport> {
+  const supabase = createServiceClient();
+  const countWhere = async (column: "discovered_at" | "enriched_at" | "classified_at") => {
+    const { count, error } = await supabase
+      .from("channels")
+      .select("id", { count: "exact", head: true })
+      .not(column, "is", null);
+    if (error) throw new Error(`getDiscoveryAdminReport ${column} failed: ${error.message}`);
+    return count ?? 0;
+  };
+  const [seeds, suggestions, discovered, enriched, classified, niches, outliers, latest] =
+    await Promise.all([
+      listSeeds(),
+      listPendingSuggestions(),
+      countWhere("discovered_at"),
+      countWhere("enriched_at"),
+      countWhere("classified_at"),
+      countRows("niches"),
+      countRows("outliers_feed"),
+      supabase
+        .from("niche_snapshots")
+        .select("snapshot_date")
+        .order("snapshot_date", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+  if (latest.error)
+    throw new Error(`getDiscoveryAdminReport snapshot failed: ${latest.error.message}`);
+  return {
+    seeds,
+    suggestions,
+    channelsDiscovered: discovered,
+    channelsEnriched: enriched,
+    channelsClassified: classified,
+    niches,
+    latestSnapshotDate: latest.data?.snapshot_date ?? null,
+    outliers,
+  };
+}
+
+export type SeedError = ForbiddenError | { type: "invalid_keyword" } | { type: "duplicate" };
+
+export async function addDiscoverySeed(
+  keyword: string,
+  priority: number,
+): Promise<Result<void, SeedError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const normalized = normalizeKeyword(keyword);
+  if (!normalized) return err({ type: "invalid_keyword" });
+
+  const added = await addManualSeed(normalized, priority);
+  if (!added) return err({ type: "duplicate" });
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_seed_add",
+    targetType: "discovery_seed",
+    targetId: null,
+    metadata: { keyword: normalized, priority },
+  });
+  return ok(undefined);
+}
+
+export async function removeDiscoverySeed(seedId: string): Promise<Result<void, ForbiddenError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  await deleteSeed(seedId);
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_seed_remove",
+    targetType: "discovery_seed",
+    targetId: seedId,
+    metadata: {},
+  });
+  return ok(undefined);
+}
+
+// ---------- Niche suggestions (D-080) ----------
+
+export interface NicheSuggestion {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  timesSuggested: number;
+  exampleChannel: string | null;
+}
+
+async function listPendingSuggestions(): Promise<NicheSuggestion[]> {
+  const { data, error } = await createServiceClient()
+    .from("niche_suggestions")
+    .select("id, slug, name, description, times_suggested, example:channels(name)")
+    .eq("status", "pending")
+    .order("times_suggested", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(`listPendingSuggestions failed: ${error.message}`);
+  return data.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    timesSuggested: row.times_suggested,
+    exampleChannel: row.example?.name ?? null,
+  }));
+}
+
+export type SuggestionError = ForbiddenError | { type: "not_found" } | { type: "duplicate" };
+
+async function pendingSuggestion(id: string) {
+  const { data, error } = await createServiceClient()
+    .from("niche_suggestions")
+    .select("id, slug, name, description")
+    .eq("id", id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (error) throw new Error(`pendingSuggestion failed: ${error.message}`);
+  return data;
+}
+
+async function markSuggestion(id: string, status: "approved" | "rejected", adminId: string) {
+  const { error } = await createServiceClient()
+    .from("niche_suggestions")
+    .update({ status, reviewed_by: adminId, reviewed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`markSuggestion failed: ${error.message}`);
+}
+
+// Adds the suggested niche to the curated list, seeds discovery with its
+// name, and sends unclassified channels back through classify so they can
+// land in it.
+export async function approveNicheSuggestion(
+  suggestionId: string,
+  category: NicheCategory,
+): Promise<Result<void, SuggestionError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const suggestion = await pendingSuggestion(suggestionId);
+  if (!suggestion) return err({ type: "not_found" });
+
+  const supabase = createServiceClient();
+  const keyword = normalizeKeyword(suggestion.name);
+  const { error } = await supabase.from("niches").insert({
+    slug: suggestion.slug,
+    name: suggestion.name,
+    description: suggestion.description,
+    category,
+    seed_keywords: keyword ? [keyword] : [],
+  });
+  if (error?.code === "23505") return err({ type: "duplicate" });
+  if (error) throw new Error(`approveNicheSuggestion insert failed: ${error.message}`);
+
+  await markSuggestion(suggestionId, "approved", admin.value.adminId);
+  if (keyword) await addManualSeed(keyword, 5);
+  const { error: resetError } = await supabase
+    .from("channels")
+    .update({ classified_at: null })
+    .is("niche_id", null)
+    .not("classified_at", "is", null);
+  if (resetError) throw new Error(`approveNicheSuggestion reset failed: ${resetError.message}`);
+
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "niche_suggestion_approve",
+    targetType: "niche_suggestion",
+    targetId: suggestionId,
+    metadata: { slug: suggestion.slug, category },
+  });
+  return ok(undefined);
+}
+
+export async function rejectNicheSuggestion(
+  suggestionId: string,
+): Promise<Result<void, SuggestionError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  const suggestion = await pendingSuggestion(suggestionId);
+  if (!suggestion) return err({ type: "not_found" });
+  await markSuggestion(suggestionId, "rejected", admin.value.adminId);
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "niche_suggestion_reject",
+    targetType: "niche_suggestion",
+    targetId: suggestionId,
+    metadata: { slug: suggestion.slug },
+  });
+  return ok(undefined);
+}
+
+// TRD.md §4.4: manual triggers carry `admin: true` for the audit trail.
+export async function triggerDiscoveryJob(job: ManualJob): Promise<Result<void, ForbiddenError>> {
+  const admin = await requireSuperAdmin();
+  if (!admin.ok) return admin;
+  await inngest.send({
+    name: MANUAL_EVENTS[job],
+    data: { admin: true, adminId: admin.value.adminId },
+  });
+  await logAdminAction({
+    adminId: admin.value.adminId,
+    action: "discovery_job_trigger",
+    targetType: "job",
+    targetId: null,
+    metadata: { job },
+  });
+  return ok(undefined);
 }

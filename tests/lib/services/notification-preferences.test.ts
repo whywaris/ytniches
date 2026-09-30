@@ -73,6 +73,7 @@ describe("getNotificationPreferences", () => {
       { type: "view_spike", inAppEnabled: true, emailEnabled: false },
       { type: "cadence_change", inAppEnabled: true, emailEnabled: false },
       { type: "outlier_detected", inAppEnabled: true, emailEnabled: false },
+      { type: "niche_update", inAppEnabled: true, emailEnabled: false },
     ]);
     expect(summary.digestCadence).toBe("off");
     expect(summary.digestDayOfWeek).toBe(1);

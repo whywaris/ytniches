@@ -81,20 +81,20 @@ See TRD.md §1.4 for the full tree. Quick reference:
 
 Every non-trivial change must reference at least one of these. If none fit, the change probably needs a spec first — file it in DECISIONS.md before writing code.
 
-| Doc | When to read | When to update |
-| --- | --- | --- |
-| **PRD.md** | Building any feature; understanding scope | New feature added or removed from a phase |
-| **DECISIONS.md** | Any question about "why did we choose X?" | Every open question that must resolve; every resolution |
-| **Design-System.md** | Any UI change (component composition, colors, spacing) | New primitive component added; token change |
-| **Implementation-Plan.md** | Phase planning, checkpoints, timeline | Phase gate outcome; scope change |
-| **UI-UX-Flow.md** | Building any screen; understanding layout + states | Screen behavior changes |
-| **Application-Flow.md** | Routing, auth, state machines, error handling | New route added; state machine change |
-| **Backend-Schema.md** | Any DB touch (queries, migrations, RLS) | Every migration; index or RLS change |
-| **TRD.md** | Architecture, integrations, caching, jobs | New integration; caching strategy change |
-| **Security.md** | Auth, RLS, PII, sensitive endpoints | Threat model change; new sensitive surface |
-| **Landing-Page-Spec.md** | Landing page build (once written) | Landing structure change |
-| **Landing-Copy.md** | All marketing copy (once written) | Copy revisions |
-| **Monetization.md** | Billing, credits, tiers (once written) | Pricing / tier change |
+| Doc                        | When to read                                           | When to update                                          |
+| -------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
+| **PRD.md**                 | Building any feature; understanding scope              | New feature added or removed from a phase               |
+| **DECISIONS.md**           | Any question about "why did we choose X?"              | Every open question that must resolve; every resolution |
+| **Design-System.md**       | Any UI change (component composition, colors, spacing) | New primitive component added; token change             |
+| **Implementation-Plan.md** | Phase planning, checkpoints, timeline                  | Phase gate outcome; scope change                        |
+| **UI-UX-Flow.md**          | Building any screen; understanding layout + states     | Screen behavior changes                                 |
+| **Application-Flow.md**    | Routing, auth, state machines, error handling          | New route added; state machine change                   |
+| **Backend-Schema.md**      | Any DB touch (queries, migrations, RLS)                | Every migration; index or RLS change                    |
+| **TRD.md**                 | Architecture, integrations, caching, jobs              | New integration; caching strategy change                |
+| **Security.md**            | Auth, RLS, PII, sensitive endpoints                    | Threat model change; new sensitive surface              |
+| **Landing-Page-Spec.md**   | Landing page build (once written)                      | Landing structure change                                |
+| **Landing-Copy.md**        | All marketing copy (once written)                      | Copy revisions                                          |
+| **Monetization.md**        | Billing, credits, tiers (once written)                 | Pricing / tier change                                   |
 
 ### 3.1 Referencing specs from PRs
 
@@ -171,6 +171,37 @@ Update the losing doc after resolution.
 - **Never mix icon libraries.** Lucide only (per Design-System.md §3.4).
 - **Do not add JS to marketing pages** unless the page is genuinely interactive. Landing + blog should hydrate minimally for Core Web Vitals.
 - **PostgreSQL enums are hard to change.** When you need to modify one, use a migration that adds new values first, migrates data, then removes old values in a later PR.
+
+### 4.2.1 Production database (2026-09-29)
+
+- **`ossrqwoorqxbgyzzoosz` (formerly ytniches-dev) is PRODUCTION.** Treat every write to it as a production write.
+- **`keafgjfqekrbgkohhcnm` (the old live product) is never touched,** not even for reads.
+- **Migrations:** run in CI's test Postgres first (`pnpm test:sql`), then apply to production.
+- **Never point local jobs at production:** don't run `pnpm dev:inngest` against it, and never run the purge, discovery or enrichment jobs, or their tests, against it from a laptop. Production jobs run only through Inngest Cloud.
+- **Data changes on production:** list what will change first, and change it only after the owner approves.
+- **A separate dev Supabase project** comes back once the old project is retired; until then, local development has no safe database for jobs.
+- The deploy runbook is `docs/Deploy.md`.
+
+#### How production migrations are applied and matched
+
+- **Never run `supabase db push`, `supabase db reset`, `supabase migration up` or `supabase link` against production.** Every migration must run in CI first and be approved by the owner; the CLI skips both. `db push` also decides what to run by comparing migration _versions_, so a single mismatched history row would make it re-run that migration against production (for example `curated_niche_taxonomy` starts with `delete from public.niches`). The repo is deliberately not linked to any Supabase project.
+- **Production's history matches the repo (reconciled 2026-09-29):** `supabase_migrations.schema_migrations` has exactly one row per file in `supabase/migrations/`, with the file's version and name. Keep it that way: every file gets exactly one row with its own version.
+- **How a migration reaches production:**
+  1. CI is green on the latest commit (§4.2.2).
+  2. The owner approves.
+  3. Confirm production's history has a row for every earlier repo file, with the same version and name.
+  4. Apply the repo file's SQL verbatim with the Supabase MCP `apply_migration`, named after the file without its version prefix.
+  5. `apply_migration` records the apply time as the version, so in the same session set that row to the file's version: `update supabase_migrations.schema_migrations set version = '<file version>' where version = '<recorded version>' and name = '<name>'`. Then confirm `list_migrations` matches the repo files one to one.
+  6. Verify the result: grants, `search_path`, and a read-only smoke query.
+- **History notes:**
+  - Before the reconciliation, rows carried apply-date versions, and `20260923100002_add_workspace_rls_policies` was recorded as `fix_workspace_members_rls_recursion`. Those rows are kept in `supabase_migrations.schema_migrations_backup_20260929`.
+  - Each row keeps the SQL production actually ran. Ignoring comments, that matches the repo file for 47 of 50 migrations. `create_workspace_tables`, `add_workspace_rls_policies` and `create_discovery_functions` ran earlier drafts, and production was brought in line outside the history. Production's live policies, workspace functions, grants and `purge_stale_youtube_data` match the repo (checked 2026-09-29).
+
+### 4.2.2 CI status (2026-09-29)
+
+- **Never report CI as green without checking the latest run** on the latest commit (`gh run list --limit 1` or the Actions page), both jobs (`ci` and `sql`). A local `pnpm test` pass is not CI: CI also runs `pnpm test:sql` against Postgres, and test order differs.
+- **Don't stack new work on a red CI.** When the latest run is red, fixing it is the next task; new features and production migrations wait until it's green.
+- **A test that fails in the full suite but passes alone is not a flake** until proven otherwise; with `isolate: false`, suspect state leaking between files.
 
 ### 4.3 Pre-ship checklist
 

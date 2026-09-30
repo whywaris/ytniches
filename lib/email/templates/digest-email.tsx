@@ -10,10 +10,20 @@ export interface DigestOutlierItem extends DigestVideoItem {
   viewCount: number;
 }
 
+// Niche-Discovery-Engine.md §11: weekly digest's "top rising niches".
+export interface DigestNicheItem {
+  name: string;
+  url: string;
+  score: number;
+  trend: number;
+}
+
 export interface DigestEmailProps {
   cadence: "daily" | "weekly";
   topOutliers: DigestOutlierItem[];
   newVideos: DigestVideoItem[];
+  /** Weekly only; empty on daily digests. */
+  risingNiches?: DigestNicheItem[];
   siteUrl: string;
 }
 
@@ -37,11 +47,25 @@ function ListItem({ title, channelName, url, suffix }: DigestVideoItem & { suffi
   );
 }
 
+const SECTION_LABEL = {
+  fontSize: "12px",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  color: EMAIL_COLORS.textTertiary,
+  margin: "0 0 8px",
+} as const;
+
 // PRD.md §7.2's weekly digest: "top outliers, top new videos, channel
 // movement." Channel movement (subscriber deltas etc.) isn't tracked
-// anywhere yet -- workers/digest.ts sends only the two lists this codebase
-// actually has data for.
-export function DigestEmail({ cadence, topOutliers, newVideos, siteUrl }: DigestEmailProps) {
+// anywhere yet -- workers/digest.ts sends the lists this codebase actually has
+// data for, plus rising niches on the weekly one.
+export function DigestEmail({
+  cadence,
+  topOutliers,
+  newVideos,
+  risingNiches = [],
+  siteUrl,
+}: DigestEmailProps) {
   const heading = cadence === "daily" ? "Your daily digest" : "Your weekly digest";
   return (
     <EmailLayout
@@ -92,6 +116,24 @@ export function DigestEmail({ cadence, topOutliers, newVideos, siteUrl }: Digest
         </>
       ) : null}
 
+      {risingNiches.length > 0 ? (
+        <>
+          <p style={{ ...SECTION_LABEL, marginTop: "16px" }}>Top rising niches</p>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {risingNiches.map((niche) => (
+              <li key={niche.url} style={{ marginBottom: "10px" }}>
+                <a href={niche.url} style={{ color: EMAIL_COLORS.textPrimary, fontSize: "14px" }}>
+                  {niche.name}
+                </a>
+                <div style={{ color: EMAIL_COLORS.textTertiary, fontSize: "12px" }}>
+                  Opportunity Score {niche.score} · +{niche.trend} this week
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
       <EmailButton href={`${siteUrl}/outliers`} label="View all outliers" />
     </EmailLayout>
   );
@@ -115,6 +157,12 @@ export function digestEmailText(props: Omit<DigestEmailProps, "siteUrl">): strin
     lines.push("New videos:");
     for (const item of props.newVideos) {
       lines.push(`- ${item.title} (${item.channelName}) ${item.url}`);
+    }
+  }
+  if (props.risingNiches && props.risingNiches.length > 0) {
+    lines.push("", "Top rising niches:");
+    for (const niche of props.risingNiches) {
+      lines.push(`- ${niche.name} (score ${niche.score}, +${niche.trend} this week) ${niche.url}`);
     }
   }
   return lines.join("\n");

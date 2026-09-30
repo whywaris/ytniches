@@ -18,14 +18,14 @@
 
 ### 1.2 Realistic threat model
 
-| Actor | Motivation | Likelihood | Impact |
-| --- | --- | --- | --- |
-| Opportunistic attackers | Credential stuffing, cred harvesting | High | Low–Medium (account takeover of one user) |
-| Automated bots | Free-tier abuse, scraping | High | Medium (cost / quota exhaustion) |
-| Malicious user (paid) | Extract other users' data via API misuse | Medium | Medium–High (data leak) |
-| Competitor scraping | Steal our aggregated data | Low–Medium | Low (data is public YouTube data anyway) |
-| Targeted attack | Nation-state / sophisticated | Very low | Very high (out of scope for MVP; standard controls only) |
-| Insider (Mac / developer) | Accidental exposure | Medium | High if it happens |
+| Actor                     | Motivation                               | Likelihood | Impact                                                   |
+| ------------------------- | ---------------------------------------- | ---------- | -------------------------------------------------------- |
+| Opportunistic attackers   | Credential stuffing, cred harvesting     | High       | Low–Medium (account takeover of one user)                |
+| Automated bots            | Free-tier abuse, scraping                | High       | Medium (cost / quota exhaustion)                         |
+| Malicious user (paid)     | Extract other users' data via API misuse | Medium     | Medium–High (data leak)                                  |
+| Competitor scraping       | Steal our aggregated data                | Low–Medium | Low (data is public YouTube data anyway)                 |
+| Targeted attack           | Nation-state / sophisticated             | Very low   | Very high (out of scope for MVP; standard controls only) |
+| Insider (Mac / developer) | Accidental exposure                      | Medium     | High if it happens                                       |
 
 ### 1.3 Security principles
 
@@ -49,15 +49,19 @@ GDPR compliance IS in scope from launch (EU users likely from day 1).
 
 ## 2. Auth Security
 
-### 2.1 Password requirements (email + password users, pending D-015)
+### 2.1 Password requirements (email + password users, D-083)
 
-- Minimum 12 characters
-- Must include: one lowercase, one uppercase, one number
-- Check against `haveibeenpwned` common-password list on signup (via k-anonymity API)
-- Bcrypt hashing via Supabase Auth (managed)
-- Never logged, never emailed, never sent as plaintext anywhere
+- Minimum 12 characters, maximum 128.
+- Must include: one lowercase letter, one uppercase letter, one number.
+- **Enforced in three places:**
+  - the form's live checklist;
+  - the server action (`lib/auth/credentials.ts`);
+  - Supabase Auth's own password policy (min length 12; lowercase, uppercase and digits).
+- **Breached passwords:** checked against HaveIBeenPwned by Supabase's leaked-password protection, which needs the Supabase **Pro** plan. The app already explains the `weak_password` / `pwned` error; the check starts the moment the setting is on.
+- Hashing is bcrypt, managed by Supabase Auth; the app never stores or sees password hashes.
+- Never logged, never emailed, never sent as plaintext anywhere.
 
-### 2.2 OAuth (Google — primary)
+### 2.2 OAuth (Google, alongside email + password since D-083)
 
 - Standard OAuth 2.0 via Supabase Auth
 - Scopes requested: `openid`, `email`, `profile` — minimum needed
@@ -73,27 +77,33 @@ GDPR compliance IS in scope from launch (EU users likely from day 1).
 - No session data stored in `localStorage` or `sessionStorage`
 - Session cookie NOT accessible to JavaScript (HttpOnly enforced)
 
-### 2.4 Login rate limiting
+### 2.4 Login rate limiting (D-083)
 
-- 5 failed attempts per email per 15 minutes → account temporarily locked (15 min)
-- 5 failed attempts per IP per 15 minutes → IP throttled (all logins from IP delayed 2s)
-- After 20 attempts across window: require CAPTCHA (hCaptcha or Cloudflare Turnstile)
-- Locked account gets email notification
+- **Per email:** 5 failed password sign-ins in 15 minutes locks password sign-in for that email for 15 minutes (`lib/auth/lockout.ts`, Upstash).
+  - The lock is checked **before** Supabase is called.
+  - It applies to any address, account or not, so it never reveals whether an account exists.
+  - Google sign-in keeps working.
+  - Redis keys hold a one-way hash of the email, not the address.
+- **Alert:** the account owner gets **one** email per lockout window, sent only if the address has an account (`auth_user_exists`, service role only).
+- **Per IP:** Supabase Auth's built-in rate limits on sign-ups and sign-ins (default 30 per 5 minutes per IP).
+- **CAPTCHA:** Cloudflare Turnstile through Supabase's built-in CAPTCHA, on **every** password sign-up, sign-in, reset and resend. That's stricter than the original "after 20 attempts" rule. Google OAuth doesn't need it.
+- **Errors:** login shows one generic "Email or password is incorrect" for every wrong-credentials case, with a static "Signed up with Google?" hint for everyone. "Verify your email first" appears only when Supabase has accepted the password (it checks the password before email confirmation).
 
-### 2.5 Password reset security
+### 2.5 Password reset security (D-083)
 
-- Reset token: 32-byte random, single-use, 60-min expiry
-- Token stored hashed in DB (like passwords)
-- Reset link uses HTTPS only, token in URL, no token in email body text
-- Email reveals nothing about account existence ("If an account with that email exists, we've sent a reset link")
-- Rate limit: 3 resets per email per hour
-- Password change invalidates all existing sessions
+- **Token:** Supabase Auth's single-use token (sent as a token hash), valid for **1 hour** (Supabase "Email OTP expiration" = 3600 s, shared with verification links).
+- **Link:** it goes to `/auth/confirm`, which verifies the token and sets a 15-minute HttpOnly recovery cookie, then `/reset-password`. That page and its action need the cookie, so a plain signed-in session can't change the password there.
+- **No enumeration:** the answer is always "If an account with that email exists, we've sent a link", including over the rate limit.
+- **Rate limit:** 3 reset emails per email per hour (Upstash); over it, nothing is sent and the answer is the same.
+- **Sessions:** changing the password signs out every other session (`signOut({ scope: "others" })`).
 
-### 2.6 Email verification
+### 2.6 Email verification (D-083)
 
-- Unverified email accounts have limited access: cannot upgrade, cannot use paid features
-- Verification token: 32-byte random, single-use, 24-hour expiry
-- Re-send capped at 3 per hour
+- **Required before the account is usable.** With Supabase "Confirm email" on, an email sign-up gets no session until the link is clicked. So there's no onboarding, no trial and no credits until then. Google accounts arrive verified.
+- **Link:** single-use token hash, valid for **1 hour**. It opens `/auth/confirm`, which works in any browser (unlike the default PKCE link), then takes the Google path: onboarding first.
+- **Re-send:** capped at 3 per email per hour (Upstash, plus Supabase's own email rate limit).
+- **Admin dashboard:** counts verified accounts as signups, and shows unverified email sign-ups separately as "pending verification".
+- **Account already exists:** sign-up (only there) says so and points to Google or a reset; the owner accepted this enumeration trade-off (D-083).
 
 ### 2.7 MFA (Phase 2+)
 
@@ -104,11 +114,11 @@ Not in MVP. When added:
 - Enforced for super\_admin roles from day 1 of MFA rollout
 - Optional for regular users, promoted after 90 days of active use
 
-### 2.8 OAuth account linking
+### 2.8 OAuth account linking (D-083)
 
-- Same email across OAuth + email+password → accounts linked automatically after email verification
-- User can add/remove OAuth providers in `/settings/connections`
-- Must have at least one auth method active at all times (cannot disconnect last OAuth if no password set)
+- **One account per verified email:** the same email via Google and via password is one account. Supabase Auth links the identities automatically once the email is verified.
+- **A Google account can add a password** through "Forgot password"; the reset adds an email identity to the same user.
+- `/settings/connections` (adding or removing providers) is still future work. Until it exists, a user can't remove their last sign-in method.
 
 ## 3. Data Access & RLS
 
@@ -116,7 +126,7 @@ Not in MVP. When added:
 
 - Every user-scoped table has RLS enabled from day 1 (see Backend-Schema.md §6.1)
 - Application code uses the user's session token — RLS filters automatically
-- Migrations may use the service role (`bypass_rls`); nothing else does
+- Migrations may use the service role (`bypass_rls`). The only other use is the documented exception in D-070: server-only code writing shared public YouTube/research tables. That covers Inngest workers, `lib/services/discovery/*` and service-layer cache writes, plus audited admin actions (§3.3). Client components never import the service client.
 - Automated test: for every user-scoped table, a test asserts user A cannot read/write user B's rows via the API
 
 ### 3.2 Workspace isolation (Phase 3)
@@ -298,12 +308,12 @@ Every security incident follows this sequence:
 
 Incident severity levels:
 
-| Level | Description | Response |
-| --- | --- | --- |
-| SEV-1 | Active data breach; system-wide outage | Drop everything; contain within 1 hour |
-| SEV-2 | Vulnerability discovered, no known exploitation | Patch within 24 hours |
-| SEV-3 | Security issue, low urgency | Patch within 1 week |
-| SEV-4 | Hardening opportunity | Backlog |
+| Level | Description                                     | Response                               |
+| ----- | ----------------------------------------------- | -------------------------------------- |
+| SEV-1 | Active data breach; system-wide outage          | Drop everything; contain within 1 hour |
+| SEV-2 | Vulnerability discovered, no known exploitation | Patch within 24 hours                  |
+| SEV-3 | Security issue, low urgency                     | Patch within 1 week                    |
+| SEV-4 | Hardening opportunity                           | Backlog                                |
 
 ### 5.7 Third-party trust
 

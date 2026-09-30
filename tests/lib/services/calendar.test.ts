@@ -129,6 +129,30 @@ describe("listEntries", () => {
       },
     ]);
   });
+
+  it("shows a purged channel as expired, and an unlinked entry with no channel (D-073)", async () => {
+    const row = (id: string, channelId: string | null) => ({
+      id,
+      workspace_id: "ws-1",
+      user_id: "user-1",
+      channel_id: channelId,
+      title: "Idea",
+      description: null,
+      linked_prompts: [],
+      status: "idea",
+      scheduled_for: null,
+      assignee_id: null,
+    });
+    entriesResult = { data: [row("e1", "chan-emptied"), row("e2", null)], error: null };
+    channelsResult = { data: [{ id: "chan-emptied", name: "" }], error: null };
+
+    const result = await listEntries("ws-1", {});
+
+    expect(result.map((e) => [e.id, e.channelId, e.channelName])).toEqual([
+      ["e1", "chan-emptied", "Channel details expired"],
+      ["e2", null, null],
+    ]);
+  });
 });
 
 describe("updateEntry", () => {

@@ -1,4 +1,4 @@
-import { Bell, RefreshCw, TrendingUp, Video, type LucideIcon } from "lucide-react";
+import { Bell, Compass, RefreshCw, TrendingUp, Video, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format-relative-time";
@@ -15,6 +15,8 @@ import type { ActivityFeedNotification } from "@/components/features/tracking/ty
 export interface ActivityFeedItemProps {
   notification: ActivityFeedNotification;
   onGoToChannel?: (channelId: string) => void;
+  /** Niche notes (notification.niche set) open the niche instead. */
+  onOpenNiche?: (slug: string) => void;
   onDismiss?: (notificationId: string) => void;
   className?: string;
 }
@@ -23,11 +25,13 @@ const EVENT_META: Record<string, { icon: LucideIcon; label: string }> = {
   new_video: { icon: Video, label: "New video" },
   view_spike: { icon: TrendingUp, label: "View spike" },
   cadence_change: { icon: RefreshCw, label: "Upload cadence changed" },
+  niche_update: { icon: Compass, label: "Tracked niche" },
 };
 
 function ActivityFeedItem({
   notification,
   onGoToChannel,
+  onOpenNiche,
   onDismiss,
   className,
 }: ActivityFeedItemProps) {
@@ -49,13 +53,17 @@ function ActivityFeedItem({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar
-            size="sm"
-            src={notification.channel.avatarUrl ?? undefined}
-            fallback={notification.channel.name.slice(0, 2).toUpperCase()}
-          />
+          {notification.niche ? (
+            <Compass className="size-5 shrink-0 text-object-niches" aria-hidden="true" />
+          ) : (
+            <Avatar
+              size="sm"
+              src={notification.channel.avatarUrl ?? undefined}
+              fallback={notification.channel.name.slice(0, 2).toUpperCase()}
+            />
+          )}
           <span className="truncate text-body-sm font-medium text-text-primary">
-            {notification.channel.name}
+            {notification.niche?.name ?? notification.channel.name}
           </span>
         </div>
         <span className="shrink-0 text-caption text-text-tertiary">
@@ -77,13 +85,23 @@ function ActivityFeedItem({
 
       {!isDismissed ? (
         <div className="mt-1 flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={() => onGoToChannel?.(notification.channel.id)}
-          >
-            Go to channel
-          </Button>
+          {notification.niche ? (
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={() => onOpenNiche?.(notification.niche!.slug)}
+            >
+              Open niche
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={() => onGoToChannel?.(notification.channel.id)}
+            >
+              Go to channel
+            </Button>
+          )}
           <Button variant="ghost" size="xs" onClick={() => onDismiss?.(notification.id)}>
             Dismiss
           </Button>

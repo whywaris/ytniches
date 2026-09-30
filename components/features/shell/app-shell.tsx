@@ -152,7 +152,7 @@ function AppShell({
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1440px] px-6 pt-6 md:px-10">
             {children}
-            <YouTubeAttribution className="py-6" />
+            <YouTubeAttribution className="my-6" />
           </div>
         </main>
       </div>

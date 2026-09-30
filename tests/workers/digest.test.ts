@@ -33,8 +33,10 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
     eq: vi.fn(() => builder),
     in: vi.fn(() => builder),
     gte: vi.fn(() => builder),
+    gt: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
     then: (resolve: (value: typeof result) => void) => resolve(result),
   };
   return builder;
@@ -49,6 +51,8 @@ function fakeStep() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Anything not queued (e.g. the weekly rising-niches lookup) reads empty.
+  serviceFrom.mockReturnValue(makeQueryBuilder({ data: null, error: null }));
 });
 
 describe("dispatchDueDigests", () => {
@@ -166,6 +170,51 @@ describe("buildDigestData", () => {
       channelName: "Sleep Sounds Daily",
       url: "http://localhost:3000/tracking/chan-1",
     });
+  });
+});
+
+describe("rising niches (Niche-Discovery-Engine.md §11)", () => {
+  it("adds the top positive 7-day movers to the weekly digest only", async () => {
+    const trackedAndEmpty = () => {
+      serviceFrom.mockReturnValueOnce(
+        makeQueryBuilder({ data: [{ channel_id: "chan-1" }], error: null }),
+      ); // tracked_channels
+      serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: [], error: null })); // tracked_events
+      serviceFrom.mockReturnValueOnce(makeQueryBuilder({ data: [], error: null })); // videos
+      buildOutlierItems.mockResolvedValueOnce([]);
+    };
+
+    trackedAndEmpty();
+    serviceFrom.mockReturnValueOnce(
+      makeQueryBuilder({ data: { snapshot_date: "2026-09-27" }, error: null }),
+    );
+    const rising = makeQueryBuilder({
+      data: [
+        {
+          opportunity_score: 86,
+          trend: 14,
+          niches: { slug: "mafia-history", name: "Mafia History" },
+        },
+      ],
+      error: null,
+    });
+    serviceFrom.mockReturnValueOnce(rising);
+
+    const weekly = await buildDigestData("user-1", "weekly");
+
+    expect(weekly.risingNiches).toEqual([
+      {
+        name: "Mafia History",
+        url: "http://localhost:3000/niches/mafia-history",
+        score: 86,
+        trend: 14,
+      },
+    ]);
+    expect(rising.gt).toHaveBeenCalledWith("trend", 0);
+
+    trackedAndEmpty();
+    const daily = await buildDigestData("user-1", "daily");
+    expect(daily.risingNiches).toEqual([]);
   });
 });
 

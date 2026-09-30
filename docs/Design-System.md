@@ -109,6 +109,28 @@ Muted, distinguishable colors per object type. Used for icons, category badges, 
 
 Complete mapping of every dark token to a light equivalent — same semantics, inverted brightness. `bg-base` → #ffffff, `text-primary` → #0a0a0b, `text-secondary` → #3c3c43, `border-default` → #d1d1d6, and so on. Full mapping ships as part of the Tailwind config.
 
+### 2.8 Marketing glass (D-082)
+
+Marketing pages only (the `.marketing` scope on the marketing layout, which is always dark). The app keeps §2.1–§2.7 and its elevation tokens.
+
+| Token                | Value                           | Use                                              |
+| -------------------- | ------------------------------- | ------------------------------------------------ |
+| `--mk-bg`            | `#0d0a09`                       | Page background: near-black with a warm tint     |
+| `--glass-bg`         | white 5%                        | Glass cards                                      |
+| `--glass-bg-strong`  | white 8%                        | Scrolled navbar, tiles inside illustrations      |
+| `--glass-border`     | white 10%                       | 1px border on glass; section dividers            |
+| `--glass-highlight`  | white 14%                       | 1px top inner edge; faint illustration details   |
+| `--glass-blur`       | 8px (16px from 768px)           | Backdrop blur, navbar and cards only             |
+| `--glow-accent`      | `--accent` at 35% (`color-mix`) | Final CTA glow, the one orange point in the hero |
+| `--glow-accent-soft` | `--accent` at 12% (`color-mix`) | Background radial glows                          |
+
+- **Utilities:** `glass` (fill, border, top highlight, blur) and `mk-noise` (an inline SVG grain at 3.5% opacity, no request).
+- **Components:** `GlassCard` (`components/features/landing/glass-card.tsx`) and `SectionHeading` (Instrument Serif h2).
+- **Orange:** only for CTAs, key accents and glows. Orange text uses `--accent-text`.
+- **Contrast:** `tests/lib/design-tokens.test.ts` composites the glass over `--mk-bg`, and over the soft glow, and checks primary text, secondary text and `--accent-text` against WCAG AA (4.5:1).
+- **Illustrations (concept A):** glass tiles, a thin white outline, and exactly one orange element per picture, the "signal". Colours are CSS variables only, and there are no SVG filters. No YouTube logo, play buttons or other YouTube brand features. See `components/features/landing/illustrations.tsx`.
+- **Motion:** CSS only. The only animation is the anchor's smooth scroll, and it's off under `prefers-reduced-motion`.
+
 ## 3. Typography & Iconography
 
 ### 3.1 Font families
@@ -119,7 +141,7 @@ Complete mapping of every dark token to a light equivalent — same semantics, i
 | Display (marketing hero only) | Instrument Serif | Georgia, serif          |
 | Monospace (code, IDs)         | JetBrains Mono   | ui-monospace, monospace |
 
-Inter serves the app; Instrument Serif adds Fibery-style personality on the landing page only (never in-app).
+Inter serves the app; Instrument Serif adds Fibery-style personality on the landing page only (never in-app). It's loaded with `next/font` in the marketing layout only and used for h1/h2 (`font-display`, D-082).
 
 ### 3.2 Type scale
 
@@ -337,6 +359,29 @@ Added during the App Shell build (D-037) for the top-bar account menu — no pri
 - **Content:** `elev-2` popover, `min-w-44`, opens aligned to the trigger's end edge
 - **Item:** icon + label row, `hover`/`highlighted` background; a `destructive` variant (red text) for actions like "Log out"
 - **Keyboard/focus-trap:** native Radix `DropdownMenu` behavior, same as §5.6/§5.12's Radix-backed primitives
+
+### 5.14 Popover
+
+Added for the Niche Finder filter bar (D-077). Use it when a trigger opens a **control** (a range, presets, a list), not a menu of actions (that's §5.13).
+
+- **Trigger:** any element via `asChild`; Radix sets `aria-expanded`/`aria-controls`
+- **Content:** `elev-2`, `bg-surface-1`, `border-default`, `w-72`, `p-4`; aligned to the trigger's start edge, 6px offset
+- **Close:** Esc, outside click, or a `PopoverClose` inside the content; focus returns to the trigger
+
+### 5.15 Tooltip
+
+Short explanations on **hover and keyboard focus** (Radix wires `aria-describedby`). A tooltip explains; it never carries the only copy of important information.
+
+- **Content:** `elev-2`, `bg-surface-2`, `text-caption`, `max-w-64`, 200ms delay
+- **Trigger:** must be focusable. Wrap a chip or text in `<button type="button">`
+- **Use:** insight chips' rules, the views-vs-subs badge, Trend definitions
+
+### 5.16 Sheet
+
+A bottom sheet: the Modal's dialog behaviour (§5.7: focus trap, Esc, backdrop close, `aria-modal`) anchored to the bottom edge, for mobile surfaces.
+
+- **Layout:** full width, `rounded-t-lg`, `max-h-[85vh]`; header (title + close) and footer pinned, body scrolls
+- **Use:** the Niche Finder's mobile "Filters" sheet; prefer Modal on desktop
 
 ## 6. Data Visualization & Accessibility
 

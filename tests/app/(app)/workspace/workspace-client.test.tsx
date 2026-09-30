@@ -25,6 +25,7 @@ vi.mock("@/app/(app)/settings/billing/actions", () => ({
 vi.mock("@/lib/analytics", () => ({ capture: vi.fn() }));
 
 const { WorkspaceClient } = await import("@/app/(app)/workspace/workspace-client");
+const { BETA_MODE } = await import("@/lib/billing/beta");
 
 function renderClient(props: Partial<ComponentProps<typeof WorkspaceClient>> = {}) {
   return render(
@@ -90,6 +91,7 @@ describe("WorkspaceClient", () => {
     await userEvent.type(screen.getByLabelText("Workspace name"), "Acme");
     await userEvent.click(screen.getByRole("button", { name: "Create workspace" }));
 
-    expect(await screen.findByText("Upgrade your plan")).toBeInTheDocument();
+    // D-081: during the beta the modal shows the plans without checkout.
+    expect(await screen.findByText(BETA_MODE ? "Plans" : "Upgrade your plan")).toBeInTheDocument();
   });
 });

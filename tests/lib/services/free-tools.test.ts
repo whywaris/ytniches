@@ -15,10 +15,12 @@ vi.mock("@upstash/ratelimit", () => ({
 }));
 vi.mock("@/lib/cache/redis", () => ({ getRedis: vi.fn() }));
 
-const getQuotaUsedToday = vi.fn();
+// D-075: free tools read only their own category's usage and budget.
+const getCategoryUsed = vi.fn();
 vi.mock("@/lib/youtube/quota", () => ({
-  FREE_TOOLS_QUOTA_CUTOFF: 7_000,
-  getQuotaUsedToday: () => getQuotaUsedToday(),
+  getQuotaBudgets: () => ({ live: 3_500, sync: 2_000, free_tools: 1_500, discovery: 3_000 }),
+  getCategoryUsed: (...args: unknown[]) => getCategoryUsed(...args),
+  withQuotaSource: (_source: string, fn: () => Promise<unknown>) => fn(),
 }));
 
 const resolveChannelUrl = vi.fn();
@@ -64,21 +66,22 @@ const video = (id: string, views: number, days: number) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getQuotaUsedToday.mockResolvedValue(0);
+  getCategoryUsed.mockResolvedValue(0);
   hourLimit.mockResolvedValue({ success: true });
   dayLimit.mockResolvedValue({ success: true });
 });
 
 describe("guardFreeTool", () => {
-  it("says busy at the 70% cutoff without spending the visitor's allowance", async () => {
-    getQuotaUsedToday.mockResolvedValue(7_000);
+  it("says busy once the free-tools budget is spent, without spending the visitor's allowance", async () => {
+    getCategoryUsed.mockResolvedValue(1_500);
     expect(await guardFreeTool("1.1.1.1")).toEqual({ ok: false, error: { type: "busy" } });
     expect(hourLimit).not.toHaveBeenCalled();
     expect(dayLimit).not.toHaveBeenCalled();
+    expect(getCategoryUsed).toHaveBeenCalledWith("free_tools");
   });
 
-  it("lets requests through just under the cutoff", async () => {
-    getQuotaUsedToday.mockResolvedValue(6_999);
+  it("lets requests through just under the budget, whatever the rest of the day used", async () => {
+    getCategoryUsed.mockResolvedValue(1_499);
     expect((await guardFreeTool("1.1.1.1")).ok).toBe(true);
   });
 
@@ -97,7 +100,7 @@ describe("lookupChannel", () => {
       ok: true,
       value: { channelId: CHANNEL_ID },
     });
-    expect(getQuotaUsedToday).not.toHaveBeenCalled();
+    expect(getCategoryUsed).not.toHaveBeenCalled();
     expect(resolveChannelUrl).not.toHaveBeenCalled();
   });
 
@@ -174,7 +177,7 @@ describe("checkOutlier", () => {
   });
 
   it("stops at the guard before any YouTube call", async () => {
-    getQuotaUsedToday.mockResolvedValue(9_000);
+    getCategoryUsed.mockResolvedValue(1_500);
     expect(await checkOutlier("https://youtu.be/target12345", "ip")).toEqual({
       ok: false,
       error: { type: "busy" },
@@ -205,8 +208,8 @@ describe("extractTags", () => {
     });
   });
 
-  it("is busy past the quota cutoff, without calling YouTube", async () => {
-    getQuotaUsedToday.mockResolvedValue(7_000);
+  it("is busy once the free-tools budget is spent, without calling YouTube", async () => {
+    getCategoryUsed.mockResolvedValue(1_500);
     expect(await extractTags("https://youtu.be/t1234567890", "ip")).toEqual({
       ok: false,
       error: { type: "busy" },

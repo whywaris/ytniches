@@ -12,6 +12,11 @@ vi.mock("@/lib/services/channels", () => ({
   saveChannelToTracking: (...args: unknown[]) => saveChannelToTracking(...args),
 }));
 
+const unlockFilteredView = vi.fn();
+vi.mock("@/lib/services/feed-credits", () => ({
+  unlockFilteredView: (...args: unknown[]) => unlockFilteredView(...args),
+}));
+
 const capture = vi.fn();
 vi.mock("@/lib/analytics", () => ({
   capture: (...args: unknown[]) => capture(...args),
@@ -37,7 +42,8 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: () => makeCountQuery() }),
 }));
 
-const { searchNichesAction, saveChannelAction } = await import("@/app/(app)/niches/actions");
+const { searchNichesAction, saveChannelAction, unlockFeedFiltersAction } =
+  await import("@/app/(app)/niches/actions");
 
 const ctx = { userId: "user-1", workspaceId: null, tier: null };
 
@@ -127,5 +133,44 @@ describe("saveChannelAction", () => {
     const result = await saveChannelAction("channel-1");
 
     expect(result).toEqual({ ok: false, error: { type: "tier_limit", limit: 10, current: 10 } });
+  });
+});
+
+describe("unlockFeedFiltersAction (D-072)", () => {
+  const KEY = "3f1c2b1e-9a4b-4c2d-8e7f-1a2b3c4d5e6f";
+
+  it("canonicalises the filters the same way the page does before charging", async () => {
+    unlockFilteredView.mockResolvedValue({ ok: true, value: { charged: true } });
+
+    await unlockFeedFiltersAction(
+      "channels",
+      { faceless: "1", minSubs: "1000", sort: "outlier_score", junk: "x", lang: "english" },
+      KEY,
+    );
+
+    expect(unlockFilteredView).toHaveBeenCalledWith(
+      ctx,
+      "channels",
+      expect.objectContaining({ faceless: "1", minSubs: "1000", sort: undefined, lang: undefined }),
+      KEY,
+    );
+    const values = unlockFilteredView.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(values).not.toHaveProperty("junk");
+  });
+
+  it("rejects a bad tab, bad values or a non-UUID key without charging", async () => {
+    expect(await unlockFeedFiltersAction("search", {}, KEY)).toEqual({
+      ok: false,
+      error: { type: "validation_error" },
+    });
+    expect(await unlockFeedFiltersAction("channels", "nope", KEY)).toEqual({
+      ok: false,
+      error: { type: "validation_error" },
+    });
+    expect(await unlockFeedFiltersAction("channels", {}, "not-a-uuid")).toEqual({
+      ok: false,
+      error: { type: "validation_error" },
+    });
+    expect(unlockFilteredView).not.toHaveBeenCalled();
   });
 });

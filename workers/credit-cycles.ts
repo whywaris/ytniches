@@ -1,6 +1,7 @@
+import { BETA_MODE } from "@/lib/billing/beta";
 import { isAnnualPeriod, monthsElapsed } from "@/lib/billing/cycles";
 import { inngest } from "@/lib/inngest/client";
-import { allocateCycleCredits, type Tier } from "@/lib/services/billing";
+import { allocateBetaTrialCredits, allocateCycleCredits, type Tier } from "@/lib/services/billing";
 import { createServiceClient } from "@/lib/supabase/service";
 
 // D-063 / Monetization.md §3.3: credits are monthly on every plan. Monthly
@@ -65,7 +66,44 @@ export async function allocateAnnualMonthlyCredits(
   return { due };
 }
 
+// D-081: beta trials never end, and their credits refill each month from
+// the trial start. Month 0 is the grant at trial start.
+export interface BetaTrial {
+  user_id: string;
+  current_period_start: string;
+}
+
+async function findBetaTrials(): Promise<BetaTrial[]> {
+  const { data, error } = await createServiceClient()
+    .from("subscriptions")
+    .select("user_id, current_period_start")
+    .eq("is_current", true)
+    .eq("status", "trialing");
+  if (error) throw new Error(`findBetaTrials failed: ${error.message}`);
+  return data;
+}
+
+export async function refillBetaTrialCredits(
+  step: CreditCycleStepTools,
+  now: Date = new Date(),
+): Promise<{ due: number }> {
+  if (!BETA_MODE) return { due: 0 };
+  const trials = (await step.run("find-beta-trials", findBetaTrials)) as BetaTrial[];
+  let due = 0;
+  for (const trial of trials) {
+    const month = monthsElapsed(new Date(trial.current_period_start), now);
+    if (month < 1) continue;
+    const cycleKey = `trial:${trial.user_id}:month-${month}`;
+    await step.run(`refill-${cycleKey}`, () => allocateBetaTrialCredits(trial.user_id, cycleKey));
+    due += 1;
+  }
+  return { due };
+}
+
 export const annualCreditsCron = inngest.createFunction(
   { id: "annual-monthly-credits-cron", triggers: [{ cron: "30 * * * *" }] },
-  async ({ step }) => allocateAnnualMonthlyCredits(step),
+  async ({ step }) => ({
+    annual: await allocateAnnualMonthlyCredits(step),
+    betaTrials: await refillBetaTrialCredits(step),
+  }),
 );

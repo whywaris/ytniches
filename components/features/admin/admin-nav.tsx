@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/users", label: "Users" },
   { href: "/admin/revenue", label: "Revenue" },
   { href: "/admin/api-quotas", label: "API Quotas" },
+  { href: "/admin/discovery", label: "Discovery" },
 ];
 
 // UI-UX-Flow.md §8.2 sub-nav, trimmed to the modules built (D-052 defers

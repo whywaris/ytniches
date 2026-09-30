@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 
 import { createCheckoutAction } from "@/app/(app)/settings/billing/actions";
 import type { BillingFrequency, Tier } from "@/lib/billing";
+import { BETA_MODE } from "@/lib/billing/beta";
+import { BetaPricing } from "@/components/features/billing/beta-pricing";
 import { capture } from "@/lib/analytics/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
+import { Tag } from "@/components/ui/tag";
 import { TierCards } from "@/components/features/billing/tier-cards";
 
 export interface UpgradeModalProps {
@@ -43,20 +46,37 @@ function UpgradeModal({ open, onOpenChange, reason }: UpgradeModalProps) {
   }
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange} title="Upgrade your plan" size="xl">
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={BETA_MODE ? "Plans" : "Upgrade your plan"}
+      size="xl"
+    >
       <div className="flex flex-col gap-4">
         {reason ? (
           <p role="alert" className="text-body-sm text-warning">
             {reason}
           </p>
         ) : null}
-        <TierCards
-          billingFrequency={billingFrequency}
-          onBillingFrequencyChange={setBillingFrequency}
-          ctaLabel="Continue"
-          onSelectTier={(tier) => void handleSelectTier(tier)}
-          loadingTier={loadingTier}
-        />
+        {/* D-081: no checkout during the beta. The user is on the Beta plan;
+            the paid plans show as "Plans after beta", same as /pricing. */}
+        {BETA_MODE ? (
+          <BetaPricing
+            betaAction={
+              <Tag tone="success" className="w-fit">
+                Your plan
+              </Tag>
+            }
+          />
+        ) : (
+          <TierCards
+            billingFrequency={billingFrequency}
+            onBillingFrequencyChange={setBillingFrequency}
+            ctaLabel="Continue"
+            onSelectTier={(tier) => void handleSelectTier(tier)}
+            loadingTier={loadingTier}
+          />
+        )}
       </div>
     </Modal>
   );

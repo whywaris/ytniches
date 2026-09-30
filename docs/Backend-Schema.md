@@ -171,6 +171,8 @@ Cached YouTube channel data. Shared across users — not user-scoped.
 | `last_synced_at`     | `timestamptz`          | When we last refreshed from API    |
 | `unavailable_since`  | `timestamptz` nullable | If channel deleted / suspended     |
 
+**Discovery columns (D-069):** `avg_views_recent`, `outlier_score`, `first_upload_at`, `uploads_playlist_id`, `has_shorts`, `made_for_kids`, `likely_monetized` (estimate), `is_faceless`, `niche_id` → `niches`, `classification_confidence`, `classified_at`, `refresh_tier` (`hot`/`warm`/`cold`), `enriched_at`, `discovered_at`, `discovered_via_seed` → `discovery_seeds`. Full definitions are in `Niche-Discovery-Engine.md` §5.1.
+
 ### 3.2 videos
 
 Cached YouTube video data. Shared across users.
@@ -194,6 +196,24 @@ Cached YouTube video data. Shared across users.
 | `last_synced_at`    | `timestamptz`          |                       |
 | `unavailable_since` | `timestamptz` nullable |                       |
 
+**Discovery column (D-069):** `outlier_multiple numeric` holds views ÷ baseline (D-054 rule).
+
+### 3.2.1 Discovery tables (D-069)
+
+The full DDL is in `Niche-Discovery-Engine.md` §5.3.
+
+| Table                    | Purpose                                                                                                                                                                                                                                                  | RLS                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `discovery_seeds`        | Keywords the crawler searches (`manual` / `user_search` / `expansion`)                                                                                                                                                                                   | Service-role only (zero policies)    |
+| `niches`                 | D-080: the curated niche taxonomy (74 at launch). `category` (one of 13, check constraint mirrored by `NICHE_CATEGORIES`), `seed_keywords text[]`; `status` is one of `active` / `rising` / `saturated` / `declining`. `embedding` is unused since D-080 | `anyone_read_niches`                 |
+| `niche_suggestions`      | D-080: niches the classifier found missing, one row per `slug` (`times_suggested`, `example_channel_id`), `status` `pending` / `approved` / `rejected`; reviewed on /admin/discovery                                                                     | Service-role only (zero policies)    |
+| `niche_snapshots`        | Daily Opportunity Score + five signals per niche, PK `(niche_id, snapshot_date)`                                                                                                                                                                         | `anyone_read_niche_snapshots`        |
+| `outliers_feed`          | Global outlier feed: one row per video ≥ 3×                                                                                                                                                                                                              | `anyone_read_outliers_feed`          |
+| `channel_niches`         | D-077: up to 3 niches per channel (`confidence`, `is_primary`; one primary per channel). Tags + filtering; niche **scores** count the primary only, still mirrored in `channels.niche_id`                                                                | `anyone_read_channel_niches`         |
+| `channel_view_snapshots` | D-077: one `total_view_count` reading per channel per day it's refreshed, PK `(channel_id, snapshot_date)`, kept 30 days back (purge) for a true 30-day views difference                                                                                 | `anyone_read_channel_view_snapshots` |
+
+`channels` also gains (D-077, computed at enrichment from the kept recent uploads): `median_views_recent`, `content_type` (`long` / `shorts` / `mixed`: Shorts are ≤ 180 s; ≥ 80% Shorts = `shorts`, ≤ 20% = `long`), and `views_last_30d` (views on uploads from the last 30 days). The purge empties all three with the rest of a stale channel's YouTube fields.
+
 ### 3.3 video\_transcripts\_cache (unused since D-067, emptied)
 
 Separate table because transcripts are large and only fetched on demand (for AI Prompts generation).
@@ -216,7 +236,7 @@ User-owned. Each row is one generation output tied to a source video — either 
 | `id`              | `uuid`                 |                                                                                                                                                                                 |
 | `user_id`         | `uuid`                 | FK to `profiles.id`                                                                                                                                                             |
 | `workspace_id`    | `uuid` nullable        | FK to `workspaces.id` (Phase 3)                                                                                                                                                 |
-| `source_video_id` | `uuid`                 | FK to `videos.id`                                                                                                                                                               |
+| `source_video_id` | `uuid`                 | FK to `videos.id`, ON DELETE RESTRICT (D-073)                                                                                                                                   |
 | `kind`            | `text`                 | 'prompt' (default) / 'thumbnail_ideas' (Phase 2 Task 3). `listPrompts` filters to 'prompt' so thumbnail-ideas rows don't appear in the AI Prompts library.                      |
 | `target_audience` | `text` nullable        | User-provided context                                                                                                                                                           |
 | `tone`            | `text`                 | 'neutral' / 'casual' / 'educational' / 'dramatic' / 'clickbait\_lite' -- always 'neutral' for a `thumbnail_ideas` row                                                           |
@@ -461,7 +481,7 @@ CREATE POLICY "users_delete_own_prompts" ON prompts
   USING (auth.uid() = user_id);
 ```
 
-**Shared tables (channels, videos):** everyone-read, service-role-only-write. Data is public YouTube info — no user scoping needed on read.
+**Shared tables (channels, videos, niches, niche\_snapshots, outliers\_feed):** everyone-read, service-role-only-write. Data is public YouTube info, so reads need no user scoping. The service role writes them from server-only code (workers, `lib/services/discovery/*`, cache writes in the service layer). This is a documented exception to the rule above (D-070).
 
 **Admin tables:** super-admin role check via `profiles.role = 'super_admin'`.
 
@@ -486,6 +506,14 @@ Essential indexes for MVP:
 | `notifications`    | `(user_id, read_at, created_at DESC)` | Unread + feed              |
 | `prompts`          | `(user_id, created_at DESC)`          | User's library             |
 | `prompts`          | `(source_video_id)`                   | Videos-with-prompts lookup |
+| `channels`         | `(niche_id)`                          | Channels in a niche        |
+| `channels`         | `(last_synced_at)`                    | Enrichment due-list        |
+| `channels`         | `(youtube_created_at)`                | Channel-age filter         |
+| `channels`         | `(outlier_score DESC)`                | Channels feed sort         |
+| `outliers_feed`    | `(detected_at DESC)`, `(niche_id)`    | Global outlier feed        |
+| `niche_snapshots`  | `(snapshot_date)`                     | Latest scores              |
+
+Functions (service_role EXECUTE only, D-070): `find_due_enrichment_channel_ids`, `match_niche` (unused since D-080), `niche_signal_inputs`, `suggest_niche` (D-080, migration `20260928100010`). Migration `20260928100004`. The 30-day purge is main's `purge_stale_youtube_data` (D-067b), extended to `outliers_feed`, the discovery columns and `niche_snapshots` in `20260928100006` (D-073); `20260928100007` stops it deleting any channel a user row references and makes `prompts.source_video_id` ON DELETE RESTRICT; `channels(discovered_via_seed)` is indexed in `20260928100005`.
 
 ### 6.3 Audit tables
 
@@ -515,16 +543,17 @@ Essential indexes for MVP:
 
 Background job (nightly) enforces:
 
-| Data                                | Retention               | Action after                                                                                    |
-| ----------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
-| Soft-deleted user accounts          | 30 days                 | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived |
-| Soft-deleted prompts / notes        | 30 days                 | Hard-delete                                                                                     |
-| `auth_events`                       | 90 days                 | Delete                                                                                          |
-| `tracked_events`                    | 30 days                 | Delete (YouTube Developer Policies III.E.4.d, D-067)                                            |
-| `channels` / `videos` not refreshed | 30 days since last sync | Delete; empty the YouTube fields if a prompt or tracker still references it (D-067)             |
-| `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                         |
-| Failed webhook events               | 30 days                 | Delete after review                                                                             |
-| `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                      |
+| Data                                | Retention               | Action after                                                                                                                                           |
+| ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Soft-deleted user accounts          | 30 days                 | Hard-delete: profile, prompts, notes, tracked\_channels, notifications, credit\_events archived                                                        |
+| Soft-deleted prompts / notes        | 30 days                 | Hard-delete                                                                                                                                            |
+| `auth_events`                       | 90 days                 | Delete                                                                                                                                                 |
+| `tracked_events`                    | 30 days                 | Delete (YouTube Developer Policies III.E.4.d, D-067)                                                                                                   |
+| `channels` / `videos` not refreshed | 30 days since last sync | Delete; empty the YouTube fields if a prompt, tracker, calendar entry, notification override or channel-linked task still references it (D-067, D-073) |
+| `notifications` (YouTube events)    | 30 days                 | Delete (they quote YouTube data, D-067)                                                                                                                |
+| Failed webhook events               | 30 days                 | Delete after review                                                                                                                                    |
+| `video_transcripts_cache`           | —                       | Emptied and unused (D-067)                                                                                                                             |
+| `niche_snapshots`                   | 30 days (D-084)         | Delete; no weekly rows kept                                                                                                                            |
 
 **GDPR data export** (deferred, D-067: by email within 30 days until built): endpoint `/api/user/export` returns all user-owned data as JSON. Triggered from `/settings/danger`.
 

@@ -7,6 +7,9 @@ import { CREDIT_COSTS, FAIR_USE } from "@/lib/credits/costs";
 import { consume, getBalance } from "@/lib/credits";
 import { getCachedSearchChannels, setCachedSearchChannels } from "@/lib/youtube/cache";
 import { getChannelsByIds, searchChannelIds, type YouTubeError } from "@/lib/youtube";
+import { withQuotaSource } from "@/lib/youtube/quota";
+import { addUserSearchSeed } from "@/lib/services/discovery/seeds";
+import { listTopNicheChannelIds } from "@/lib/services/niche-feed";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { err, ok, type Result } from "@/lib/result";
@@ -118,6 +121,8 @@ function toChannelRow(
     // Phase 1C scope).
     is_monetized: null,
     youtube_created_at: channel.snippet.publishedAt,
+    uploads_playlist_id: channel.contentDetails?.relatedPlaylists.uploads ?? null,
+    made_for_kids: channel.status?.madeForKids ?? null,
     last_synced_at: new Date().toISOString(),
   };
 }
@@ -372,16 +377,18 @@ export async function searchNiches(
       return err({ type: "insufficient_credits", balance, required: SEARCH_CREDIT_COST });
     }
 
-    const idsResult = await searchChannelIds(searchFilters);
+    const idsResult = await withQuotaSource("search", () => searchChannelIds(searchFilters));
     if (!idsResult.ok) {
       return err(toSearchError(idsResult.error));
     }
-    const channelsResult = await getChannelsByIds(idsResult.value);
+    const channelsResult = await withQuotaSource("search", () => getChannelsByIds(idsResult.value));
     if (!channelsResult.ok) {
       return err(toSearchError(channelsResult.error));
     }
     channels = channelsResult.value;
     await setCachedSearchChannels(searchFilters, channels);
+    // Niche-Discovery-Engine.md §6.3: every real search feeds the crawler.
+    if (searchFilters.keyword) await addUserSearchSeed(searchFilters.keyword);
   }
 
   const idByYoutubeId = await upsertChannels(channels);
@@ -568,4 +575,30 @@ export async function saveChannelToTracking(
   }
 
   return ok(undefined);
+}
+
+// Niche-Discovery-Engine.md §9.2/§9.5 "Track niche": tracks the niche's top
+// channels through saveChannelToTracking, so the plan's cap and cadence
+// apply exactly as for single Track clicks. Stops at the cap.
+export const TRACK_NICHE_CHANNELS = 3;
+
+export interface TrackNicheResult {
+  tracked: number;
+  limitReached: boolean;
+}
+
+export async function trackNiche(
+  ctx: RequestContext,
+  slug: string,
+): Promise<Result<TrackNicheResult, NotFoundError>> {
+  const channelIds = await listTopNicheChannelIds(slug, TRACK_NICHE_CHANNELS);
+  if (channelIds.length === 0) return err({ type: "not_found" });
+
+  let tracked = 0;
+  for (const channelId of channelIds) {
+    const saved = await saveChannelToTracking(ctx, channelId);
+    if (!saved.ok) return ok({ tracked, limitReached: true });
+    tracked += 1;
+  }
+  return ok({ tracked, limitReached: false });
 }

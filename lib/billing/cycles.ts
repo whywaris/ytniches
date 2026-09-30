@@ -26,3 +26,9 @@ export function monthsElapsed(start: Date, now: Date): number {
   if (addMonths(start, months) > now) months -= 1;
   return Math.max(0, months);
 }
+
+// The next monthly anniversary of `start` after `now` (D-081: when beta
+// trial credits next refill).
+export function nextMonthlyAnniversary(start: Date, now: Date): Date {
+  return addMonths(start, monthsElapsed(start, now) + 1);
+}

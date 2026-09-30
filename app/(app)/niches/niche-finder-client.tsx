@@ -105,7 +105,9 @@ function NicheFinderClient({
   ) {
     setState({ status: "searching" });
     setSelectedForComparison([]);
-    router.replace(buildSearchUrl(pathname, nextFilters, nextSort, nextPage));
+    // D-069: search is a tab of /niches now; keep the URL on it.
+    const url = buildSearchUrl(pathname, nextFilters, nextSort, nextPage);
+    router.replace(`${url}${url.includes("?") ? "&" : "?"}tab=search`);
     const idempotencyKey = crypto.randomUUID();
     const result = await searchNichesAction(
       toSearchInput(nextFilters, nextSort, nextPage),

@@ -14,6 +14,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OutlierCard } from "@/components/features/outliers/outlier-card";
+import { EstimateNote } from "@/components/features/youtube/estimate-note";
 import type { OutlierItem, OutlierRange } from "@/lib/services/outliers";
 
 export type OutlierViewTab = "feed" | "grid" | "trending";
@@ -119,10 +120,11 @@ function OutliersClient({
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-6 py-6 lg:px-10">
       <div>
-        <h1 className="text-h3 text-text-primary">Outliers</h1>
+        <h1 className="text-h3 text-text-primary">Your outliers</h1>
         <p className="text-body-sm text-text-secondary">
           Videos from your tracked channels that dramatically over-perform their baseline.
         </p>
+        <EstimateNote what="Outlier multiples and scores" className="mt-1" />
       </div>
 
       <Tabs value={view} onValueChange={handleViewChange}>

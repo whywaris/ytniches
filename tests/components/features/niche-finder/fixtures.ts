@@ -1,0 +1,68 @@
+import type { FeedChannel, NicheFeedItem } from "@/lib/services/niche-feed";
+
+export const NICHE: NicheFeedItem = {
+  id: "n1",
+  slug: "mafia-history",
+  name: "Mafia History",
+  description: "Organised crime families told as documentaries.",
+  status: "rising",
+  score: 84,
+  label: "low",
+  trend: 12,
+  whyChips: ["62% small channels ranking", "4 new channels breaking out"],
+  channelCount: 38,
+  newChannels30d: 4,
+  medianViews: 18_400,
+  thumbnails: [1, 2, 3].map((i) => ({
+    videoId: `vid-${i}`,
+    channelId: "c1",
+    youtubeVideoId: `yt${i}`,
+    title: `Breakout video ${i}`,
+    thumbnailUrl: `https://i.ytimg.com/vi/yt${i}/hqdefault.jpg`,
+  })),
+};
+
+export const CHANNEL: FeedChannel = {
+  id: "c1",
+  youtubeChannelId: "UC1",
+  name: "Mafia Tales",
+  avatarUrl: null,
+  subscriberCount: 8_200,
+  videoCount: 41,
+  avgViewsRecent: 38_500,
+  medianViewsRecent: 164_000,
+  outlierScore: 4.7,
+  youtubeCreatedAt: "2026-03-01T00:00:00Z",
+  activeSince: "2026-03-04T00:00:00Z",
+  daysSinceStart: 209,
+  discoveredAt: "2026-09-20T00:00:00Z",
+  isFaceless: true,
+  likelyMonetized: true,
+  contentType: "long",
+  language: "en",
+  country: "US",
+  views30d: { kind: "uploads", value: 912_000 },
+  niches: [
+    { slug: "mafia-history", name: "Mafia History", isPrimary: true },
+    { slug: "true-crime", name: "True Crime", isPrimary: false },
+  ],
+  topVideos: [1, 2, 3].map((i) => ({
+    videoId: `vid-${i}`,
+    youtubeVideoId: `pv${i}`,
+    title: `The Gambino story part ${i}`,
+    thumbnailUrl: `https://i.ytimg.com/vi/pv${i}/hqdefault.jpg`,
+    viewCount: 400_000 / i,
+    publishedAt: "2026-09-01T00:00:00Z",
+    isOutlier: i === 1,
+    outlierMultiple: i === 1 ? 12.4 : 1.4,
+  })),
+  insights: [
+    {
+      id: "breakout",
+      label: "Breakout 12×",
+      hint: "An upload reached 12× the channel's usual views in the last 30 days (a breakout is 10× or more).",
+    },
+    { id: "faceless", label: "Faceless (est.)", hint: "Our AI's estimate." },
+  ],
+  viewsToSubs: 20,
+};

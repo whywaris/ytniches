@@ -17,7 +17,7 @@ import {
 import { extractTagsAction } from "@/app/(marketing)/tools/actions";
 
 // Server-backed (1 unit per uncached video), behind the free-tools guard:
-// per-IP limit + 70% quota cutoff (D-054, D-055).
+// per-IP limit + the free-tools quota budget (D-054, D-055, D-075).
 export function TagExtractorTool() {
   const [query, setQuery] = React.useState("");
   const [company, setCompany] = React.useState("");

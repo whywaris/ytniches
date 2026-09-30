@@ -5,5 +5,12 @@
 // SQL, so this is the only copy of the number.
 export const YOUTUBE_DATA_MAX_AGE_DAYS = 30;
 
+// Manual trigger for the purge (Admin -> Discovery "Run purge", D-073).
+export const YOUTUBE_RETENTION_EVENT = "youtube/retention.requested";
+
 // Shown where a saved prompt's source video has been emptied by the purge.
 export const EXPIRED_VIDEO_TITLE = "Video details expired";
+
+// Shown where a channel a user row points at (a calendar entry) has been
+// emptied by the purge. Such channels are emptied, never deleted (D-073).
+export const EXPIRED_CHANNEL_NAME = "Channel details expired";

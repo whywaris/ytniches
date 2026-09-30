@@ -1,10 +1,9 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { AuthShell, OrDivider } from "@/components/features/auth/auth-shell";
 import { ConsentLine } from "@/components/features/auth/consent-line";
-import { Checkbox } from "@/components/ui/checkbox";
-import { TextInput } from "@/components/ui/text-input";
-import { Logo } from "@/components/features/brand/logo";
+import { SignupForm } from "@/components/features/auth/signup-form";
 import { signInWithGoogle } from "@/app/(auth)/actions";
 
 import type { Metadata } from "next";
@@ -13,11 +12,9 @@ export const metadata: Metadata = {
   title: "Sign up — YTNiches",
 };
 
-// UI-UX-Flow.md §2.5. Placeholder shell — same constraints as the login
-// page (Design-System.md tokens only, Google OAuth is the only wired
-// path). Terms checkbox renders per spec but isn't wired as a submit
-// gate — that's a product/legal decision for the real signup UX, not
-// something to invent here.
+// UI-UX-Flow.md §2.5 / Application-Flow.md §3.1: Google or email and
+// password (D-083). The consent line sits under both ways to create an
+// account (D-067c); it replaces the old unwired terms checkbox.
 export default async function SignupPage({
   searchParams,
 }: {
@@ -28,63 +25,34 @@ export default async function SignupPage({
   const signInWithGoogleForTarget = signInWithGoogle.bind(null, redirectTarget);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-base px-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Link href="/" aria-label="YTNiches home" className="mb-6 inline-flex text-text-primary">
-            <Logo decorative className="h-8" />
-          </Link>
-          <h1 className="text-h2 font-semibold text-text-primary">Create your account</h1>
-          <p className="text-body-sm text-text-secondary">
-            Research + execution for YouTube creators.
-          </p>
-        </div>
-
-        {params.error ? (
-          <p role="alert" className="text-body-sm text-error">
-            Something went wrong signing you up. Please try again.
-          </p>
-        ) : null}
-
-        <form action={signInWithGoogleForTarget}>
-          <Button type="submit" fullWidth>
-            Continue with Google
-          </Button>
-        </form>
-        <ConsentLine />
-
-        <div className="flex items-center gap-3 text-caption text-text-tertiary">
-          <span className="h-px flex-1 bg-border-subtle" />
-          or
-          <span className="h-px flex-1 bg-border-subtle" />
-        </div>
-
-        {/* Shell only — email/password auth not wired (D-015 open). */}
-        <form className="space-y-4">
-          <TextInput label="Email" type="email" name="email" disabled />
-          <TextInput label="Password" type="password" name="password" disabled />
-          <label className="flex items-start gap-2 text-body-sm text-text-secondary">
-            <Checkbox disabled className="mt-0.5" />I agree to the{" "}
-            <Link href="/legal/terms" className="text-accent-text hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/legal/privacy" className="text-accent-text hover:underline">
-              Privacy Policy
-            </Link>
-          </label>
-          <Button type="submit" variant="secondary" fullWidth disabled>
-            Sign up with email
-          </Button>
-        </form>
-
-        <p className="text-center text-body-sm text-text-secondary">
-          Already have an account?{" "}
-          <Link href="/login" className="text-accent-text hover:underline">
-            Log in
-          </Link>
+    <AuthShell
+      title="Create your account"
+      subtitle="Spot rising YouTube channels. Plan what to make next."
+    >
+      {params.error ? (
+        <p role="alert" className="text-body-sm text-error">
+          Something went wrong signing you up. Please try again.
         </p>
-      </div>
-    </div>
+      ) : null}
+
+      <form action={signInWithGoogleForTarget}>
+        <Button type="submit" fullWidth>
+          Continue with Google
+        </Button>
+      </form>
+      <ConsentLine />
+
+      <OrDivider />
+
+      <SignupForm redirectTarget={redirectTarget} />
+      <ConsentLine />
+
+      <p className="text-center text-body-sm text-text-secondary">
+        Already have an account?{" "}
+        <Link href="/login" className="text-accent-text hover:underline">
+          Log in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

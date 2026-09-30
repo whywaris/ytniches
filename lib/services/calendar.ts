@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { err, ok, type Result } from "@/lib/result";
 import type { RequestContext } from "@/lib/context";
 import type { Database } from "@/lib/supabase/database.types";
+import { EXPIRED_CHANNEL_NAME } from "@/lib/youtube/retention";
 import type {
   CreateCalendarEntryInput,
   ListCalendarEntriesFilter,
@@ -96,7 +97,9 @@ async function attachChannelNames(rows: CalendarEntryRow[]): Promise<CalendarEnt
   if (error) {
     throw new Error(`attachChannelNames query failed: ${error.message}`);
   }
-  const nameById = new Map((channels ?? []).map((c) => [c.id, c.name]));
+  // The 30-day purge empties (never deletes) a channel a calendar entry
+  // points at, leaving name = '' -- show that as expired, not blank (D-073).
+  const nameById = new Map((channels ?? []).map((c) => [c.id, c.name || EXPIRED_CHANNEL_NAME]));
   return rows.map((row) =>
     toEntry(row, row.channel_id ? (nameById.get(row.channel_id) ?? null) : null),
   );

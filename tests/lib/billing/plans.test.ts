@@ -2,7 +2,9 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { BETA_MODE } from "@/lib/billing/beta";
 import {
+  BETA_PLAN,
   DEFAULT_REFRESH_CADENCE_HOURS,
   refreshCadenceHoursFor,
   TIER_INFO,
@@ -80,8 +82,23 @@ describe("trial (D-060)", () => {
     expect(refreshCadenceHoursFor({ tier: "pro", status: "trialing" })).toBe(6);
   });
 
-  it("is pitched one way, from one constant", () => {
-    expect(TRIAL_PITCH).toBe("Try every Pro feature free for 14 days");
+  it("is pitched one way, from one constant -- the beta wording while BETA_MODE is on (D-081)", () => {
+    expect(TRIAL_PITCH).toBe(
+      BETA_MODE
+        ? "$0 during beta: every Pro feature, with 50 credits every month"
+        : "Try every Pro feature free for 14 days",
+    );
+  });
+
+  it("describes the Beta plan from the constants: $0, the trial credits monthly, the trial tier's limits (D-081)", () => {
+    expect(BETA_PLAN.price).toBe(0);
+    expect(BETA_PLAN.monthlyCredits).toBe(TRIAL.credits);
+    expect(BETA_PLAN.features).toEqual([
+      `${TRIAL.credits} credits every month`,
+      `Track up to ${TIER_INFO[TRIAL.tier].trackedChannels} channels`,
+      `Refreshes every ${TRIAL.refreshCadenceHours} hours`,
+      ...TIER_INFO[TRIAL.tier].extras,
+    ]);
   });
 
   it("never says 'full Pro access' anywhere in the product", () => {

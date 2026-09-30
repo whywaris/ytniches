@@ -3,7 +3,7 @@ title: Cookie Policy
 slug: cookies
 description: The cookies and browser storage YTNiches uses, and how to control them.
 order: 4
-lastUpdated: 2026-09-27
+lastUpdated: 2026-09-30
 ---
 
 Cookies are small files a website stores in your browser. YTNiches uses as few as possible: only the ones the app needs to work. That's why we don't show a cookie banner.
@@ -14,7 +14,11 @@ Cookies are small files a website stores in your browser. YTNiches uses as few a
 
 **Active workspace (essential).** If you belong to a Team workspace, a cookie called `workspace-id` remembers which workspace you're using, so the app doesn't have to look it up on every page. Page scripts can't read it.
 
+**Email sign-up and password reset (essential, short-lived).** When you sign up with an email address, a cookie called `ytn_pending_email` holds that address for up to <Fact k="auth.pendingEmailMinutes" unit="minute" />, so the "check your email" page can resend the verification link. When you open a password-reset link, a cookie called `ytn_pw_recovery` lets you set a new password for up to <Fact k="auth.recoveryMinutes" unit="minute" />. Page scripts can't read either one.
+
 Those are the only cookies we set.
+
+**Bot protection.** The email sign-up, log-in and password-reset forms include a Cloudflare Turnstile check. It runs in a frame from Cloudflare and doesn't set advertising or tracking cookies. See [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/).
 
 ## What we don't use
 
@@ -31,7 +35,7 @@ The app keeps a few preferences in your browser's local storage. This isn't a co
 
 ## Content from third parties
 
-Channel avatars and video thumbnails load from Google's servers (YouTube). Google may receive your IP address when your browser loads them, as with any image on the web. See the [Google Privacy Policy](http://www.google.com/policies/privacy).
+Channel avatars and video thumbnails load from Google's servers (YouTube). Google may receive your IP address when your browser loads them, as with any image on the web. See the [Google Privacy Policy](https://policies.google.com/privacy).
 
 ## Your choices
 

@@ -155,6 +155,8 @@
   /* §3.1 font families */
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  /* Marketing display only (D-082): set by the marketing layout. */
+  --font-display: var(--font-instrument-serif), Georgia, serif;
 
   /* §3.2 type scale (size + paired line-height) */
   --text-display-lg: 60px;
@@ -241,4 +243,83 @@
   & :is(h2, h3) {
     scroll-margin-top: 96px;
   }
+}
+
+/* Marketing glass (D-082, Design-System.md §2.8). Scoped to the marketing
+   layout, which is always dark (no ThemeProvider there). Glows are mixed
+   from --accent, so a brand change reaches them. Orange stays for CTAs,
+   key accents and glows; orange text uses --accent-text.
+   tests/lib/design-tokens.test.ts composites the glass over --mk-bg and
+   over the soft glow and checks text on it against WCAG AA. */
+.marketing {
+  --mk-bg: #0d0a09;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.14);
+  --glass-blur: 8px;
+  --glow-accent: color-mix(in srgb, var(--accent) 35%, transparent);
+  --glow-accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  background-color: var(--mk-bg);
+}
+
+@media (min-width: 768px) {
+  .marketing {
+    --glass-blur: 16px;
+  }
+}
+
+/* A glass surface: translucent fill, hairline border, a 1px top highlight.
+   The backdrop blur (the expensive part) only from 768px: on phones the
+   cards sit over a near-flat background, where blur is invisible but
+   still costs a compositing layer each. The navbar blurs everywhere. */
+@utility glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  @media (min-width: 768px) {
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+}
+
+/* The same surface with no blur at all (FAQ rows, small repeated items). */
+@utility glass-flat {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Very subtle film grain over the whole marketing page: an inline SVG
+   (no request), fixed-size tile, never intercepts clicks. Desktop only:
+   on phones it's a paint cost over a very tall page for no visible gain. */
+@utility mk-noise {
+  position: relative;
+  @media (max-width: 767px) {
+    &::after {
+      display: none;
+    }
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+/* The landing's "See how it works" anchor (D-082). The reduced-motion
+   block above forces scroll-behavior: auto. */
+html:has(.marketing) {
+  scroll-behavior: smooth;
+}
+
+/* D-084: the "developed with YouTube" logo in the app follows the theme
+   (white text on dark, dark text on light). The marketing site is always
+   dark and renders only the white one (tone="dark"). */
+:root[data-theme="light"] .yt-logo-on-dark,
+:root:not([data-theme="light"]) .yt-logo-on-light {
+  display: none;
 }

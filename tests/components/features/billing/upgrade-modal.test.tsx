@@ -22,6 +22,16 @@ vi.mock("@/lib/analytics", () => ({
   capture: (...args: unknown[]) => capture(...args),
 }));
 
+// D-081: off by default (the paid path); the beta test switches it on.
+const beta = vi.hoisted(() => ({
+  BETA_MODE: false,
+  BETA_BANNER: "Free during beta — paid plans coming soon",
+}));
+// Every real export, with BETA_MODE switchable per test (same object).
+vi.mock("@/lib/billing/beta", async (importOriginal) =>
+  Object.assign(beta, { ...(await importOriginal<object>()), BETA_MODE: beta.BETA_MODE }),
+);
+
 const { UpgradeModal } = await import("@/components/features/billing/upgrade-modal");
 
 function renderModal(props: Partial<ComponentProps<typeof UpgradeModal>> = {}) {
@@ -34,9 +44,26 @@ function renderModal(props: Partial<ComponentProps<typeof UpgradeModal>> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  beta.BETA_MODE = false;
 });
 
 describe("UpgradeModal", () => {
+  it("during the beta shows the Beta plan as yours and the paid plans with no way to check out (D-081)", async () => {
+    beta.BETA_MODE = true;
+    const { baseElement } = renderModal();
+
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+    expect(screen.getByText("Your plan")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Plans after beta" })).toBeInTheDocument();
+    expect(screen.getAllByText("Coming soon")).toHaveLength(3);
+    // Only the monthly/annual toggle is a button -- no plan can be bought.
+    expect(screen.getAllByRole("button").map((button) => button.textContent?.trim())).not.toContain(
+      "Continue",
+    );
+    expect(createCheckoutAction).not.toHaveBeenCalled();
+    expect(await axe(baseElement)).toHaveNoViolations();
+  });
+
   it("has no accessibility violations while open", async () => {
     const { baseElement } = renderModal();
     expect(await axe(baseElement)).toHaveNoViolations();

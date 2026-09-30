@@ -53,6 +53,7 @@ describe("VsComparison", () => {
 const { COMPETITOR_PAGES } = await import("@/content/vs");
 const { YTNICHES, FEATURE_LABELS } = await import("@/content/vs/ytniches");
 const { TRIAL, trialSummary } = await import("@/lib/billing/plans");
+const { BETA_MODE } = await import("@/lib/billing/beta");
 
 const STATUS_TEXT = {
   yes: "Yes",
@@ -83,7 +84,11 @@ describe.each(COMPETITOR_PAGES)("/vs/$id", (page) => {
     expect(trial, `${page.id} has no Free trial row`).toBeDefined();
     expect(trial!.ours.status).toBe("Yes");
     expect(trial!.ours.text).toContain(trialSummary());
-    expect(trialSummary()).toBe(`${TRIAL.days} days of Pro, no card`);
+    expect(trialSummary()).toBe(
+      BETA_MODE
+        ? `$0 during beta, ${TRIAL.credits} credits every month, no card`
+        : `${TRIAL.days} days of Pro, no card`,
+    );
   });
 
   // Guards against a column swap: each rendered cell must match the side

@@ -4,6 +4,8 @@
 
 ---
 
+> **Beta (D-081, 2026-09-28):** while `BETA_MODE` is on (`lib/billing/beta.ts`), there is no checkout. Every new account gets the trial (Pro features, trial limits) with no expiry, and its credits refill monthly. /pricing shows one $0 Beta card, then the plans below under "Plans after beta" at their real prices, marked "Coming soon" and with no buttons (D-081). The rest of this document describes billing once it goes live.
+
 ## 1. Overview & Business Model
 
 YTNiches is a subscription SaaS with credit-metered usage on top of the base plan. Users pay a monthly (or annual) fee for tier access + a monthly credit allocation. Credits meter the expensive actions (AI generation, high-cost API calls) so heavy users don't blow up unit economics.
@@ -35,15 +37,15 @@ Target gross margin: **\~75–85% at every paid tier.**
 
 Cost per user per month, roughly (Pro tier example):
 
-| Cost driver | Estimate |
-| --- | --- |
-| AI generation (100 prompts) | \~$10 |
-| YouTube API (heavily cached) | \~$1 |
-| Hosting + infra (Supabase, Vercel, Redis, Resend) | \~$1 |
-| Creem MoR fee (3.9% + $0.40 on $49) | \~$2.30 |
-| **Total cost per Pro user/month** | **\~$14.30** |
-| **Revenue per Pro user/month** | **$49** |
-| **Gross margin** | **\~71%** |
+| Cost driver                                       | Estimate     |
+| ------------------------------------------------- | ------------ |
+| AI generation (100 prompts)                       | \~$10        |
+| YouTube API (heavily cached)                      | \~$1         |
+| Hosting + infra (Supabase, Vercel, Redis, Resend) | \~$1         |
+| Creem MoR fee (3.9% + $0.40 on $49)               | \~$2.30      |
+| **Total cost per Pro user/month**                 | **\~$14.30** |
+| **Revenue per Pro user/month**                    | **$49**      |
+| **Gross margin**                                  | **\~71%**    |
 
 Starter and Team similar margins by design. Free trial cost is limited by trial credits (see §3).
 
@@ -61,12 +63,12 @@ Mac's positioning (DECISIONS.md D-002): Research + Execution, not just research.
 
 Mac to set actual targets. As a directional model:
 
-| Milestone | Users mix | Approx MRR |
-| --- | --- | --- |
-| 100 paid | 60 Starter, 30 Pro, 10 Team | $3,610 |
-| 500 paid | 250 Starter, 200 Pro, 50 Team | $19,600 |
-| 1000 paid | 500 Starter, 400 Pro, 100 Team | $39,200 |
-| 2500 paid | 1250 Starter, 1000 Pro, 250 Team | $98,000 |
+| Milestone | Users mix                        | Approx MRR |
+| --------- | -------------------------------- | ---------- |
+| 100 paid  | 60 Starter, 30 Pro, 10 Team      | $3,610     |
+| 500 paid  | 250 Starter, 200 Pro, 50 Team    | $19,600    |
+| 1000 paid | 500 Starter, 400 Pro, 100 Team   | $39,200    |
+| 2500 paid | 1250 Starter, 1000 Pro, 250 Team | $98,000    |
 
 ## 2. Tier Structure
 
@@ -120,19 +122,19 @@ For small teams running multiple channels or an agency operation.
 
 ### 2.5 Feature matrix (quick reference)
 
-| Feature | Starter | Pro | Team |
-| --- | --- | --- | --- |
-| Monthly credits | 200 | 1,000 | 3,000 |
-| Tracked channels | 10 | 50 | 100 |
-| Refresh cadence | 24h | 6h | 1h |
-| AI Prompts | ✓ | ✓ | ✓ |
-| Competitor Tracking | ✓ | ✓ | ✓ |
-| Outlier Finder (Phase 2) | ✓ | ✓ | ✓ |
-| Email notifications | – | ✓ | ✓ |
-| Slack notifications | – | – | ✓ |
-| Workspace / Team (Phase 3) | – | – | ✓ |
-| Content Calendar (Phase 3) | – | – | ✓ |
-| Tasks (Phase 3) | – | – | ✓ |
+| Feature                    | Starter | Pro   | Team  |
+| -------------------------- | ------- | ----- | ----- |
+| Monthly credits            | 200     | 1,000 | 3,000 |
+| Tracked channels           | 10      | 50    | 100   |
+| Refresh cadence            | 24h     | 6h    | 1h    |
+| AI Prompts                 | ✓       | ✓     | ✓     |
+| Competitor Tracking        | ✓       | ✓     | ✓     |
+| Outlier Finder (Phase 2)   | ✓       | ✓     | ✓     |
+| Email notifications        | –       | ✓     | ✓     |
+| Slack notifications        | –       | –     | ✓     |
+| Workspace / Team (Phase 3) | –       | –     | ✓     |
+| Content Calendar (Phase 3) | –       | –     | ✓     |
+| Tasks (Phase 3)            | –       | –     | ✓     |
 
 ### 2.6 Annual billing
 
@@ -156,27 +158,29 @@ Credits meter the actions that have real marginal cost. The credit unit exists s
 
 ### 3.1 Cost per action
 
-| Action | Cost (credits) | Rationale |
-| --- | --- | --- |
-| Niche search | 1 | YouTube API cost dominates; heavily cached |
-| Add channel to tracking | 1 | One-time fetch |
-| Prompt generation | 5 | AI API cost dominates (\~$0.10 per call) |
-| Regenerate prompts (with feedback) | 3 | Cheaper than fresh generation (partial reuse) |
-| Outlier scan on tracked channel (Phase 2) | 2 | Cost of AI classification + baseline calc |
-| Thumbnail idea generation (Phase 2) | 5 | Same AI cost as prompt generation |
-| Export results (CSV, JSON) | 0 (free) | Data user already has access to |
-| View channel detail / video list | 0 (free) | Served from cache |
-| Save channel to workspace | 0 (free) | DB-only operation |
-| Notification delivery | 0 (free) | Email cost negligible |
+| Action                                                                                         | Cost (credits) | Rationale                                                                         |
+| ---------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| Niche search                                                                                   | 1              | YouTube API cost dominates; heavily cached                                        |
+| Add channel to tracking                                                                        | 1              | One-time fetch                                                                    |
+| Prompt generation                                                                              | 5              | AI API cost dominates (\~$0.10 per call)                                          |
+| Regenerate prompts (with feedback)                                                             | 3              | Cheaper than fresh generation (partial reuse)                                     |
+| Outlier scan on tracked channel (Phase 2)                                                      | 2              | Cost of AI classification + baseline calc                                         |
+| Thumbnail idea generation (Phase 2)                                                            | 5              | Same AI cost as prompt generation                                                 |
+| Export results (CSV, JSON)                                                                     | 0 (free)       | Data user already has access to                                                   |
+| View channel detail / video list                                                               | 0 (free)       | Served from cache                                                                 |
+| Browse default Niches / Channels / Outliers feeds, niche detail, sort, page, niche-only filter | 0 (free)       | Served from our DB. Starter/Trial see the top 50 niches, Pro/Team see all (D-072) |
+| Filtered discovery search (any other feed filter)                                              | 1              | Free to re-run or page for 24h, like a live search (D-072)                        |
+| Save channel to workspace                                                                      | 0 (free)       | DB-only operation                                                                 |
+| Notification delivery                                                                          | 0 (free)       | Email cost negligible                                                             |
 
 ### 3.2 Credit allocation by tier
 
-| Tier | Credits / cycle | Cycle length |
-| --- | --- | --- |
-| Trial | 50 total | Once (14 days) |
-| Starter | 200 | Monthly |
-| Pro | 1,000 | Monthly |
-| Team | 3,000 | Monthly (workspace-shared) |
+| Tier    | Credits / cycle | Cycle length               |
+| ------- | --------------- | -------------------------- |
+| Trial   | 50 total        | Once (14 days)             |
+| Starter | 200             | Monthly                    |
+| Pro     | 1,000           | Monthly                    |
+| Team    | 3,000           | Monthly (workspace-shared) |
 
 Annual subscribers get the same monthly allocation, just paid annually.
 
@@ -199,11 +203,11 @@ Annual subscribers get the same monthly allocation, just paid annually.
 
 One-time purchases for users who need more credits without upgrading tier.
 
-| Pack | Credits | Price | Cost per credit |
-| --- | --- | --- | --- |
-| Small | 100 | $10 | $0.10 |
-| Medium | 500 | $40 | $0.08 |
-| Large | 2000 | $120 | $0.06 |
+| Pack   | Credits | Price | Cost per credit |
+| ------ | ------- | ----- | --------------- |
+| Small  | 100     | $10   | $0.10           |
+| Medium | 500     | $40   | $0.08           |
+| Large  | 2000    | $120  | $0.06           |
 
 - Top-up credits added to user's balance; consumed AFTER monthly allocation
 - Top-up credits DO NOT expire (unlike monthly allocation)
@@ -272,22 +276,22 @@ flowchart LR
 
 Each subscription tier is a Creem Product with monthly + annual price variants:
 
-| Creem product | Interval | Amount | Currency |
-| --- | --- | --- | --- |
-| `ytniches-starter` | month | 1900 (cents) | USD |
-| `ytniches-starter` | year | 19000 (cents) | USD |
-| `ytniches-pro` | month | 4900 (cents) | USD |
-| `ytniches-pro` | year | 49000 (cents) | USD |
-| `ytniches-team-3seats` | month | 9900 (cents) | USD |
-| `ytniches-team-3seats` | year | 99000 (cents) | USD |
-| `ytniches-team-additional-seat` | month | 2500 (cents) | USD |
+| Creem product                   | Interval | Amount        | Currency |
+| ------------------------------- | -------- | ------------- | -------- |
+| `ytniches-starter`              | month    | 1900 (cents)  | USD      |
+| `ytniches-starter`              | year     | 19000 (cents) | USD      |
+| `ytniches-pro`                  | month    | 4900 (cents)  | USD      |
+| `ytniches-pro`                  | year     | 49000 (cents) | USD      |
+| `ytniches-team-3seats`          | month    | 9900 (cents)  | USD      |
+| `ytniches-team-3seats`          | year     | 99000 (cents) | USD      |
+| `ytniches-team-additional-seat` | month    | 2500 (cents)  | USD      |
 
 Credit top-ups are one-time Creem products (not subscriptions):
 
-| Creem product | Amount |
-| --- | --- |
-| `ytniches-credits-100` | 1000 (cents) = $10 |
-| `ytniches-credits-500` | 4000 (cents) = $40 |
+| Creem product           | Amount               |
+| ----------------------- | -------------------- |
+| `ytniches-credits-100`  | 1000 (cents) = $10   |
+| `ytniches-credits-500`  | 4000 (cents) = $40   |
 | `ytniches-credits-2000` | 12000 (cents) = $120 |
 
 Product IDs stored in env vars, mapped in `lib/billing/products.ts`.
@@ -309,18 +313,18 @@ Creem sends webhooks for subscription lifecycle events. Handler: `POST /api/webh
 
 **Events we handle:**
 
-| Event | What we do |
-| --- | --- |
-| `checkout.completed` | Create/update subscription row; allocate credits for the cycle |
-| `subscription.created` | Same (redundant safety) |
-| `subscription.updated` | Handle plan change; adjust credit allocation |
-| `subscription.renewed` | Fresh credit allocation for new cycle |
+| Event                    | What we do                                                     |
+| ------------------------ | -------------------------------------------------------------- |
+| `checkout.completed`     | Create/update subscription row; allocate credits for the cycle |
+| `subscription.created`   | Same (redundant safety)                                        |
+| `subscription.updated`   | Handle plan change; adjust credit allocation                   |
+| `subscription.renewed`   | Fresh credit allocation for new cycle                          |
 | `subscription.cancelled` | Mark subscription cancelled; access continues until period end |
-| `subscription.paused` | Pause access + credit consumption; retain data |
-| `subscription.resumed` | Restore access |
-| `payment.failed` | Enter dunning state; email user; keep access for 3 days |
-| `payment.recovered` | Exit dunning; restore full access |
-| `refund.issued` | Log refund; adjust credit balance (remove unused portion) |
+| `subscription.paused`    | Pause access + credit consumption; retain data                 |
+| `subscription.resumed`   | Restore access                                                 |
+| `payment.failed`         | Enter dunning state; email user; keep access for 3 days        |
+| `payment.recovered`      | Exit dunning; restore full access                              |
+| `refund.issued`          | Log refund; adjust credit balance (remove unused portion)      |
 
 **Security:**
 
@@ -433,13 +437,13 @@ Creem is the default implementation. Any future provider swap only touches this 
 
 Contextual, never surprising. Placement:
 
-| Location | Trigger | Prompt |
-| --- | --- | --- |
+| Location             | Trigger                          | Prompt                                                                 |
+| -------------------- | -------------------------------- | ---------------------------------------------------------------------- |
 | Niche Finder results | Free/trial user hits daily limit | "You've hit today's Trial search limit. Upgrade for 200/mo on Starter" |
-| Prompt generation | User has < 5 credits | "Only 4 credits left. Buy more or upgrade" |
-| Add channel | User hits tier tracking limit | "You're at 10/10 tracked channels. Upgrade for 50 (Pro)" |
-| Trial end banner | Trial expired | Persistent "Upgrade to keep going" |
-| Settings > Billing | Manual review | Full pricing table |
+| Prompt generation    | User has < 5 credits             | "Only 4 credits left. Buy more or upgrade"                             |
+| Add channel          | User hits tier tracking limit    | "You're at 10/10 tracked channels. Upgrade for 50 (Pro)"               |
+| Trial end banner     | Trial expired                    | Persistent "Upgrade to keep going"                                     |
+| Settings > Billing   | Manual review                    | Full pricing table                                                     |
 
 Never: modal takeovers on non-billing pages, autoplay upgrade videos, dark patterns.
 

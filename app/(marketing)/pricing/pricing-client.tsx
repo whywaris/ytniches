@@ -12,7 +12,8 @@ import { TierCards } from "@/components/features/billing/tier-cards";
 // onboarding completion (lib/services/onboarding.ts's completeOnboarding/
 // skipOnboarding), not at checkout -- picking a tier here is just
 // pre-selecting intent for signup, not an actual Creem checkout, so this
-// page needs no Server Action of its own.
+// page needs no Server Action of its own. Only shown once BETA_MODE is off;
+// during the beta /pricing shows components/features/billing/beta-pricing.
 function PricingClient() {
   const router = useRouter();
   const [billingFrequency, setBillingFrequency] = React.useState<BillingFrequency>("monthly");

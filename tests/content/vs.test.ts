@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COMPETITOR_PAGES } from "@/content/vs";
 import { YTNICHES } from "@/content/vs/ytniches";
-import { COMPETITORS } from "@/components/features/landing/content";
+import { FOOTER } from "@/components/features/landing/content";
 
 const MAX_AGE_DAYS = 180;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -46,8 +46,9 @@ describe.each(COMPETITOR_PAGES)("content/vs/$id.ts", (page) => {
     }
   });
 
-  it("has a landing-page card linking to it", () => {
-    expect(COMPETITORS.map((competitor) => competitor.id)).toContain(page.id);
+  it("is linked from the marketing footer (D-082)", () => {
+    const hrefs = FOOTER.columns.flatMap((column) => column.links.map((link) => link.href));
+    expect(hrefs).toContain(`/vs/${page.id}`);
   });
 });
 
