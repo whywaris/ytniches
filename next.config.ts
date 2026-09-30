@@ -1,6 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 
-import { LEGACY_TOOL_REDIRECTS } from "./lib/tools/legacy-redirects";
+import { LEGACY_TOOL_REDIRECTS, LEGAL_REDIRECTS } from "./lib/tools/legacy-redirects";
 
 import type { NextConfig } from "next";
 
@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
   // it (or create a competing AGENTS.md) on every `next dev`/`next build`.
   agentRules: false,
   // D-055: old-site tool URLs we don't rebuild -> /tools with a 301.
+  // D-084: /privacy and /terms -> /legal/*.
   async redirects() {
-    return LEGACY_TOOL_REDIRECTS;
+    return [...LEGACY_TOOL_REDIRECTS, ...LEGAL_REDIRECTS];
   },
 };
 

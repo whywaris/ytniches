@@ -7,7 +7,7 @@ import {
   PENDING_EMAIL_MINUTES,
   RECOVERY_MINUTES,
 } from "@/lib/auth/forms";
-import { BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
+import { BETA_MODE, BETA_NOTICE_DAYS, BETA_PRICE } from "@/lib/billing/beta";
 import { TIER_INFO, TIERS, TRIAL, TRIAL_PITCH } from "@/lib/billing/plans";
 import { REFUND_POLICY } from "@/lib/billing/refund-policy";
 import { LEGAL } from "@/lib/legal/policy";
@@ -87,6 +87,11 @@ export const FACTS: Record<string, string | number> = {
   "auth.recoveryMinutes": RECOVERY_MINUTES,
   "trial.days": TRIAL.days,
   "trial.credits": TRIAL.credits,
+  // What workers/credit-cycles.ts does: during the beta the trial's credits
+  // refill monthly with no carry-over (rolloverCap 0); otherwise once.
+  "trial.creditsTerms": BETA_MODE
+    ? `During the beta, the trial doesn't expire and comes with ${TRIAL.credits} credits every month. Unused credits don't carry over`
+    : `The trial comes with ${TRIAL.credits} credits, once`,
   "trial.plan": TIER_INFO[TRIAL.tier].label,
   "trial.sync": sync(TRIAL.refreshCadenceHours),
 

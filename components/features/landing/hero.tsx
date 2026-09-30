@@ -1,5 +1,3 @@
-import { ShieldCheck } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { HERO, HOW_IT_WORKS, PRIMARY_CTA } from "@/components/features/landing/content";
 import { CtaLink } from "@/components/features/landing/cta-link";
@@ -34,10 +32,7 @@ function Hero() {
               <a href={`#${HOW_IT_WORKS.id}`}>{HERO.secondaryCta}</a>
             </Button>
           </div>
-          <p className="mt-6 flex items-center gap-2 text-body-sm text-text-secondary">
-            <ShieldCheck aria-hidden="true" className="size-4 text-accent-text" />
-            {HERO.dataLine}
-          </p>
+          <p className="mt-6 text-body-sm text-text-secondary">{HERO.dataLine}</p>
         </div>
         <HeroArt className="mx-auto max-w-[560px]" />
       </div>

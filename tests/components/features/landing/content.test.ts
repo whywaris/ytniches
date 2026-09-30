@@ -76,7 +76,11 @@ describe("landing content", () => {
     expect(content.FAQ.length).toBeGreaterThanOrEqual(5);
     expect(content.FAQ.length).toBeLessThanOrEqual(6);
     const answers = content.FAQ.map((item) => `${item.question} ${item.answer}`).join(" ");
-    expect(answers).toMatch(/official YouTube Data API/);
+    expect(answers).toMatch(/YouTube API Services/);
+    // D-084: no wording that implies YouTube or Google endorses us.
+    expect(text).not.toMatch(
+      /(official|approved|certified|endorsed by|partnered)(?![^.]*(isn't|not))/i,
+    );
     expect(answers).toMatch(/isn't affiliated with, endorsed or sponsored by YouTube or Google/);
     expect(content.FAQ.some((item) => item.link?.href === "/legal/privacy")).toBe(true);
     expect(answers).toMatch(/beta/i);

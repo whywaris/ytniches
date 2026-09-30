@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { renderMdx } from "@/lib/blog/mdx";
+import { BETA_MODE } from "@/lib/billing/beta";
 import { FACTS } from "@/lib/help/facts";
 import { getLegalPages } from "@/lib/legal";
 import { HELP_MDX_COMPONENTS } from "@/components/features/help/help-mdx";
@@ -66,6 +67,13 @@ describe("content/legal", () => {
       );
       expect(html.length).toBeGreaterThan(0);
     });
+  });
+
+  it("states the trial credits the way credit-cycles grants them (D-081)", () => {
+    expect(FACTS["trial.creditsTerms"]).toContain(BETA_MODE ? "every month" : "once");
+    expect(pages.find((page) => page.slug === "terms")!.body).toContain(
+      '<Fact k="trial.creditsTerms" />',
+    );
   });
 
   it("meets YouTube's Developer Policies wording (III.A.1, III.A.2)", () => {

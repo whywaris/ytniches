@@ -41,7 +41,8 @@ export const HERO = {
   subhead:
     "YTNiches finds fast-growing faceless channels every day, shows which videos are outperforming their channel, and helps you turn it into a content plan.",
   secondaryCta: "See how it works",
-  dataLine: "Built on official YouTube data",
+  // D-084: neutral source line; nothing that suggests YouTube or Google endorses us.
+  dataLine: "Uses public data from YouTube API Services",
 };
 
 export type IllustrationId = "find" | "understand" | "plan";
@@ -108,7 +109,7 @@ export interface FaqItem {
 export const FAQ: FaqItem[] = [
   {
     question: "Where does the data come from?",
-    answer: `From the official YouTube Data API: public channel and video information. We refresh it on a schedule and keep it for no more than ${YOUTUBE_DATA_MAX_AGE_DAYS} days, as YouTube's terms require.`,
+    answer: `From YouTube API Services (the YouTube Data API): public channel and video information. We refresh it on a schedule and keep it for no more than ${YOUTUBE_DATA_MAX_AGE_DAYS} days, as YouTube's terms require.`,
   },
   {
     question: "Is YTNiches part of YouTube?",
