@@ -39,7 +39,9 @@ export interface OnboardingClientProps {
   initialPrimaryGoal: PrimaryGoal | null;
 }
 
-const TOTAL_DOTS = 5;
+// D-086: Welcome, find a niche, save a channel, extract prompts. The old
+// "Connect your channel" step is gone (YTNiches never uses YouTube OAuth).
+const TOTAL_DOTS = 4;
 
 const PERSONA_OPTIONS: { value: PrimaryGoal; label: string }[] = [
   { value: "explorer", label: "I'm exploring niches — no channel yet" },
@@ -62,12 +64,12 @@ const ONBOARDING_DEFAULT_FILTERS: NicheFilterValues = {
   languages: ["en"],
 };
 
-// onboarding_step: 0-5 (Backend-Schema.md §2.2). Value 3 is reserved but
-// never persisted -- Steps 3+4 share one screen (approved decision), so
-// the DB jumps straight from 2 to 4 on that screen's final Continue.
-function dbStepToUiStep(step: number): 1 | 2 | 3 | 5 {
+// onboarding_step: 0-5 (Backend-Schema.md §2.2), values unchanged by
+// D-086 (no migration). Welcome saves 2; the search+save screen saves 4;
+// finishing saves 5. 1 (the removed Connect step) and 3 (never persisted)
+// both resume at the search screen.
+export function dbStepToUiStep(step: number): 1 | 3 | 5 {
   if (step <= 0) return 1;
-  if (step === 1) return 2;
   if (step === 4) return 5;
   return 3;
 }
@@ -206,29 +208,6 @@ function WelcomeStep({
         onClick={() => primaryGoal && onContinue(trimmedName, primaryGoal)}
       >
         Continue
-      </Button>
-    </div>
-  );
-}
-
-// D-015 (Open): YouTube OAuth scope isn't wired yet -- button shows a
-// "Coming soon" toast instead of a real connect flow.
-function ConnectStep({ saving, onSkip }: { saving: boolean; onSkip: () => void }) {
-  const { showToast } = useToast();
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-h3 text-text-primary">Connect your channel?</h1>
-        <p className="text-body-sm text-text-secondary">
-          We&apos;ll personalize your niche recommendations. You can skip and connect later.
-        </p>
-      </div>
-      <Button fullWidth onClick={() => showToast({ title: "Coming soon", variant: "info" })}>
-        Connect with YouTube
-      </Button>
-      <Button fullWidth variant="ghost" loading={saving} onClick={onSkip}>
-        Skip for now
       </Button>
     </div>
   );
@@ -490,7 +469,7 @@ function PromptStep({
 function OnboardingClient({ initialStep, initialName, initialPrimaryGoal }: OnboardingClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [uiStep, setUiStep] = React.useState<1 | 2 | 3 | 5>(() => dbStepToUiStep(initialStep));
+  const [uiStep, setUiStep] = React.useState<1 | 3 | 5>(() => dbStepToUiStep(initialStep));
   const [savingStep, setSavingStep] = React.useState(false);
   const [hasSavedChannel, setHasSavedChannel] = React.useState(false);
   const [channelId, setChannelId] = React.useState<string | null>(null);
@@ -507,13 +486,6 @@ function OnboardingClient({ initialStep, initialName, initialPrimaryGoal }: Onbo
   async function handleWelcomeContinue(name: string, primaryGoal: PrimaryGoal) {
     setSavingStep(true);
     await updateProfileAction(name, primaryGoal);
-    await updateOnboardingStepAction(1);
-    setSavingStep(false);
-    setUiStep(2);
-  }
-
-  async function handleConnectSkip() {
-    setSavingStep(true);
     await updateOnboardingStepAction(2);
     setSavingStep(false);
     setUiStep(3);
@@ -533,9 +505,9 @@ function OnboardingClient({ initialStep, initialName, initialPrimaryGoal }: Onbo
     router.push("/dashboard");
   }
 
-  // Dot 4 lights up once a channel's saved on the combined Step 3+4
-  // screen, even though onboarding_step itself only ever holds 2 or 4.
-  const activeDot = uiStep === 3 && hasSavedChannel ? 4 : uiStep;
+  // Dots: 1 Welcome, 2 find a niche, 3 once a channel's saved on that same
+  // screen, 4 extract prompts.
+  const activeDot = uiStep === 1 ? 1 : uiStep === 5 ? 4 : hasSavedChannel ? 3 : 2;
 
   return (
     <OnboardingLayout activeDot={activeDot} onSkip={() => void handleSkip()}>
@@ -546,9 +518,6 @@ function OnboardingClient({ initialStep, initialName, initialPrimaryGoal }: Onbo
           saving={savingStep}
           onContinue={(name, primaryGoal) => void handleWelcomeContinue(name, primaryGoal)}
         />
-      ) : null}
-      {uiStep === 2 ? (
-        <ConnectStep saving={savingStep} onSkip={() => void handleConnectSkip()} />
       ) : null}
       {uiStep === 3 ? (
         <SearchSaveStep

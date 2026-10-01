@@ -65,7 +65,7 @@ GDPR compliance IS in scope from launch (EU users likely from day 1).
 
 - Standard OAuth 2.0 via Supabase Auth
 - Scopes requested: `openid`, `email`, `profile` — minimum needed
-- **NOT requested:** any YouTube API scopes on signup (separate flow when user opts in to "Connect my channel")
+- **NOT requested, ever (D-086):** any YouTube API scope. YTNiches never connects to a user's YouTube account; it only reads public channel and video data with its own API key.
 - Refresh tokens stored server-side only; never exposed to client
 
 ### 2.3 Session management

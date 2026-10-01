@@ -278,7 +278,7 @@ A background engine refreshes the data daily. Browsing costs 0 credits and 0 You
 **Flow:**
 
 1. Welcome — name, primary goal (Explorer / Stuck / Grower / Operator, in user-friendly wording)
-2. Optional YouTube connect — if user has a channel, connect it for personalized recs; skippable
+2. (Removed, D-086: no YouTube account connection. YTNiches only uses public data through its own API key.)
 3. First niche search — guided walkthrough with pre-filled sensible filters based on goal
 4. First result save — user saves one channel to tracking
 5. First prompt generation — pick a video from saved channel, generate prompts, see output

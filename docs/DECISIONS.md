@@ -1056,3 +1056,15 @@ Decisions that still need to close before their dependent docs / features can be
   - **Legal:** the Privacy Policy's YouTube section covers discovery, the figures we store and for how long, refresh and deletion, deletion requests, and the fact that our estimates aren't YouTube data. Google Privacy Policy link: https://policies.google.com/privacy. No street address is published; the country is (`LEGAL.country`).
 - **Open:** the product rename; the courts city in the Terms; whether `legal.dataRequestDays` (30) should drop to 7 to match III.E.4 for any future Authorized Data.
 - **Impacts:** `lib/youtube/estimates.ts`, `components/features/youtube/*`, `lib/tools/registry.ts`, `content/legal/*`, `lib/discovery/config.ts`, the purge migration, Backend-Schema.md §retention, Niche-Discovery-Engine.md.
+
+### D-086: No YouTube OAuth; onboarding has no "Connect your channel" step
+
+- **Status:** Resolved (2026-09-30), owner-approved. Closes the YouTube-account part of D-015.
+- **Why:** the onboarding step "Connect your channel?" with a "Connect with YouTube" button could make a YouTube API reviewer think YTNiches uses YouTube OAuth. It didn't: the button only showed a "Coming soon" toast, nothing was saved, and nothing in the product reads a user's own channel.
+- **Final call:**
+  - YTNiches never requests YouTube API scopes and never connects to a user's YouTube account. It reads only public channel and video data with its own API key. Google sign-in stays at `openid email profile`.
+  - Onboarding is Welcome → first niche search and save → first prompt (4 progress dots). Trial activation is unchanged: it happens when onboarding completes or is skipped.
+  - No database migration: stored `onboarding_step` values keep their meaning; a user at the old step 1 resumes at the search step.
+  - No "Add your channel" option in Settings. `profiles.youtube_channel_id` stays, marked unused/reserved.
+  - The Privacy Policy no longer mentions adding your own YouTube channel.
+- **Impacts:** `app/onboarding/onboarding-client.tsx`, `content/legal/privacy.mdx`, UI-UX-Flow.md §3 and §8.1.4, PRD.md onboarding flow, Security.md §2.2, Backend-Schema.md (profiles).

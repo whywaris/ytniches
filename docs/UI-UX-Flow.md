@@ -157,13 +157,9 @@ Goal: signup → first useful output in under 5 minutes. "Show, don't tell" — 
 
 ---
 
-### Step 2: Connect YouTube (optional)
+### Step 2: removed (D-086)
 
-- Screen title: "Connect your channel?"
-- Sub: "We'll personalize your niche recommendations. You can skip and connect later."
-- Two buttons: "Connect with YouTube" (primary) + "Skip for now" (ghost)
-- Skip advances directly to Step 3
-- Connect → OAuth flow → return here → auto-advance to Step 3
+There is no "Connect your channel" step: YTNiches never connects to a user's YouTube account (no YouTube OAuth). Welcome continues straight to Step 3, and onboarding shows 4 progress dots (Welcome, first niche search, first save, first prompt). Stored `onboarding_step` values are unchanged; a user stopped at the old step 1 resumes at Step 3.
 
 ---
 
@@ -650,7 +646,6 @@ Spec in Section 6.4 (Competitor Tracking notification preferences). Same page.
 **8.1.4 Connections** (`/settings/connections`):
 
 - Google account (email shown, disconnect button)
-- YouTube channel (if connected: channel name + disconnect, else: connect button)
 - Slack (Phase 3, team tier only)
 - Zapier (Phase 3, if implemented)
 
